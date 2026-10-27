@@ -1,0 +1,22 @@
+{
+  "name": "@ebc-compass/platform",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "scripts": {
+    "install:providers": "sst install",
+    "dev": "sst dev --stage dev",
+    "deploy": "sst deploy --stage dev",
+    "remove": "sst remove --stage dev",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test src/functions/*.test.mjs"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.0",
+    "prettier": "^3.9.10",
+    "sst": "3.18.1",
+    "typescript": "~5.9.3"
+  }
+}
