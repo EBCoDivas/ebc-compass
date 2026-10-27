@@ -1,0 +1,14 @@
+model = "gpt-6-luna"
+model_reasoning_effort = "medium"
+
+[features]
+multi_agent = true
+
+[mcp_servers.openaiDeveloperDocs]
+url = "https://developers.openai.com/mcp"
+
+[mcp_servers.github]
+url = "https://api.githubcopilot.com/mcp/"
+
+[mcp_servers.awsKnowledge]
+url = "https://knowledge-mcp.global.api.aws"
