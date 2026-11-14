@@ -12,3 +12,39 @@ url = "https://api.githubcopilot.com/mcp/"
 
 [mcp_servers.awsKnowledge]
 url = "https://knowledge-mcp.global.api.aws"
+
+[[hooks.SessionStart]]
+matcher = "startup|resume"
+
+[[hooks.SessionStart.hooks]]
+type = "command"
+command = '''
+root=$(git rev-parse --show-toplevel 2>/dev/null) || { printf '%s\n' '{"systemMessage":"Hooks inactivos: instala Git y abre Codex dentro del repositorio."}'; exit 0; }
+sh "$root/.codex/hooks/run_hook.sh" check
+'''
+command_windows = '''
+$root = git rev-parse --show-toplevel 2>$null
+if ($LASTEXITCODE -ne 0 -or -not $root) { Write-Output '{"systemMessage":"Hooks inactivos: instala Git y abre Codex dentro del repositorio."}'; exit 0 }
+& "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$root/.codex/hooks/run_hook.ps1" -Check
+exit $LASTEXITCODE
+'''
+timeout = 30
+statusMessage = "Comprobando requisitos de los hooks"
+
+[[hooks.PreToolUse]]
+matcher = "^(Bash|PowerShell|exec_command)$"
+
+[[hooks.PreToolUse.hooks]]
+type = "command"
+command = '''
+root=$(git rev-parse --show-toplevel 2>/dev/null) || { printf '%s\n' 'No se puede revisar el comando: instala Git y abre Codex dentro del repositorio.' >&2; exit 2; }
+sh "$root/.codex/hooks/run_hook.sh"
+'''
+command_windows = '''
+$root = git rev-parse --show-toplevel 2>$null
+if ($LASTEXITCODE -ne 0 -or -not $root) { [Console]::Error.WriteLine('No se puede revisar el comando: instala Git y abre Codex dentro del repositorio.'); exit 2 }
+$input | & "$env:SystemRoot/System32/WindowsPowerShell/v1.0/powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "$root/.codex/hooks/run_hook.ps1"
+exit $LASTEXITCODE
+'''
+timeout = 30
+statusMessage = "Revisando comando"
