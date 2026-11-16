@@ -1,4 +1,8 @@
-export function createApi(stage: string, auth: { userPool: { id: any }, webClient: { id: any } }) {
+export function createApi(
+  stage: string,
+  auth: { userPool: { id: any }, webClient: { id: any } },
+  backend: { arn: any },
+) {
   const health = new sst.aws.Function("HealthFunction", {
     handler: "src/functions/health.handler",
     runtime: "nodejs22.x",
@@ -13,8 +17,10 @@ export function createApi(stage: string, auth: { userPool: { id: any }, webClien
 
   const api = new sst.aws.ApiGatewayV2("CompassApi", {
     cors: {
-      allowOrigins: ["http://localhost:5173", "http://localhost:5174"],
-      allowMethods: ["GET"],
+      // "*": el origen del sitio (CloudFront) se conoce después del API. No hay cookies (allowCredentials: false) y las
+      // rutas exigen un JWT de Cognito en el encabezado Authorization.
+      allowOrigins: ["*"],
+      allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
       allowHeaders: ["authorization", "content-type"],
       allowCredentials: false,
     },
@@ -37,6 +43,8 @@ export function createApi(stage: string, auth: { userPool: { id: any }, webClien
     },
   });
   api.route("GET /opportunities", opportunities.arn, { auth: { jwt: { authorizer: authorizer.id } } });
+  // Backend completo (catálogo, recomendaciones, alertas y asistente) con las mismas rutas /api/* que en local.
+  api.route("ANY /api/{proxy+}", backend.arn, { auth: { jwt: { authorizer: authorizer.id } } });
 
   return { api, health, opportunities };
 }

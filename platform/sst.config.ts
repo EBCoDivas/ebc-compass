@@ -20,18 +20,44 @@ export default $config({
   },
 
   async run() {
-    const [{ createApi }, { createAuth }, { createKnowledgeBase }] =
-      await Promise.all([
-        import("./infra/api"),
-        import("./infra/auth"),
-        import("./infra/knowledge-base"),
-      ]);
+    const [
+      { createApi },
+      { createAuth },
+      { createKnowledgeBase },
+      { createConversationsTable },
+      { createBackend },
+      { createSite },
+    ] = await Promise.all([
+      import("./infra/api"),
+      import("./infra/auth"),
+      import("./infra/knowledge-base"),
+      import("./infra/data"),
+      import("./infra/backend"),
+      import("./infra/site"),
+    ]);
 
     const { userPool, webClient } = createAuth();
-    const { api } = createApi($app.stage, { userPool, webClient });
     const knowledge = createKnowledgeBase();
+    const table = createConversationsTable();
+    const backend = createBackend({
+      stage: $app.stage,
+      table,
+      knowledgeBaseId: knowledge.knowledgeBase.knowledgeBaseId,
+      knowledgeBaseArn: knowledge.knowledgeBase.knowledgeBaseArn,
+    });
+    const { api } = createApi($app.stage, { userPool, webClient }, backend);
+    const site = createSite({
+      apiUrl: api.url,
+      userPoolId: userPool.id,
+      webClientId: webClient.id,
+    });
 
     return {
+      region,
+      stage: $app.stage,
+      siteUrl: site.url,
+      conversationsTable: table.name,
+      backendFunction: backend.name,
       apiUrl: api.url,
       cognitoUserPoolId: userPool.id,
       cognitoWebClientId: webClient.id,
