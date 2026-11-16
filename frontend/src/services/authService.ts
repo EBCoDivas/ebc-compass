@@ -14,5 +14,5 @@ export function signIn(username: string, password: string): Promise<string> {
   })
 }
 
-export function getToken(): string | null { return sessionStorage.getItem(TOKEN_KEY) }
-export function signOut(): void { sessionStorage.removeItem(TOKEN_KEY) }
+export function getToken(): string | null { return typeof sessionStorage === 'undefined' ? null : sessionStorage.getItem(TOKEN_KEY) }
+export function signOut(): void { if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(TOKEN_KEY) }
