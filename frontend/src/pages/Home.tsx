@@ -18,7 +18,8 @@ function formatDate(date: string) {
 export function Home() {
   const profile = loadProfile()
   const [items, setItems] = useState<Opportunity[]>([])
-  const [savedIds] = useState<string[]>(() => JSON.parse(window.localStorage.getItem('ebc_compass_saved_opportunities') ?? '[]') as string[])
+  const [savedIds, setSavedIds] = useState<string[]>(() => JSON.parse(window.localStorage.getItem('ebc_compass_saved_opportunities') ?? '[]') as string[])
+  useEffect(() => { const updateSaved = (event: Event) => setSavedIds((event as CustomEvent<string[]>).detail); window.addEventListener('ebc-saved-opportunities', updateSaved); return () => window.removeEventListener('ebc-saved-opportunities', updateSaved) }, [])
   const profileInterests = profile?.interests.join(',')
   useEffect(() => { if (!profile) return; fetchRecommendations({ career: profile.career, currentSemester: profile.currentSemester, interests: profile.interests }).then((recommendations) => setItems(recommendations.map((item) => item.opportunity))).catch(() => setItems([])) }, [profile?.career, profile?.currentSemester, profileInterests])
   const upcoming = items.filter((item) => item.deadline).sort((a, b) => a.deadline!.localeCompare(b.deadline!)).slice(0, 4)
