@@ -24,3 +24,6 @@ Desktop.ini
 *.swp
 *.swo
 *~
+# Entorno local (IDs y hashes locales del conocimiento, exportaciones)
+local/.state/
+lab/.state/

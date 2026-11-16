@@ -1,0 +1,17 @@
+# AWS Emulator para la demo local (macOS). Se controla con `npm run emulator:up` / `emulator:down`.
+# Todo el estado vive en memoria: al detenerlo se borra y hay que volver a ejecutar `npm run provision`.
+services:
+  aws-emulator:
+    build: ./emulator
+    image: aws-emulator
+    container_name: ebc-aws-emulator
+    command: ["-p", "9297"]
+    ports:
+      - "127.0.0.1:9297:9297"   # solo loopback; nunca publicar en 0.0.0.0
+    mem_limit: 2g
+    memswap_limit: 2g
+    environment:
+      HOME: "${HOME}"
+      EMULATOR_TELEMETRY: "off"
+    volumes:
+      - "${HOME}/.aws/emulator:${HOME}/.aws/emulator"

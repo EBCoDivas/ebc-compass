@@ -1,0 +1,59 @@
+/* Chat del asistente. Mantiene el tema monocromático del resto de la app. */
+.visually-hidden { border: 0; clip: rect(0 0 0 0); height: 1px; margin: -1px; overflow: hidden; padding: 0; position: absolute; white-space: nowrap; width: 1px; }
+
+.assistant-page { max-width: 900px; padding-top: 1.25rem; padding-bottom: 1rem; }
+.assistant-page .page-heading { margin-bottom: 1rem; }
+.assistant-page h1 { font-size: clamp(1.6rem, 4vw, 2.25rem); }
+.assistant-page .page-heading > p:last-child { font-size: 1rem; margin: 0; }
+.assistant-profile-hint { margin: 0 0 1rem; }
+.assistant-profile-hint a { color: #0d4d91; font-weight: 700; }
+
+.chat-card { background: #fff; border: 1px solid #d0d0d0; border-radius: 14px; box-shadow: 0 8px 24px #00000012; display: flex; flex-direction: column; height: calc(100dvh - 22rem); max-height: 760px; min-height: 420px; overflow: hidden; }
+.chat-toolbar { align-items: center; background: #f7f7f7; border-bottom: 1px solid #e0e0e0; color: #333; display: flex; font-size: .8rem; gap: .75rem; justify-content: space-between; padding: .6rem 1rem; }
+.chat-toolbar .button { font-size: .8rem; min-height: 2.75rem; padding: .5rem .8rem; white-space: nowrap; }
+
+.chat-log { position: relative; display: flex; flex: 1; flex-direction: column; gap: .9rem; overflow-y: auto; padding: 1rem; }
+.chat-empty { color: #333; display: grid; flex: 1; gap: 1rem; align-content: center; justify-items: start; padding: 1.5rem; }
+.chat-empty p { margin: 0; }
+
+.chat-message { border-radius: 14px; display: grid; gap: .35rem; max-width: min(85%, 640px); padding: .75rem 1rem; }
+.chat-message.student { align-self: flex-end; background: #000; border-bottom-right-radius: 4px; color: #fff; }
+.chat-message.assistant { align-self: flex-start; background: #f2f2f2; border: 1px solid #d9d9d9; border-bottom-left-radius: 4px; color: #000; }
+.chat-message.error { background: #fff4f4; border-color: #a12a2a; }
+.chat-author { font-size: .7rem; font-weight: 800; letter-spacing: .06em; opacity: .75; text-transform: uppercase; }
+.chat-text { line-height: 1.5; margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.chat-retry { justify-self: start; min-height: 2.75rem; }
+.chat-note { background: #fff8e5; border-left: 4px solid #d39a27; border-radius: 4px; color: #5c4300; font-size: .8rem; margin: .25rem 0 0; padding: .4rem .6rem; }
+.chat-caption { color: #555; font-size: .72rem; }
+
+.chat-sources { align-items: baseline; color: #333; display: flex; flex-wrap: wrap; font-size: .75rem; gap: .4rem; }
+.chat-sources span { font-weight: 700; }
+.chat-sources ul { display: flex; flex-wrap: wrap; gap: .35rem; list-style: none; margin: 0; padding: 0; }
+.chat-sources li { background: #fff; border: 1px solid #bdbdbd; border-radius: 12px; padding: .15rem .55rem; }
+.chat-sources li.document { border-style: dashed; }
+
+.chat-followups, .chat-suggestions ul { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; margin: .4rem 0 0; padding: 0; }
+.chat-followups button, .chat-suggestions button { background: #fff; border: 1px solid #999; border-radius: 22px; color: #000; cursor: pointer; font-size: .85rem; min-height: 2.75rem; padding: .45rem .85rem; text-align: left; }
+.chat-followups button:hover, .chat-suggestions button:hover { background: #000; border-color: #000; color: #fff; }
+.chat-suggestions p { color: #333; font-size: .9rem; margin: 0 0 .25rem; }
+
+.chat-dots::after { animation: chat-dots 1.2s steps(4, end) infinite; content: ''; }
+@keyframes chat-dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75%, 100% { content: '...'; } }
+
+.chat-notice { margin: 0; padding: 0 1rem .5rem; }
+.chat-form { align-items: start; border-top: 1px solid #e0e0e0; display: grid; gap: .25rem .5rem; grid-template-columns: 1fr auto; padding: .75rem 1rem; }
+.chat-form input { min-height: 2.75rem; }
+.chat-form .button { min-height: 2.75rem; }
+.chat-help { color: #555; font-size: .72rem; grid-column: 1 / -1; margin: 0; }
+.chat-help.warn { color: #8a6100; font-weight: 700; }
+
+/* Foco visible en todos los controles del chat (NF-02.7). */
+.chat-card :focus-visible, .chat-log:focus-visible { outline: 3px solid #0d4d91; outline-offset: 2px; }
+
+@media (max-width: 600px) {
+  /* Deja libre la navegación inferior fija (≈4.5 rem) cuando el chat se desplaza hasta la parte superior. */
+  .chat-card { height: calc(100dvh - 6rem); min-height: 460px; }
+  .chat-message { max-width: 94%; }
+  .chat-toolbar { align-items: stretch; flex-direction: column; gap: .4rem; }
+}
+@media (prefers-reduced-motion: reduce) { .chat-dots::after { animation: none; content: '…'; } }

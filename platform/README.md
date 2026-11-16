@@ -5,13 +5,17 @@ This directory contains the AWS infrastructure definition for EBC Compass, built
 ## Included infrastructure
 
 - Amazon Cognito User Pool with email as the sign-in username and a public web client.
-- API Gateway HTTP API with `GET /health` and CORS for the local Vite origin (`http://localhost:5173`).
+- API Gateway HTTP API with `GET /health`, `GET /opportunities`, and `ANY /api/{proxy+}` (the full Express backend as one Lambda: catalog, recommendations, alerts and the assistant), protected by a Cognito JWT authorizer.
 - Node.js 22 health Lambda and API/Lambda CloudWatch logs retained for one week.
 - Private, HTTPS-only S3 document bucket. New objects use Amazon S3 managed-key encryption (SSE-S3) by default.
 - S3 Vectors bucket and a 1,024-dimensional `float32` cosine index.
 - Amazon Bedrock Knowledge Base using Titan Text Embeddings V2 and an S3 data source. The source bucket starts empty; no ingestion is run here.
 
-Business API routes, JWT authorization for those routes, the frontend site, and assistant inference will be added when the backend and frontend branches are integrated.
+- DynamoDB table `ConversationCheckpoints` (`PK`/`SK`, TTL on `ttl`) for assistant conversations (LangGraph checkpointer).
+- Backend Lambda (`../backend/src/lambda.ts`) with Bedrock Converse + Knowledge Base `Retrieve` permissions. It reads `BEDROCK_MODEL_ID` at deploy time.
+- Frontend static site (S3 + CloudFront) built with the API URL and Cognito settings.
+
+Deploying all of this with almost no manual steps (model discovery, knowledge ingestion, smoke test, demo user) is documented in [`docs/deploy-lab.md`](../docs/deploy-lab.md) and driven by `npm run lab:*` from the repository root. Prefer that path over calling `npm run deploy` directly: the backend needs `BEDROCK_MODEL_ID`, which `lab:deploy` detects.
 
 ## Local development
 
