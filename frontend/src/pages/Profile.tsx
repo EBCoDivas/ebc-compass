@@ -2,12 +2,15 @@ import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loadProfile, profileCompleteness, saveProfile } from '../services/profileService'
-import { campusOptions, careerOptions, emptyProfile, simulatedAcademicData } from '../types/profile'
+import { emptyProfile, simulatedAcademicData } from '../types/profile'
 import type { StudentProfile } from '../types/profile'
 
 export function Profile() {
   const navigate = useNavigate()
-  const [profile, setProfile] = useState<StudentProfile>(() => loadProfile() ?? emptyProfile)
+  const [profile, setProfile] = useState<StudentProfile>(() => {
+    const stored = loadProfile()
+    return { ...emptyProfile, ...stored, campus: stored?.campus || 'CMS', career: stored?.career || 'banking', currentSemester: stored?.currentSemester || 2 }
+  })
   const [interest, setInterest] = useState('')
   const [error, setError] = useState('')
   const completeness = profileCompleteness(profile)
@@ -74,11 +77,7 @@ export function Profile() {
             <div><span>Semestre actual</span><strong>{simulatedAcademicData.semester}</strong></div>
           </div>
           <p className="field-help">Estos datos fueron validados con tu información institucional.</p>
-          <div className="form-grid">
-            <label>Campus<select required value={profile.campus} onChange={(e) => update('campus', e.target.value as StudentProfile['campus'])}><option value="">Selecciona tu campus</option>{campusOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>
-            <label>Carrera<select required value={profile.career} onChange={(e) => update('career', e.target.value as StudentProfile['career'])}><option value="">Selecciona tu carrera</option>{careerOptions.map((option) => <option value={option.value} key={option.value}>{option.label}</option>)}</select></label>
-            <label>Semestre<select required value={profile.currentSemester} onChange={(e) => update('currentSemester', e.target.value ? Number(e.target.value) : '')}><option value="">Selecciona tu semestre</option>{Array.from({ length: 10 }, (_, index) => <option value={index + 1} key={index + 1}>{index + 1}° semestre</option>)}</select></label>
-          </div>
+          <p className="field-help">Campus, carrera y semestre corresponden a tu inscripción institucional y no se pueden modificar desde aquí.</p>
           <button type="button" className="assistant-link" onClick={() => setError('La solicitud de corrección estará disponible en el asistente.')}><span className="assistant-icon" aria-hidden="true">💬</span> ¿Hay un dato académico incorrecto? Solicita una corrección en el asistente.</button>
         </section>
         <section className="form-card">
