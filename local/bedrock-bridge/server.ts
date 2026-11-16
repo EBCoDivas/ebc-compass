@@ -10,15 +10,10 @@
 //
 // Solo escucha en 127.0.0.1. No registra el contenido de los mensajes ni imprime la clave.
 
-import { existsSync, readFileSync } from 'node:fs'
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import OpenAI from 'openai'
 import type { ComparisonFilter, CompoundFilter } from 'openai/resources/shared'
 
-const here = dirname(fileURLToPath(import.meta.url))
-const stateFile = join(here, '..', '.state', 'knowledge.json')
 
 const port = Number(process.env.BRIDGE_PORT ?? 8787)
 const model = process.env.OPENAI_MODEL ?? 'gpt-6-luna'
@@ -112,13 +107,7 @@ function requireOpenAI(): OpenAI {
 }
 
 function vectorStoreId(): string | undefined {
-  if (!existsSync(stateFile)) return undefined
-  try {
-    const state = JSON.parse(readFileSync(stateFile, 'utf8')) as { vectorStoreId?: string }
-    return state.vectorStoreId
-  } catch {
-    return undefined
-  }
+  return process.env.OPENAI_VECTOR_STORE_ID?.trim() || undefined
 }
 
 // ---------- Converse ----------
@@ -225,9 +214,12 @@ async function health(deep: boolean) {
   if (!openai) return { ...base, upstream: 'error', detail: 'Falta OPENAI_API_KEY' }
   try {
     await openai.models.retrieve(model)
-    return { ...base, upstream: 'ok' }
+    const id = vectorStoreId()
+    if (!id) return { ...base, vectorStoreLoaded: false, upstream: 'ok', detail: 'Configura OPENAI_VECTOR_STORE_ID' }
+    const store = await openai.vectorStores.retrieve(id)
+    return { ...base, upstream: 'ok', vectorStoreLoaded: store.status === 'completed' && store.file_counts.completed > 0, detail: store.status }
   } catch (error) {
-    return { ...base, upstream: 'error', detail: toBedrockError(error).message }
+    return { ...base, vectorStoreLoaded: false, upstream: 'error', detail: toBedrockError(error).message }
   }
 }
 

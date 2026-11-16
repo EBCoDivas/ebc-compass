@@ -11,7 +11,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const packages = ['backend', 'frontend', 'local', 'scripts/lab']
 
 // Variables que el usuario debe llenar a mano (secretos). Se avisa si están vacías.
-const requiredSecrets = { local: ['OPENAI_API_KEY'] }
+const requiredSecrets = { local: ['OPENAI_API_KEY', 'OPENAI_VECTOR_STORE_ID'] }
 
 function emptyVariables(file, names) {
   const values = new Map()

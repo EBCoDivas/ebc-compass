@@ -11,5 +11,5 @@
     "checkJs": false,
     "forceConsistentCasingInFileNames": true
   },
-  "include": ["bedrock-bridge", "scripts", "lib", "../scripts/lib"]
+  "include": ["kb", "bedrock-bridge", "scripts", "lib", "../scripts/lib"]
 }

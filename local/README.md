@@ -13,7 +13,7 @@ Demo local del asistente: **AWS Emulator** (DynamoDB, S3…) + un **puente** que
 
 ```sh
 npm run env:create   # crea backend/.env, frontend/.env y local/.env desde sus .env.example
-# Abre local/.env y completa OPENAI_API_KEY (tú la colocas; git la ignora)
+# Abre local/.env y completa OPENAI_API_KEY y OPENAI_VECTOR_STORE_ID (tú la colocas; git la ignora)
 npm run setup        # instala dependencias, levanta el emulador y aprovisiona recursos
 npm run dev          # emulador + puente + backend + frontend
 ```
@@ -69,3 +69,22 @@ Backend ─ AWS_ENDPOINT_URL ─────────────────
 | `El emulador no está en marcha` | `npm run emulator:up` |
 | Perdí las conversaciones | Se reinició el emulador (datos en memoria); es esperado |
 | Puerto 3000/5173 ocupado | Cierra el proceso que lo usa (`lsof -i :3000`) y vuelve a ejecutar |
+
+
+## Vector store compartido
+
+Cada integrante debe copiar el mismo `OPENAI_VECTOR_STORE_ID` en `local/.env`
+y usar una clave con acceso al proyecto de OpenAI correspondiente.
+No se necesita cargar el corpus para consultar un store ya preparado.
+
+- `npm run kb:upload`: sincroniza el corpus con el ID configurado; nunca crea otro automáticamente.
+- `npm run kb:upload -- --id vs_…`: valida, guarda el ID y sincroniza.
+- `npm run kb:upload -- --create`: crea explícitamente un store sin expiración, guarda su ID y carga el corpus.
+- `npm run kb:reset -- --id vs_…`: exige confirmar el ID escribiéndolo; afecta a todo el equipo. Conserva los archivos globales de OpenAI.
+
+La sincronización consulta todos los archivos remotos y sus huellas; no depende del estado local.
+Ejecutar las sincronizaciones de forma secuencial por un responsable.
+Al cambiar el ID hay que reiniciar el puente.
+Para migrar, copia el ID del antiguo `local/.state/knowledge.json` al `.env`,
+verifica con `kb:status` y ejecuta `kb:upload`: se quitará la expiración existente.
+Los errores de acceso o expiración requieren corregir el ID explícitamente.
