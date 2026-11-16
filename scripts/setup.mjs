@@ -44,7 +44,7 @@ step('2/5 Creando archivos .env')
 run('node', ['scripts/env-create.mjs'])
 
 step('3/5 Instalando dependencias')
-const packages = ['backend', 'frontend', 'local', 'lab', ...(skipPlatform ? [] : ['platform'])]
+const packages = ['backend', 'frontend', 'local', 'scripts/lab', ...(skipPlatform ? [] : ['platform'])]
 for (const pkg of packages) {
   console.log(`  · ${pkg}`)
   run('npm', ['--prefix', pkg, 'install', '--no-audit', '--no-fund'], { stdio: ['ignore', 'ignore', 'inherit'] })

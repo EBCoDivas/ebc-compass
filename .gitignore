@@ -26,4 +26,4 @@ Desktop.ini
 *~
 # Entorno local (IDs y hashes locales del conocimiento, exportaciones)
 local/.state/
-lab/.state/
+scripts/lab/.state/

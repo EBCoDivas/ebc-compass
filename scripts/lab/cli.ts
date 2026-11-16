@@ -30,7 +30,7 @@ import { DeleteObjectsCommand, ListObjectsV2Command, PutObjectCommand, S3Client 
 import { GetCallerIdentityCommand, STSClient } from '@aws-sdk/client-sts'
 
 const here = dirname(fileURLToPath(import.meta.url))
-const repoRoot = join(here, '..')
+const repoRoot = join(here, '..', '..')
 const REGION = 'us-east-1' // misma región que platform/sst.config.ts
 const stage = process.env.LAB_STAGE || 'dev'
 const stateFile = join(here, '.state', 'lab.json')
@@ -170,7 +170,7 @@ async function chooseModel(): Promise<string> {
   }
   return fail(
     'Ningún modelo de Bedrock respondió. Habilita el acceso a un modelo (p. ej. Claude Haiku o Amazon Nova Lite) en la consola de Amazon Bedrock → Model access, ' +
-      'o fija LAB_BEDROCK_MODEL_ID en lab/.env, y vuelve a intentar.',
+      'o fija LAB_BEDROCK_MODEL_ID en scripts/lab/.env, y vuelve a intentar.',
   )
 }
 

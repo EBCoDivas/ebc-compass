@@ -29,7 +29,7 @@ Al terminar `lab:deploy` imprime la URL del sitio. Eso es todo: no hay que copia
 | # | Paso | Detalle |
 |---|---|---|
 | 1 | **Cuenta** | Muestra la cuenta, el usuario y la región (`us-east-1`) para que confirmes que es la del lab. Si no hay credenciales, se detiene con instrucciones |
-| 2 | **Modelo de Bedrock** | Detecta solo un modelo de texto disponible en la cuenta (prefiere Claude Haiku, luego Amazon Nova Lite/Micro, Claude Sonnet, Nova Pro) probando cada uno con una llamada mínima. Así no hay que saber qué modelo está habilitado. Se puede fijar con `LAB_BEDROCK_MODEL_ID` en `lab/.env` |
+| 2 | **Modelo de Bedrock** | Detecta solo un modelo de texto disponible en la cuenta (prefiere Claude Haiku, luego Amazon Nova Lite/Micro, Claude Sonnet, Nova Pro) probando cada uno con una llamada mínima. Así no hay que saber qué modelo está habilitado. Se puede fijar con `LAB_BEDROCK_MODEL_ID` en `scripts/lab/.env` |
 | 3 | **SST deploy** | Crea toda la infraestructura (tabla abajo), compila el frontend con la URL del API y la configuración de Cognito, y empaqueta el backend como Lambda |
 | 4 | **Conocimiento** | Exporta el corpus (`knowledge/`), lo sube al bucket de documentos, **sincroniza la Knowledge Base** (ingesta con Titan Embeddings V2 → S3 Vectors), espera a que termine y **comprueba que recupera** los documentos esperados con las mismas 10 preguntas de `kb:verify` (umbral 90 %) |
 | 5 | **Prueba de humo** | Crea un usuario temporal en Cognito, obtiene un token, prueba el API (sin token debe dar 401; con token: catálogo, asistente en español e inglés con Bedrock, seguimiento, historial, borrado) y el sitio, y borra el usuario |
@@ -92,7 +92,7 @@ El código del backend **no cambia**: en local las llamadas de AWS se desvían a
 | `npm run lab:status` | URLs y recursos del despliegue | No |
 | `npm run lab:destroy -- --confirm` | Elimina todo (`sst remove`) | Sí |
 
-Configuración opcional en `lab/.env` (se crea con `npm run env:create`): `LAB_STAGE` (por defecto `dev`), `LAB_BEDROCK_MODEL_ID` y `LAB_DEMO_EMAIL`. Las credenciales de AWS **nunca** van en ese archivo.
+Configuración opcional en `scripts/lab/.env` (se crea con `npm run env:create`): `LAB_STAGE` (por defecto `dev`), `LAB_BEDROCK_MODEL_ID` y `LAB_DEMO_EMAIL`. Las credenciales de AWS **nunca** van en ese archivo.
 
 ## Si algo falla
 

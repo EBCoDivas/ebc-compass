@@ -8,7 +8,7 @@ import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const packages = ['backend', 'frontend', 'local', 'lab']
+const packages = ['backend', 'frontend', 'local', 'scripts/lab']
 
 // Variables que el usuario debe llenar a mano (secretos). Se avisa si están vacías.
 const requiredSecrets = { local: ['OPENAI_API_KEY'] }

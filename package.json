@@ -46,13 +46,13 @@
     "sst:dev": "node scripts/sst-guard.mjs dev",
     "sst:deploy": "node scripts/sst-guard.mjs deploy",
     "sst:remove": "node scripts/sst-guard.mjs remove",
-    "lab:check": "npm --prefix lab run -s check --",
-    "lab:deploy": "npm --prefix lab run -s deploy --",
-    "lab:knowledge": "npm --prefix lab run -s knowledge --",
-    "lab:smoke": "npm --prefix lab run -s smoke --",
-    "lab:user": "npm --prefix lab run -s user --",
-    "lab:status": "npm --prefix lab run -s status --",
-    "lab:destroy": "npm --prefix lab run -s destroy --",
-    "lab:typecheck": "npm --prefix lab run typecheck"
+    "lab:check": "npm --prefix scripts/lab run -s check --",
+    "lab:deploy": "npm --prefix scripts/lab run -s deploy --",
+    "lab:knowledge": "npm --prefix scripts/lab run -s knowledge --",
+    "lab:smoke": "npm --prefix scripts/lab run -s smoke --",
+    "lab:user": "npm --prefix scripts/lab run -s user --",
+    "lab:status": "npm --prefix scripts/lab run -s status --",
+    "lab:destroy": "npm --prefix scripts/lab run -s destroy --",
+    "lab:typecheck": "npm --prefix scripts/lab run typecheck"
   }
 }
