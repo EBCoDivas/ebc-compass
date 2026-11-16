@@ -66,6 +66,11 @@ for (const port of wanted) if (await portInUse(port)) busy.push(port)
 if (busy.length > 0) fail(`Puerto(s) ocupado(s): ${busy.join(', ')}. Cierra lo que los use (lsof -i :${busy[0]}) y vuelve a ejecutar.`)
 
 // 6. Procesos
+// Cada servicio tiene su color para distinguir sus líneas. Se desactiva con NO_COLOR o si la salida no es una terminal.
+const useColor = process.stdout.isTTY && !process.env.NO_COLOR
+const COLORS = { bridge: 35, backend: 36, frontend: 32 } // magenta, cian, verde
+const tag = (name) => (useColor && COLORS[name] ? `\x1b[1;${COLORS[name]}m[${name}]\x1b[0m` : `[${name}]`)
+
 const children = []
 function start(name, command, args, env) {
   const child = spawn(command, args, { cwd: root, env, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
@@ -75,14 +80,14 @@ function start(name, command, args, env) {
       pending += chunk
       const lines = pending.split('\n')
       pending = lines.pop() ?? ''
-      for (const line of lines) out.write(`[${name}] ${line}\n`)
+      for (const line of lines) out.write(`${tag(name)} ${line}\n`)
     })
   }
   pipe(child.stdout, process.stdout)
   pipe(child.stderr, process.stderr)
   child.on('exit', (code) => {
     if (!shuttingDown) {
-      console.error(`✖ [${name}] terminó con código ${code}. Deteniendo todo.`)
+      console.error(`✖ ${tag(name)} terminó con código ${code}. Deteniendo todo.`)
       shutdown(1)
     }
   })
