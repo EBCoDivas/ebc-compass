@@ -76,9 +76,8 @@ export function Profile() {
             <div><span>Carrera</span><strong>{simulatedAcademicData.career}</strong></div>
             <div><span>Semestre actual</span><strong>{simulatedAcademicData.semester}</strong></div>
           </div>
-          <p className="field-help">Estos datos fueron validados con tu información institucional.</p>
-          <p className="field-help">Campus, carrera y semestre corresponden a tu inscripción institucional y no se pueden modificar desde aquí.</p>
-          <button type="button" className="assistant-link" onClick={() => setError('La solicitud de corrección estará disponible en el asistente.')}><span className="assistant-icon" aria-hidden="true">💬</span> ¿Hay un dato académico incorrecto? Solicita una corrección en el asistente.</button>
+          <div className="institutional-note"><strong>Información institucional verificada</strong><span>Campus, carrera y semestre provienen de tu inscripción y no se pueden modificar aquí.</span></div>
+          <button type="button" className="assistant-link" onClick={() => setError('La solicitud de corrección estará disponible en el asistente.')}><span className="assistant-icon" aria-hidden="true">💬</span><span><strong>¿Hay un dato académico incorrecto?</strong><small>Solicita una corrección en el asistente.</small></span><span className="assistant-arrow" aria-hidden="true">→</span></button>
         </section>
         <section className="form-card">
           <label>¿Cómo prefieres que te llamemos? <input required value={profile.name} onChange={(e) => update('name', e.target.value)} placeholder="Ej. Vale, Val o V. Martinez" /><span className="field-help">Usaremos este nombre para dirigirnos a ti en tu seguimiento.</span></label>
