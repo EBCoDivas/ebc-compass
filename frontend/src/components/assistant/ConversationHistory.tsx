@@ -1,10 +1,12 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { Markdown } from './Markdown'
 import type { ChatEntry } from '../../types/assistant'
 
 interface Props {
   entries: ChatEntry[]
   pending: boolean
   onRetry: () => void
+  onRegenerate: () => void
   onPickSuggestion: (text: string) => void
 }
 
@@ -14,7 +16,8 @@ function captionFor(entry: ChatEntry): string | undefined {
   return entry.meta.mode === 'llm' ? `Redactada con IA · ${seconds} s` : `Respuesta por reglas · ${seconds} s`
 }
 
-export function ConversationHistory({ entries, pending, onRetry, onPickSuggestion }: Props) {
+export function ConversationHistory({ entries, pending, onRetry, onRegenerate, onPickSuggestion }: Props) {
+  const [copiedId, setCopiedId] = useState('')
   const logRef = useRef<HTMLDivElement>(null)
   const lastRef = useRef<HTMLElement>(null)
   const lastAssistantId = [...entries].reverse().find((entry) => entry.role === 'assistant' && !entry.isError)?.id
@@ -22,6 +25,16 @@ export function ConversationHistory({ entries, pending, onRetry, onPickSuggestio
   const last = entries[entries.length - 1]
   // Una respuesta nueva se muestra desde su inicio (para leerla de arriba abajo); lo demás, hasta el final.
   const showFromStart = last?.role === 'assistant' && !last.isError && !pending
+
+  async function copy(entry: ChatEntry) {
+    try {
+      await navigator.clipboard.writeText(entry.content)
+      setCopiedId(entry.id)
+      window.setTimeout(() => setCopiedId(''), 2000)
+    } catch {
+      setCopiedId('')
+    }
+  }
 
   useEffect(() => {
     const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
@@ -37,7 +50,7 @@ export function ConversationHistory({ entries, pending, onRetry, onPickSuggestio
       {entries.map((entry, index) => (
         <article key={entry.id} ref={index === entries.length - 1 ? lastRef : undefined} className={`chat-message ${entry.role}${entry.isError ? ' error' : ''}`} aria-label={entry.role === 'student' ? 'Tú' : 'Asistente'}>
           <span className="chat-author">{entry.role === 'student' ? 'Tú' : 'Asistente'}</span>
-          <p className="chat-text">{entry.content}</p>
+          {entry.role === 'assistant' && !entry.isError ? <Markdown>{entry.content}</Markdown> : <p className="chat-text">{entry.content}</p>}
 
           {entry.isError && (
             <button type="button" className="button secondary chat-retry" onClick={onRetry} disabled={pending}>
@@ -64,7 +77,13 @@ export function ConversationHistory({ entries, pending, onRetry, onPickSuggestio
             </div>
           )}
 
-          {captionFor(entry) && <small className="chat-caption">{captionFor(entry)}</small>}
+          {entry.role === 'assistant' && !entry.isError && (
+            <div className="chat-actions">
+              <button type="button" onClick={() => void copy(entry)}>{copiedId === entry.id ? 'Copiado ✓' : 'Copiar'}</button>
+              {entry.id === lastAssistantId && <button type="button" onClick={onRegenerate} disabled={pending}>Regenerar</button>}
+              {captionFor(entry) && <small className="chat-caption">{captionFor(entry)}</small>}
+            </div>
+          )}
 
           {entry.id === lastAssistantId && entry.suggestions && entry.suggestions.length > 0 && !pending && (
             <div className="chat-followups" aria-label="Preguntas sugeridas">

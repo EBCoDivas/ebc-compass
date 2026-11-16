@@ -8,7 +8,7 @@ export function SuggestedQuestions({ suggestions, onPick }: Props) {
   if (suggestions.length === 0) return null
   return (
     <div className="chat-suggestions">
-      <p>Puedes empezar con una de estas preguntas:</p>
+      <p className="chat-suggestions-title">Puedes empezar con:</p>
       <ul>
         {suggestions.map((text) => (
           <li key={text}>

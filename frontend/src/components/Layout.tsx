@@ -1,5 +1,8 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { usePageTitle } from '../utils/pageTitle'
+
+const titles: Record<string, string> = { '/': 'Inicio', '/catalogo': 'Oportunidades', '/calendario': 'Calendario', '/asistente': 'Asistente', '/perfil': 'Mi perfil', '/acceso': 'Iniciar sesión' }
 
 function NavIcon({ type }: { type: 'home' | 'opportunities' | 'calendar' | 'chat' }) {
   const paths = {
@@ -12,10 +15,13 @@ function NavIcon({ type }: { type: 'home' | 'opportunities' | 'calendar' | 'chat
 }
 
 export function Layout({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation()
+  usePageTitle(titles[pathname] ?? '')
   return (
     <>
+      <a className="skip-link" href="#contenido">Saltar al contenido</a>
       <header className="site-header">
-        <NavLink className="brand" to="/"><img src="/ebc-logo.svg" alt="EBC - La Escuela de Negocios de México" /><span>Compass</span></NavLink>
+        <NavLink className="brand" to="/"><img src="/ebc-compass-mark.svg" alt="" width="40" height="40" /><span className="brand-word">EBC <em>Compass</em></span></NavLink>
         <nav aria-label="Navegación principal">
           <NavLink className="nav-link" to="/"><NavIcon type="home" />Inicio</NavLink>
           <NavLink className="nav-link" to="/catalogo"><NavIcon type="opportunities" />Oportunidades</NavLink>
@@ -23,7 +29,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <NavLink className="nav-link" to="/asistente"><NavIcon type="chat" />Conversar</NavLink>
         </nav>
       </header>
-      {children}
+      <div id="contenido" tabIndex={-1}>{children}</div>
       <nav className="mobile-nav" aria-label="Navegación móvil">
         <NavLink className="mobile-nav-link" to="/"><NavIcon type="home" /><span>Inicio</span></NavLink>
         <NavLink className="mobile-nav-link" to="/catalogo"><NavIcon type="opportunities" /><span>Oportunidades</span></NavLink>

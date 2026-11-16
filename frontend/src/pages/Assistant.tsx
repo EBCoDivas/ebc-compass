@@ -17,7 +17,7 @@ export function Assistant() {
   const [pending, setPending] = useState(false)
   const [notice, setNotice] = useState('')
   const [lastQuestion, setLastQuestion] = useState('')
-  const inputRef = useRef<HTMLInputElement>(null)
+  const inputRef = useRef<HTMLTextAreaElement>(null)
   const [searchParams, setSearchParams] = useSearchParams()
 
   useEffect(() => {
@@ -43,12 +43,13 @@ export function Assistant() {
   }, [incoming, setSearchParams])
 
   const ask = useCallback(
-    async (message: string, options: { showQuestion: boolean }) => {
+    async (message: string, options: { showQuestion: boolean; dropLastReply?: boolean }) => {
       setNotice('')
       setLastQuestion(message)
       setPending(true)
       setEntries((current) => {
-        const withoutError = current.filter((entry) => !entry.isError)
+        let withoutError = current.filter((entry) => !entry.isError)
+        if (options.dropLastReply && withoutError[withoutError.length - 1]?.role === 'assistant') withoutError = withoutError.slice(0, -1)
         return options.showQuestion ? [...withoutError, { id: crypto.randomUUID(), role: 'student', content: message }] : withoutError
       })
       try {
@@ -97,34 +98,47 @@ export function Assistant() {
     }
   }
 
+  const lastStudentQuestion = [...entries].reverse().find((entry) => entry.role === 'student')?.content ?? ''
   const incomplete = !profile || profileCompleteness(profile) < 100
 
+  const topics = ['Becas y apoyos', 'Cursos y certificaciones', 'Trámites escolares', 'Eventos y networking', 'Fechas importantes']
+
   return (
-    <main className="page assistant-page">
-      <div className="page-heading">
-        <p className="eyebrow">TU ASISTENTE</p>
-        <h1>Asistente EBC Compass</h1>
-        <p>Pregúntame sobre becas, cursos, trámites, eventos y fechas importantes, en español o en inglés.</p>
-      </div>
-
-      {incomplete && (
-        <p className="institutional-note assistant-profile-hint">
-          <strong>Respuestas más personalizadas</strong>
-          <span>
-            {profile ? 'Completa tu perfil' : 'Crea tu perfil'} para que tenga en cuenta tu carrera y semestre. <Link to="/perfil">Ir a mi perfil</Link>
-          </span>
-        </p>
-      )}
-
-      <section className="chat-card" aria-label="Chat con el asistente">
-        <div className="chat-toolbar">
-          <span>Respuestas orientativas: para decisiones oficiales consulta a Servicios Escolares.</span>
+    <main className="assistant-page">
+      <aside className="assistant-side" aria-label="Contexto del asistente">
+        <details className="side-collapse" open>
+          <summary>Tu contexto</summary>
+          <div className="side-section">
+            <h2>Hablas como</h2>
+            {profile ? (
+              <p className="side-persona">
+                <strong>{profile.name || 'Estudiante EBC'}</strong>
+                <span>{profileCompleteness(profile)}% de tu perfil completo</span>
+              </p>
+            ) : (
+              <p className="side-persona"><strong>Sin perfil</strong><span>Respuestas generales</span></p>
+            )}
+            {incomplete && (
+              <p className="side-hint">
+                {profile ? 'Completa tu perfil' : 'Crea tu perfil'} para respuestas más personalizadas. <Link to="/perfil">Ir a mi perfil</Link>
+              </p>
+            )}
+          </div>
+          <div className="side-section">
+            <h2>Puedo ayudarte con</h2>
+            <ul className="side-topics">{topics.map((topic) => <li key={topic}>{topic}</li>)}</ul>
+          </div>
+          <p className="side-disclaimer">Respuestas orientativas: para decisiones oficiales consulta a Servicios Escolares.</p>
           {entries.length > 0 && (
             <button type="button" className="button secondary" onClick={clear} disabled={pending}>
               Borrar conversación
             </button>
           )}
-        </div>
+        </details>
+      </aside>
+
+      <section className="chat-card" aria-labelledby="chat-title">
+        <h1 id="chat-title" className="chat-title">Asistente <em>Compass</em></h1>
 
         {loading ? (
           <p className="chat-empty" role="status">
@@ -132,13 +146,13 @@ export function Assistant() {
           </p>
         ) : entries.length === 0 ? (
           <div className="chat-empty">
-            <p>
-              <strong>¡Hola{profile?.name ? `, ${profile.name}` : ''}!</strong> Soy el asistente de EBC Compass. ¿En qué te ayudo?
-            </p>
+            <img src="/ebc-compass-mark.svg" alt="" width="56" height="56" />
+            <h2>¡Hola{profile?.name ? `, ${profile.name}` : ''}! ¿En qué te ayudo?</h2>
+            <p>Pregúntame sobre becas, cursos, trámites, eventos y fechas, en español o en inglés.</p>
             <SuggestedQuestions suggestions={suggestions} onPick={pick} />
           </div>
         ) : (
-          <ConversationHistory entries={entries} pending={pending} onRetry={() => void ask(lastQuestion, { showQuestion: false })} onPickSuggestion={pick} />
+          <ConversationHistory entries={entries} pending={pending} onRetry={() => void ask(lastQuestion, { showQuestion: false })} onRegenerate={() => void ask(lastQuestion || lastStudentQuestion, { showQuestion: false, dropLastReply: true })} onPickSuggestion={pick} />
         )}
 
         {pending && entries.length === 0 && <p role="status" className="chat-empty">Escribiendo…</p>}
