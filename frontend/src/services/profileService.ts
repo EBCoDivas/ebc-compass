@@ -1,6 +1,7 @@
 import { emptyProfile, type StudentProfile } from '../types/profile'
 
 export const PROFILE_STORAGE_KEY = 'ebc_compass_profile'
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 export function loadProfile(): StudentProfile | null {
   const stored = window.localStorage.getItem(PROFILE_STORAGE_KEY)
@@ -24,6 +25,11 @@ export function loadProfile(): StudentProfile | null {
 
 export function saveProfile(profile: StudentProfile): void {
   window.localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile))
+}
+
+export async function saveProfileRemote(profile: StudentProfile): Promise<void> {
+  const response = await fetch(`${API_URL}/api/profiles`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(profile) })
+  if (!response.ok) throw new Error('No fue posible sincronizar el perfil.')
 }
 
 export function profileCompleteness(profile: StudentProfile): number {

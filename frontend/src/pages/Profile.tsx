@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { loadProfile, profileCompleteness, saveProfile } from '../services/profileService'
+import { loadProfile, profileCompleteness, saveProfile, saveProfileRemote } from '../services/profileService'
 import { emptyProfile, simulatedAcademicData } from '../types/profile'
 import type { StudentProfile } from '../types/profile'
 
@@ -51,6 +51,7 @@ export function Profile() {
     }
     const saved = { ...profile, id: profile.id || crypto.randomUUID(), updatedAt: new Date().toISOString() }
     saveProfile(saved)
+    void saveProfileRemote(saved).catch(() => setError('Perfil guardado localmente. La sincronización con el backend no está disponible.'))
     navigate('/')
   }
 
