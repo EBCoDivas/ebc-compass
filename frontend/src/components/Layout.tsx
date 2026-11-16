@@ -8,8 +8,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <NavLink className="brand" to="/">EBC <span>Compass</span></NavLink>
         <nav aria-label="Navegación principal">
           <NavLink className="nav-link" to="/">Inicio</NavLink>
-          <NavLink className="nav-link" to="/perfil">Mi perfil</NavLink>
-          <NavLink className="nav-link" to="/catalogo">Catálogo</NavLink>
+          <NavLink className="nav-link" to="/catalogo">Oportunidades</NavLink>
           <NavLink className="nav-link" to="/guardadas">Guardadas</NavLink>
         </nav>
       </header>
