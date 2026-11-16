@@ -28,7 +28,8 @@ export function saveProfile(profile: StudentProfile): void {
 }
 
 export async function saveProfileRemote(profile: StudentProfile): Promise<void> {
-  const response = await fetch(`${API_URL}/api/profiles`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(profile) })
+  const token = getToken()
+  const response = await fetch(`${API_URL}/api/profiles`, { method: 'POST', headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) }, body: JSON.stringify(profile) })
   if (!response.ok) throw new Error('No fue posible sincronizar el perfil.')
 }
 
@@ -36,3 +37,4 @@ export function profileCompleteness(profile: StudentProfile): number {
   const required = [profile.name.trim(), profile.campus, profile.career, profile.currentSemester]
   return Math.round((required.filter(Boolean).length / required.length) * 100)
 }
+import { getToken } from './authService'
