@@ -1,0 +1,55 @@
+{
+  "version": 1,
+  "questions": [
+    {
+      "question": "¿Qué requisitos pide la Beca Fundación EBC?",
+      "language": "es",
+      "expect": "becas-programas.md"
+    },
+    {
+      "question": "¿Qué documentos necesito para solicitar una beca?",
+      "language": "es",
+      "expect": "solicitud-beca.md"
+    },
+    {
+      "question": "¿Hasta cuándo me puedo reinscribir?",
+      "language": "es",
+      "expect": "reinscripcion.md"
+    },
+    {
+      "question": "¿Qué prerrequisitos tiene FIN-301?",
+      "language": "es",
+      "expect": "reglamento-prerrequisitos.md"
+    },
+    {
+      "question": "¿En qué horario atiende Servicios Escolares?",
+      "language": "es",
+      "expect": "servicios-escolares.md"
+    },
+    {
+      "question": "What GPA do I need for the Santander scholarship?",
+      "language": "en",
+      "expect": "scholarships-and-procedures-en.md"
+    },
+    {
+      "question": "How do I apply for a scholarship?",
+      "language": "en",
+      "expect": "scholarships-and-procedures-en.md"
+    },
+    {
+      "question": "Where do I get help on campus?",
+      "language": "en",
+      "expect": "faq-en.md"
+    },
+    {
+      "question": "Can I save opportunities for later?",
+      "language": "en",
+      "expect": "faq-en.md"
+    },
+    {
+      "question": "Until when can I re-enroll?",
+      "language": "en",
+      "expect": "scholarships-and-procedures-en.md"
+    }
+  ]
+}

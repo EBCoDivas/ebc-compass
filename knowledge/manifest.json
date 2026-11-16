@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "path": "becas-programas.md",
+      "id": "becas-programas"
+    },
+    {
+      "path": "solicitud-beca.md",
+      "id": "solicitud-beca"
+    },
+    {
+      "path": "reinscripcion.md",
+      "id": "reinscripcion"
+    },
+    {
+      "path": "reglamento-prerrequisitos.md",
+      "id": "reglamento-prerrequisitos"
+    },
+    {
+      "path": "servicios-escolares.md",
+      "id": "servicios-escolares"
+    },
+    {
+      "path": "calendario-academico.md",
+      "id": "calendario-academico"
+    },
+    {
+      "path": "desarrollo-profesional.md",
+      "id": "desarrollo-profesional"
+    },
+    {
+      "path": "eventos-vinculacion.md",
+      "id": "eventos-vinculacion"
+    },
+    {
+      "path": "bolsa-de-trabajo-practicas.md",
+      "id": "bolsa-de-trabajo-practicas"
+    },
+    {
+      "path": "preguntas-frecuentes.md",
+      "id": "preguntas-frecuentes"
+    },
+    {
+      "path": "faq-en.md",
+      "id": "faq-en"
+    },
+    {
+      "path": "scholarships-and-procedures-en.md",
+      "id": "scholarships-and-procedures-en"
+    }
+  ]
+}
