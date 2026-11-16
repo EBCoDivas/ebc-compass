@@ -25,6 +25,12 @@ test('backend exposes the documented local API flow', async (t) => {
   assert.equal(recommended.length > 0, true)
   assert.equal(recommended[0].relevanceScore > 0, true)
 
+  const alerts = await fetch(`${baseUrl}/api/alerts`)
+  const upcomingAlerts = await alerts.json() as Array<{ daysRemaining: number }>
+  assert.equal(alerts.status, 200)
+  assert.equal(upcomingAlerts.length <= 5, true)
+  assert.equal(upcomingAlerts.every((item, index) => index === 0 || item.daysRemaining >= upcomingAlerts[index - 1].daysRemaining), true)
+
   const profile = await fetch(`${baseUrl}/api/profiles`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Valerie', campus: 'CMS', career: 'finance', currentSemester: 5 }) })
   assert.equal(profile.status, 201)
 })
