@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { loadProfile, profileCompleteness, saveProfile, saveProfileRemote } from '../services/profileService'
+import { assistantPath } from '../services/assistantService'
 import { emptyProfile, simulatedAcademicData } from '../types/profile'
 import type { StudentProfile } from '../types/profile'
 
@@ -78,7 +79,7 @@ export function Profile() {
             <div><span>Semestre actual</span><strong>{simulatedAcademicData.semester}</strong></div>
           </div>
           <div className="institutional-note"><strong>Información institucional verificada</strong><span>Campus, carrera y semestre provienen de tu inscripción y no se pueden modificar aquí.</span></div>
-          <button type="button" className="assistant-link" onClick={() => setError('La solicitud de corrección estará disponible en el asistente.')}><span className="assistant-icon" aria-hidden="true">💬</span><span><strong>¿Hay un dato académico incorrecto?</strong><small>Solicita una corrección en el asistente.</small></span><span className="assistant-arrow" aria-hidden="true">→</span></button>
+          <Link className="assistant-link" to={assistantPath('¿Cómo solicito la corrección de un dato académico incorrecto?')}><span className="assistant-icon" aria-hidden="true">💬</span><span><strong>¿Hay un dato académico incorrecto?</strong><small>Solicita una corrección en el asistente.</small></span><span className="assistant-arrow" aria-hidden="true">→</span></Link>
         </section>
         <section className="form-card">
           <label>¿Cómo prefieres que te llamemos? <input required value={profile.name} onChange={(e) => update('name', e.target.value)} placeholder="Ej. Vale, Val o V. Martinez" /><span className="field-help">Usaremos este nombre para dirigirnos a ti en tu seguimiento.</span></label>
