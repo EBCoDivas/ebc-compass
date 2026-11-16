@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EBC Compass · Propuesta visual</title>
+<link rel="icon" href="brand/v1/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,500;0,600;1,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0B1B2B;--ink-soft:#3D4A57;--teal:#0E7C86;--teal-dark:#0A5F67;--teal-soft:#E3F3F1;--gold:#F7AC14;--gold-soft:#FFF4D6;--sand:#F7F4EE;--line:#E3DDD0;--lime:#5E7F0B;--lime-soft:#EEF5D8;--white:#fff}
+*{box-sizing:border-box}body{margin:0;background:var(--sand);color:var(--ink);font:17px/1.55 Inter,system-ui,sans-serif}
+h1,h2,h3{font-family:'EB Garamond',Georgia,serif;font-weight:600;letter-spacing:.2px;margin:0}
+header.top{background:var(--ink);color:#fff;padding:14px clamp(16px,5vw,56px);display:flex;align-items:center;justify-content:space-between;gap:16px}
+header.top img{height:40px;background:#fff;border-radius:10px;padding:4px 10px}
+header.top nav{display:flex;gap:22px;font-size:15px}header.top nav a{color:#fff;text-decoration:none;opacity:.85}header.top nav a.on{opacity:1;box-shadow:0 2px 0 var(--gold);padding-bottom:4px}
+main{max-width:1180px;margin:0 auto;padding:36px clamp(16px,5vw,40px) 72px}
+h1{font-size:clamp(34px,5vw,52px)}h2{font-size:30px;margin:44px 0 6px}.lead{color:var(--ink-soft);max-width:70ch}
+.grid{display:grid;gap:16px}.sw{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+.chip{border-radius:14px;padding:14px;min-height:112px;display:flex;flex-direction:column;justify-content:flex-end;border:1px solid var(--line);font-size:14px}.chip b{font-size:15px}
+.logos{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}.logobox{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px;display:flex;align-items:center;justify-content:center;min-height:130px}.logobox.dark{background:var(--ink)}.logobox img{max-width:100%}
+.fav{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap}.fav figure{margin:0;text-align:center;font-size:12px;color:var(--ink-soft)}
+.layout{display:grid;grid-template-columns:260px 1fr;gap:0;background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 18px 40px #0b1b2b14;min-height:560px}
+.side{background:var(--teal-soft);padding:20px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:16px;font-size:14px}
+.persona{background:#fff;border:1px solid #bfe3df;border-radius:14px;padding:12px}.persona small{color:var(--ink-soft);display:block}.persona select{width:100%;margin-top:8px;padding:8px;border-radius:8px;border:1px solid #9fcfca;font:inherit;font-size:14px}
+.side h3{font-size:18px}.side ul{margin:0;padding-left:18px;color:var(--ink-soft)}
+.chat{display:flex;flex-direction:column}.log{flex:1;padding:24px clamp(16px,3vw,36px);display:flex;flex-direction:column;gap:18px}
+.msg{max-width:78%;padding:14px 18px;border-radius:18px}.me{align-self:flex-end;background:var(--ink);color:#fff;border-bottom-right-radius:6px}
+.bot{align-self:flex-start;background:var(--sand);border:1px solid var(--line);border-bottom-left-radius:6px}
+.bot p{margin:0 0 10px}.bot ul{margin:0 0 10px;padding-left:20px}.bot li{margin:4px 0}.bot strong{color:var(--teal-dark)}
+.src{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;margin-top:6px}.src span{background:#fff;border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+.cursor{display:inline-block;width:8px;height:1.1em;background:var(--teal);vertical-align:-2px;animation:b 1s steps(2) infinite}@keyframes b{50%{opacity:0}}
+.actions{display:flex;gap:8px;margin-top:6px}.actions button{background:none;border:1px solid var(--line);border-radius:8px;font-size:12px;padding:3px 10px;color:var(--ink-soft)}
+.composer{border-top:1px solid var(--line);padding:14px clamp(16px,3vw,36px);display:flex;gap:10px;align-items:flex-end}.composer div{flex:1;border:1.5px solid var(--teal);border-radius:14px;padding:12px 14px;color:#6b7785;min-height:52px}
+.btn{background:var(--teal);color:#fff;border:0;border-radius:12px;padding:14px 22px;font:600 15px Inter;min-height:48px}.btn.stop{background:var(--ink)}
+.cards{grid-template-columns:repeat(auto-fit,minmax(250px,1fr))}.card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;border-top:4px solid var(--teal)}
+.card.beca{border-top-color:var(--gold)}.card.evento{border-top-color:var(--lime)}.card h3{font-size:22px;margin:10px 0 6px}.card p{margin:0;color:var(--ink-soft);font-size:15px}
+.tag{display:inline-flex;gap:6px;align-items:center;font-size:12px;font-weight:600;border-radius:999px;padding:3px 10px}.t-curso{background:var(--teal-soft);color:var(--teal-dark)}.t-beca{background:var(--gold-soft);color:#8A5A00}.t-evento{background:var(--lime-soft);color:var(--lime)}
+.due{margin-top:12px;font-weight:600;color:var(--teal-dark);font-size:14px}
+.note{background:var(--gold-soft);border-left:4px solid var(--gold);padding:12px 16px;border-radius:8px;font-size:14px;color:#5c4300;max-width:80ch}
+@media(max-width:820px){.layout{grid-template-columns:1fr}.side{border-right:0;border-bottom:1px solid var(--line)}.msg{max-width:92%}}
+</style>
+</head>
+<body>
+<header class="top"><img src="brand/v1/ebc-compass-logo.svg" alt="EBC Compass"><nav aria-label="Principal"><a href="#">Inicio</a><a href="#">Oportunidades</a><a href="#">Calendario</a><a class="on" href="#">Conversar</a></nav></header>
+<main>
+<h1>EBC Compass · propuesta visual</h1>
+<p class="lead">Es una propuesta, no código de producción: sirve para decidir dirección antes de implementar. Mantiene el espíritu de EBC (serif editorial, azul-negro, acento dorado del propio sitio) pero deja de ser blanco y negro puro.</p>
+
+<h2>Paleta «Brújula»</h2>
+<p class="lead">Parte de los colores que EBC ya usa en su sitio (negro, azul #004A98, cian #0098D6, lima #9BC31B y dorado #F7AC14) y los reinterpreta: un teal que queda entre el cian y el lima, una tinta azul-negra en lugar de negro puro y arena cálida de fondo.</p>
+<div class="grid sw">
+<div class="chip" style="background:var(--ink);color:#fff"><b>Tinta</b>#0B1B2B<br>Texto, encabezado, botón secundario</div>
+<div class="chip" style="background:var(--teal);color:#fff"><b>Teal brújula</b>#0E7C86<br>Acción principal · 4.95:1 con blanco</div>
+<div class="chip" style="background:var(--gold);color:var(--ink)"><b>Oro norte</b>#F7AC14<br>Acento, becas, la «aguja»</div>
+<div class="chip" style="background:var(--sand)"><b>Arena</b>#F7F4EE<br>Fondo de página</div>
+<div class="chip" style="background:var(--teal-soft)"><b>Teal suave</b>#E3F3F1<br>Paneles, chips</div>
+<div class="chip" style="background:var(--lime-soft);color:var(--lime)"><b>Lima</b>#5E7F0B<br>Éxito y eventos · 4.65:1</div>
+</div>
+
+<h2>Logo y favicon</h2>
+<p class="lead">Una brújula (de ahí «Compass»): aguja dorada hacia el norte y teal hacia el sur. No imita el logotipo de EBC; convive con él en el encabezado como producto «de EBC». Conviene validarlo con el área de marca de EBC.</p>
+<div class="grid logos">
+<div class="logobox"><img src="brand/v1/ebc-compass-logo.svg" alt="Logo horizontal" height="64"></div>
+<div class="logobox dark"><img src="brand/v1/ebc-compass-mark.svg" alt="Marca" height="72"></div>
+<div class="logobox"><div class="fav"><figure><img src="brand/v1/favicon.svg" width="64" height="64" alt=""><br>64 px</figure><figure><img src="brand/v1/favicon.svg" width="32" height="32" alt=""><br>32 px</figure><figure><img src="brand/v1/favicon.svg" width="16" height="16" alt=""><br>16 px</figure></div></div>
+</div>
+
+<h2>Tipografía</h2>
+<p class="lead">Títulos en <b>EB Garamond</b> (la misma serif editorial del sitio de EBC) y texto en <b>Inter</b> (ya la usa la app): da carácter institucional sin perder legibilidad en pantalla.</p>
+<h3 style="font-size:40px">Tu guía académica y profesional</h3>
+<p>Becas, cursos, trámites y fechas importantes en un solo lugar, con una asistente que conoce tu carrera.</p>
+
+<h2>Chat: más grande, con contexto y Markdown renderizado</h2>
+<p class="lead">Ocupa casi toda la altura de la ventana, con panel lateral (quién eres, de qué puedes hablar), respuestas con formato, fuentes, copiar y botón «Detener» mientras llega el texto en streaming.</p>
+<div class="layout">
+<aside class="side">
+<div class="persona"><small>Viendo como (modo demo)</small><b>Valerie Martínez</b><small>Finanzas · 5.º semestre · CDMX Sur</small><select aria-label="Cambiar de persona"><option>Valerie · Finanzas</option><option>Diego · Mercadotecnia</option><option>Ana · Contaduría</option></select></div>
+<div><h3>Puedo ayudarte con</h3><ul><li>Becas y apoyos</li><li>Trámites escolares</li><li>FiT EBC y prácticas</li><li>Fechas importantes</li></ul></div>
+<div class="note" style="font-size:13px">Respuestas orientativas. Para decisiones oficiales consulta a tu campus.</div>
+</aside>
+<section class="chat">
+<div class="log">
+<div class="msg me">¿Qué becas puedo pedir y cuándo cierran?</div>
+<div class="msg bot"><p>Para <strong>Finanzas</strong> en 5.º semestre hay dos opciones vigentes:</p><ul><li><strong>Beca de Excelencia Académica</strong>: apoyo del 10 al 40 %. Cierra el <strong>15/12/2026</strong>.</li><li><strong>Beca al mérito académico</strong>: reconocimiento y descuento. Cierra el <strong>10/12/2026</strong>.</li></ul><p>¿Quieres que te diga qué documentos necesitas?</p><div class="src"><span>Beca de Excelencia Académica</span><span>Cómo solicitar una beca</span></div><div class="actions"><button>Copiar</button><button>👍</button><button>👎</button></div></div>
+<div class="msg me">Sí, ¿qué documentos pide la primera?</div>
+<div class="msg bot"><p>Necesitas tu <strong>historial académico</strong>, carta de motivación y comprobante de inscripción<span class="cursor" aria-hidden="true"></span></p></div>
+</div>
+<div class="composer"><div>Escribe tu pregunta… (Enter envía, Shift+Enter nueva línea)</div><button class="btn stop">■ Detener</button></div>
+</section>
+</div>
+
+<h2>Tarjetas por tipo (color + ícono + texto, nunca solo color)</h2>
+<div class="grid cards">
+<article class="card"><span class="tag t-curso">📘 Curso</span><h3>Mercados financieros</h3><p>Fortalece tus bases para analizar mercados e inversiones.</p><div class="due">Semestres 3 a 5</div></article>
+<article class="card beca"><span class="tag t-beca">🎓 Beca</span><h3>Beca de Excelencia Académica</h3><p>Apoyo del 10 al 40 % para quienes destacan por su desempeño.</p><div class="due">Cierra en 29 días · 15/12/2026</div></article>
+<article class="card evento"><span class="tag t-evento">📅 Evento</span><h3>FiT EBC · Feria de empleabilidad</h3><p>Conecta con empresas y conoce vacantes para estudiantes.</p><div class="due">Fecha: 15/01/2027 · Campus CDMX Sur</div></article>
+</div>
+<p class="note" style="margin-top:28px">Contraste verificado (WCAG): tinta/arena 15.9:1 · blanco/teal 4.95:1 · oro/tinta 9.0:1 · teal oscuro/blanco 7.4:1 · lima/blanco 4.65:1.</p>
+</main>
+</body>
+</html>
