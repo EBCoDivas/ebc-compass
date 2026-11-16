@@ -28,7 +28,7 @@ export default $config({
       ]);
 
     const { userPool, webClient } = createAuth();
-    const { api } = createApi($app.stage);
+    const { api } = createApi($app.stage, { userPool, webClient });
     const knowledge = createKnowledgeBase();
 
     return {

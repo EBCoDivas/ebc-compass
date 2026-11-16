@@ -1,4 +1,4 @@
-export function createApi(stage: string) {
+export function createApi(stage: string, auth: { userPool: { id: any }, webClient: { id: any } }) {
   const health = new sst.aws.Function("HealthFunction", {
     handler: "src/functions/health.handler",
     runtime: "nodejs22.x",
@@ -29,7 +29,14 @@ export function createApi(stage: string) {
     timeout: "5 seconds",
     logging: { format: "json", retention: "1 week" },
   });
-  api.route("GET /opportunities", opportunities.arn);
+  const authorizer = api.addAuthorizer({
+    name: "CognitoAuthorizer",
+    jwt: {
+      issuer: $interpolate`https://cognito-idp.us-east-1.amazonaws.com/${auth.userPool.id}`,
+      audiences: [auth.webClient.id],
+    },
+  });
+  api.route("GET /opportunities", opportunities.arn, { auth: { jwt: { authorizer: authorizer.id } } });
 
   return { api, health, opportunities };
 }
