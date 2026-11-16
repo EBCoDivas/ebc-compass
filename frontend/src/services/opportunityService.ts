@@ -12,6 +12,7 @@ export interface Opportunity {
 }
 
 export interface Recommendation { opportunity: Opportunity; relevanceScore: number; explanation: string }
+export interface Alert { id: string; opportunityId: string; title: string; deadline: string; daysRemaining: number; urgency: 'urgent' | 'soon' | 'future' }
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
@@ -27,5 +28,11 @@ export async function fetchRecommendations(profile: { career?: string; currentSe
   const response = await fetch(`${API_URL}/api/recommendations?${params}`)
   if (!response.ok) throw new Error('No fue posible cargar las recomendaciones.')
   return response.json() as Promise<Recommendation[]>
+}
+
+export async function fetchAlerts(): Promise<Alert[]> {
+  const response = await fetch(`${API_URL}/api/alerts`)
+  if (!response.ok) throw new Error('No fue posible cargar las alertas.')
+  return response.json() as Promise<Alert[]>
 }
 
