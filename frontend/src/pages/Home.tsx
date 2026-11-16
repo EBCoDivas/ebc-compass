@@ -4,7 +4,7 @@ import { simulatedAcademicData } from '../types/profile'
 import { loadProfile, profileCompleteness } from '../services/profileService'
 import { fetchOpportunities, type Opportunity } from '../services/opportunityService'
 
-const labels = { course: 'Curso', scholarship: 'Beca', event: 'Evento', procedure: 'Procedimiento' }
+const labels = { course: 'Curso', scholarship: 'Beca', 'professional-development': 'Desarrollo profesional', event: 'Evento', procedure: 'Procedimiento', 'career-opportunity': 'Oportunidad laboral' }
 
 function daysUntil(date: string) {
   return Math.ceil((new Date(`${date}T23:59:59`).getTime() - Date.now()) / 86400000)

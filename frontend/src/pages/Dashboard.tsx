@@ -4,7 +4,7 @@ import { loadProfile } from '../services/profileService'
 import { fetchOpportunities, type Opportunity } from '../services/opportunityService'
 import { useNavigate } from 'react-router-dom'
 
-const labels = { course: 'Curso', scholarship: 'Beca', event: 'Evento', procedure: 'Procedimiento' }
+const labels = { course: 'Curso', scholarship: 'Beca', 'professional-development': 'Desarrollo profesional', event: 'Evento', procedure: 'Procedimiento', 'career-opportunity': 'Oportunidad laboral' }
 
 export function Dashboard() {
   const profile = loadProfile()

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchOpportunities, type Opportunity } from '../services/opportunityService'
 
-const labels = { all: 'Todos', course: 'Cursos', scholarship: 'Becas', event: 'Eventos', procedure: 'Procedimientos' }
+const labels = { all: 'Todos', course: 'Cursos', scholarship: 'Becas', 'professional-development': 'Desarrollo profesional', event: 'Eventos', procedure: 'Procedimientos', 'career-opportunity': 'Oportunidades laborales' }
 
 export function Catalog() {
   const [items, setItems] = useState<Opportunity[]>([])

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { fetchOpportunities, type Opportunity } from '../services/opportunityService'
 
 const STORAGE_KEY = 'ebc_compass_saved_opportunities'
-const labels = { course: 'Curso', scholarship: 'Beca', event: 'Evento', procedure: 'Procedimiento' }
+const labels = { course: 'Curso', scholarship: 'Beca', 'professional-development': 'Desarrollo profesional', event: 'Evento', procedure: 'Procedimiento', 'career-opportunity': 'Oportunidad laboral' }
 
 export function Saved() {
   const [items, setItems] = useState<Opportunity[]>([])
