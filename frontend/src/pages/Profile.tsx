@@ -45,8 +45,8 @@ export function Profile() {
 
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
-    if (!profile.name.trim() || !profile.campus || !profile.career || !profile.currentSemester || profile.interests.length === 0 || profile.preferences.length === 0) {
-      setError('Completa tus datos académicos, al menos un interés y una preferencia para guardar tu perfil.')
+    if (!profile.name.trim() || !profile.campus || !profile.career || !profile.currentSemester) {
+      setError('Completa tu nombre y verifica tus datos académicos para guardar tu perfil.')
       return
     }
     const saved = { ...profile, id: profile.id || crypto.randomUUID(), updatedAt: new Date().toISOString() }
