@@ -28,6 +28,19 @@ npm run install:providers
 
 Los comandos `npm run dev`, `npm run deploy` y `npm run remove` están reservados para las actividades y autorizaciones de infraestructura correspondientes.
 
+## Comandos centralizados (demo local)
+
+Desde la raíz del repo hay un punto de entrada único para la demo local del asistente (emulador de AWS + puente a OpenAI):
+
+```sh
+npm run env:create   # crea los .env desde los .env.example; completa OPENAI_API_KEY en local/.env
+npm run setup        # instala dependencias, levanta el emulador y aprovisiona
+npm run dev          # levanta todo (npm run dev:rules: sin OpenAI)
+npm run doctor       # diagnóstico del entorno
+```
+
+Detalle y lista completa de comandos en [local/README.md](local/README.md). Para desplegar al lab de AWS (cuando esté disponible): `npm run lab:check` y `npm run lab:deploy -- --confirm`; guía en [docs/deploy-lab.md](docs/deploy-lab.md). Cada paquete (`frontend/`, `backend/`, `platform/`, `local/`) mantiene además sus propios scripts.
+
 ## Configuración local
 
 Copia `.env.example` como `.env` cuando necesites configurar variables locales. Nunca agregues credenciales reales, tokens, claves privadas ni archivos `.env` al repositorio.
