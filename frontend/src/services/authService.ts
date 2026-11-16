@@ -1,9 +1,11 @@
 import { AuthenticationDetails, CognitoUser, CognitoUserPool } from 'amazon-cognito-identity-js'
 
 const TOKEN_KEY = 'ebc_compass_id_token'
+export const authConfigured = Boolean(import.meta.env.VITE_COGNITO_USER_POOL_ID && import.meta.env.VITE_COGNITO_CLIENT_ID)
 function getPool() { return new CognitoUserPool({ UserPoolId: import.meta.env.VITE_COGNITO_USER_POOL_ID ?? '', ClientId: import.meta.env.VITE_COGNITO_CLIENT_ID ?? '' }) }
 
 export function signIn(username: string, password: string): Promise<string> {
+  if (!authConfigured) return Promise.reject(new Error('Cognito no está configurado para este entorno.'))
   return new Promise((resolve, reject) => {
     const pool = getPool()
     const user = new CognitoUser({ Username: username, Pool: pool })
