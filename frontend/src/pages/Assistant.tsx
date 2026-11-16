@@ -101,7 +101,14 @@ export function Assistant() {
   const lastStudentQuestion = [...entries].reverse().find((entry) => entry.role === 'student')?.content ?? ''
   const incomplete = !profile || profileCompleteness(profile) < 100
 
-  const topics = ['Becas y apoyos', 'Cursos y certificaciones', 'Trámites escolares', 'Eventos y networking', 'Fechas importantes']
+  // Cada tema prepara una pregunta en el campo de texto (no la envía).
+  const topics: [string, string][] = [
+    ['Becas y apoyos', '¿Qué becas puedo solicitar?'],
+    ['Cursos y certificaciones', '¿Qué cursos me recomiendas para mi carrera?'],
+    ['Trámites escolares', '¿Qué trámites tengo pendientes este periodo?'],
+    ['Eventos y networking', '¿Qué eventos hay en las próximas semanas?'],
+    ['Fechas importantes', '¿Cuáles son mis próximas fechas importantes?'],
+  ]
 
   return (
     <main className="assistant-page">
@@ -126,7 +133,7 @@ export function Assistant() {
           </div>
           <div className="side-section">
             <h2>Puedo ayudarte con</h2>
-            <ul className="side-topics">{topics.map((topic) => <li key={topic}>{topic}</li>)}</ul>
+            <ul className="side-topics">{topics.map(([topic, question]) => <li key={topic}><button type="button" onClick={() => pick(question)}>{topic}</button></li>)}</ul>
           </div>
           <p className="side-disclaimer">Respuestas orientativas: para decisiones oficiales consulta a Servicios Escolares.</p>
           {entries.length > 0 && (
@@ -138,7 +145,7 @@ export function Assistant() {
       </aside>
 
       <section className="chat-card" aria-labelledby="chat-title">
-        <h1 id="chat-title" className="chat-title">Asistente <em>Compass</em></h1>
+        <h1 id="chat-title" className="chat-title">Asistente</h1>
 
         {loading ? (
           <p className="chat-empty" role="status">

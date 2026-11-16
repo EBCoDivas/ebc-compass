@@ -36,7 +36,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <NavLink className="mobile-nav-link" to="/calendario"><NavIcon type="calendar" /><span>Calendario</span></NavLink>
         <NavLink className="mobile-nav-link" to="/asistente"><NavIcon type="chat" /><span>Conversar</span></NavLink>
       </nav>
-      <footer>Escuela Bancaria y Comercial · EBC Compass</footer>
+      <footer>EBC Compass, un proyecto para estudiantes de la Escuela Bancaria y Comercial. Información orientativa.</footer>
     </>
   )
 }

@@ -20,7 +20,7 @@
   --blue-soft: #E4EDF9;
   --navy-soft: #E3E8F2;
   --radius: 14px;
-  --shadow: 0 8px 24px #0b2f6b14;
+  --shadow: 0 1px 2px #0b2f6b0f;
   --font-display: Sora, Inter, system-ui, sans-serif;
   --font-serif: 'EB Garamond', Georgia, serif;
 
@@ -36,7 +36,7 @@
 body { background: var(--mist); color: var(--ink); margin: 0; min-width: 320px; }
 button, input, select, textarea { font: inherit; }
 h1, h2, h3 { font-family: var(--font-display); letter-spacing: -.01em; }
-h1 em, .brand-word em { color: var(--blue); font-family: var(--font-serif); font-style: italic; font-weight: 500; }
+.brand-word em { color: var(--blue); font-family: var(--font-serif); font-style: italic; font-weight: 500; }
 a { color: var(--blue); }
 :focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
 #contenido:focus { outline: none; }
@@ -61,7 +61,8 @@ nav { display: flex; gap: .35rem; }
 .page-heading { margin-bottom: 1.5rem; }
 .page-heading > p:last-child, .intro { color: var(--ink-soft); font-size: 1.05rem; margin: 0; }
 .eyebrow { color: var(--lime-ink); font-size: .75rem; font-weight: 800; letter-spacing: .12em; margin: 0; }
-.page h1 { color: var(--navy); font-size: clamp(1.8rem, 4.5vw, 2.8rem); line-height: 1.15; margin: .25rem 0 .5rem; }
+.page h1 { color: var(--navy); font-size: clamp(1.8rem, 4.5vw, 2.6rem); line-height: 1.15; margin: 0 0 .4rem; }
+.intro { max-width: 60ch; }
 
 /* Tarjetas */
 .welcome-card, .summary-card, .form-card, .completeness, .metric-card, .dashboard-section, .opportunity-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 1.4rem; }
@@ -125,14 +126,19 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue); }
 .badge.type-career-opportunity { background: var(--navy-soft); color: var(--navy); }
 
 /* Oportunidades */
-.opportunity-grid { display: grid; gap: 1rem; grid-auto-rows: 1fr; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.opportunity-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
 .opportunity-card { align-content: start; display: grid; gap: .45rem; padding: 1.1rem; transition: box-shadow .15s, transform .15s; }
-.opportunity-card:hover { box-shadow: 0 12px 28px #0b2f6b24; transform: translateY(-2px); }
+.opportunity-card-button:hover { border-color: var(--blue); }
+.card-top { align-items: center; display: flex; gap: .6rem; justify-content: space-between; }
+.card-date { color: var(--ink-soft); display: flex; flex-wrap: wrap; font-size: .85rem; gap: .2rem .6rem; justify-content: space-between; margin: .2rem 0 0; }
+.card-date strong { color: var(--lime-ink); }
+.card-date.soon strong { color: var(--gold-ink); }
+.card-date.urgent strong { color: var(--coral-ink); }
 .opportunity-card h2, .opportunity-card h3 { color: var(--navy); font-size: 1.05rem; margin: .25rem 0 0; }
 .opportunity-card p { color: var(--ink-soft); font-size: .95rem; line-height: 1.45; margin: 0; }
 .opportunity-card small { color: var(--ink-soft); display: block; }
 .opportunity-card-button { color: inherit; cursor: pointer; font: inherit; text-align: left; width: 100%; }
-.card-action { align-self: end; color: var(--blue); display: block; font-weight: 700; margin-top: .5rem; text-decoration: none; }
+.card-action { color: var(--blue); display: block; font-weight: 700; margin-top: .5rem; }
 .catalog-controls { display: grid; gap: .75rem; grid-template-columns: 2fr 1fr; margin-bottom: .9rem; }
 .chip-row { display: flex; flex-wrap: wrap; gap: .5rem; }
 .result-count { color: var(--ink-soft); font-size: .9rem; margin: .8rem 0 1rem; }
@@ -180,14 +186,57 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue); }
 .soon .days-left { color: var(--gold-ink); }
 .future .days-left { color: var(--lime-ink); }
 .action-group { display: flex; flex-wrap: wrap; gap: .5rem; }
-.calendar-list li { gap: 1rem; }
+.calendar-list li > div { flex: 1; }
 
 .calendar-week, .calendar-grid { display: grid; gap: .35rem; grid-template-columns: repeat(7, 1fr); }
 .calendar-week { color: var(--ink-soft); font-size: .75rem; font-weight: 800; text-align: center; }
 .calendar-grid { margin-top: .5rem; }
-.calendar-day, .calendar-empty { align-items: center; aspect-ratio: 1; border: 1px solid var(--line); border-radius: 8px; display: flex; justify-content: center; position: relative; }
-.calendar-day.has-deadline { background: var(--cyan-soft); border: 2px solid var(--cyan); color: var(--cyan-ink); font-weight: 800; }
-.calendar-day.has-deadline::after { background: var(--cyan); border-radius: 50%; bottom: 5px; content: ''; height: 5px; position: absolute; width: 5px; }
+.calendar-day, .calendar-empty { align-items: center; border-radius: 8px; display: flex; height: 2.6rem; justify-content: center; position: relative; }
+.calendar-day.today { background: var(--navy); color: #fff; font-weight: 800; }
+.calendar-layout { align-items: start; display: grid; gap: 1.25rem; grid-template-columns: minmax(17rem, 22rem) minmax(0, 1fr); }
+.calendar-layout .dashboard-section { margin-top: 0; }
+.calendar-month h2 { font-size: 1.15rem; }
+.calendar-month h2::first-letter { text-transform: uppercase; }
+@media (max-width: 860px) { .calendar-layout { grid-template-columns: 1fr; } }
+.calendar-day.has-deadline { background: var(--cyan-soft); color: var(--cyan-ink); font-weight: 800; }
+.calendar-day.has-deadline::after { background: var(--cyan); border-radius: 50%; bottom: 4px; content: ''; height: 5px; position: absolute; width: 5px; }
+
+/* El rumbo: la pieza memorable de Inicio. Una línea con el degradado de marca = el tiempo que avanza. */
+.profile-strip { align-items: center; background: var(--gold-soft); border-radius: 10px; display: flex; flex-wrap: wrap; gap: .75rem 1rem; justify-content: space-between; margin: 1.25rem 0 0; padding: .8rem 1rem; }
+.profile-strip p { color: var(--gold-ink); margin: 0; max-width: 60ch; }
+.rumbo { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; margin-top: 1.5rem; padding: 1.4rem 1.5rem 1.2rem; }
+.rumbo-head { align-items: baseline; display: flex; justify-content: space-between; }
+.rumbo h2 { color: var(--navy); font-size: 1.35rem; margin: 0; }
+.rumbo-empty p { color: var(--ink-soft); margin: .5rem 0 0; }
+.rumbo-track { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; list-style: none; margin: 1.6rem 0 1.2rem; padding: 0; position: relative; }
+.rumbo-track::before { background: var(--grad); border-radius: 3px; content: ''; height: 4px; left: 18px; position: absolute; right: 0; top: 16px; }
+.rumbo-today, .rumbo-stop { display: grid; gap: .2rem; justify-items: start; padding-right: .9rem; position: relative; }
+.rumbo-today { grid-template-rows: 36px auto; max-width: 5rem; }
+.rumbo-today img { position: relative; }
+.rumbo-today span { color: var(--navy); font-size: .8rem; font-weight: 800; }
+.rumbo-dot { background: var(--surface); border: 4px solid var(--lime); border-radius: 50%; height: 18px; margin: 9px 0 .5rem; position: relative; width: 18px; }
+.rumbo-stop.soon .rumbo-dot { border-color: var(--gold); }
+.rumbo-stop.urgent .rumbo-dot { border-color: var(--coral); }
+.rumbo-stop.next .rumbo-dot { background: var(--navy); border-color: var(--navy); box-shadow: 0 0 0 5px var(--blue-soft); }
+.rumbo-stop time { color: var(--ink-soft); font-size: .85rem; }
+.rumbo-stop time strong { color: var(--navy); font-family: var(--font-display); font-size: 1.5rem; line-height: 1; }
+.rumbo-title { font-weight: 650; line-height: 1.3; }
+.rumbo-meta { color: var(--ink-soft); font-size: .8rem; }
+.rumbo-stop.urgent .rumbo-meta { color: var(--coral-ink); font-weight: 700; }
+.rumbo-next { align-items: center; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: .75rem 1rem; justify-content: space-between; padding-top: 1rem; }
+.rumbo-next p { margin: 0; }
+.home-section { margin-top: 2rem; }
+.home-section h2 { color: var(--navy); font-size: 1.2rem; margin: 0 0 .9rem; }
+.home-section .section-heading h2 { margin: 0; }
+.home-section .section-heading { margin-bottom: .9rem; }
+.saved-list { list-style: none; margin: 0; padding: 0; }
+@media (max-width: 700px) {
+  .rumbo { padding: 1.1rem; }
+  .rumbo-track { grid-auto-flow: row; gap: 1rem; margin: 1.2rem 0 1rem; padding-left: 2.6rem; }
+  .rumbo-track::before { bottom: 0; height: auto; left: 16px; right: auto; top: 18px; width: 4px; }
+  .rumbo-today { grid-template-rows: auto; left: -2.6rem; max-width: none; align-items: center; display: flex; gap: .6rem; }
+  .rumbo-dot { left: -2.25rem; margin: 0; position: absolute; top: 2px; }
+}
 
 footer { color: var(--ink-soft); font-size: .85rem; padding: 1.5rem 1rem; text-align: center; }
 

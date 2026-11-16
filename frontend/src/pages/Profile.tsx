@@ -59,7 +59,6 @@ export function Profile() {
   return (
     <main className="page profile-page">
       <div className="page-heading">
-        <p className="eyebrow">PERSONALIZA TU EXPERIENCIA</p>
         <h1>Mi perfil</h1>
         <p>Cuéntanos sobre ti para recibir recomendaciones más relevantes.</p>
       </div>

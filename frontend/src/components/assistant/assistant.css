@@ -8,13 +8,14 @@
 .side-collapse > summary { color: var(--navy); cursor: pointer; font-family: var(--font-display); font-weight: 700; list-style: none; }
 .side-collapse > summary::-webkit-details-marker { display: none; }
 .side-section { margin-top: 1rem; }
-.side-section h2 { color: var(--ink-soft); font-family: Inter, sans-serif; font-size: .72rem; font-weight: 800; letter-spacing: .08em; margin: 0 0 .4rem; text-transform: uppercase; }
+.side-section h2 { color: var(--ink-soft); font-family: Inter, sans-serif; font-size: .85rem; font-weight: 600; margin: 0 0 .4rem; }
 .side-persona { display: grid; gap: .1rem; margin: 0; }
 .side-persona span { color: var(--ink-soft); font-size: .85rem; }
 .side-hint { background: var(--gold-soft); border-radius: 8px; color: var(--gold-ink); font-size: .82rem; margin: .6rem 0 0; padding: .55rem .7rem; }
 .side-hint a { color: var(--gold-ink); font-weight: 700; }
 .side-topics { display: flex; flex-wrap: wrap; gap: .4rem; list-style: none; margin: 0; padding: 0; }
-.side-topics li { background: var(--cyan-soft); border-radius: 14px; color: var(--cyan-ink); font-size: .8rem; font-weight: 600; padding: .25rem .6rem; }
+.side-topics button { background: var(--cyan-soft); border: 1px solid transparent; border-radius: 14px; color: var(--cyan-ink); cursor: pointer; font-size: .8rem; font-weight: 600; min-height: 2rem; padding: .25rem .65rem; }
+.side-topics button:hover { border-color: var(--cyan); }
 .side-disclaimer { color: var(--ink-soft); font-size: .78rem; margin: 1rem 0; }
 .assistant-side .button { font-size: .85rem; min-height: 2.75rem; width: 100%; }
 
@@ -22,7 +23,6 @@
 .chat-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); display: flex; flex-direction: column; height: calc(100dvh - 7.5rem); min-height: 480px; overflow: hidden; }
 .chat-title { border-bottom: 1px solid var(--line); color: var(--navy); font-size: 1.05rem; margin: 0; padding: .8rem 1.25rem; position: relative; }
 .chat-title::after { background: var(--grad); bottom: -1px; content: ''; height: 2px; left: 0; position: absolute; width: 64px; }
-.chat-title em { color: var(--blue); font-family: var(--font-serif); font-size: 1.25rem; }
 
 .chat-log { display: flex; flex: 1; flex-direction: column; gap: 1rem; overflow-y: auto; padding: 1.25rem; position: relative; }
 .chat-empty { align-content: center; color: var(--ink-soft); display: grid; flex: 1; gap: .6rem; justify-items: center; padding: 1.5rem; text-align: center; }
@@ -75,12 +75,12 @@
 
 /* Sugerencias como tarjetas */
 .chat-suggestions { margin-top: .8rem; width: 100%; }
-.chat-suggestions-title { color: var(--ink-soft); font-size: .85rem; margin: 0 0 .5rem; }
+.chat-empty .chat-suggestions-title { color: var(--ink-soft); font-size: .85rem; margin: 0 auto .5rem; text-align: center; }
 .chat-suggestions ul { display: grid; gap: .6rem; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); list-style: none; margin: 0 auto; max-width: 760px; padding: 0; }
 .chat-suggestions button { background: #fff; border: 1px solid var(--line); border-left: 4px solid var(--cyan); border-radius: 10px; color: var(--ink); cursor: pointer; height: 100%; min-height: 3.5rem; padding: .7rem .9rem; text-align: left; width: 100%; }
 .chat-suggestions li:nth-child(3n+2) button { border-left-color: var(--lime); }
 .chat-suggestions li:nth-child(3n) button { border-left-color: var(--gold); }
-.chat-suggestions button:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.chat-suggestions button:hover { border-color: var(--blue); }
 
 .chat-dots::after { animation: chat-dots 1.2s steps(4, end) infinite; content: ''; }
 @keyframes chat-dots { 0% { content: ''; } 25% { content: '.'; } 50% { content: '..'; } 75%, 100% { content: '...'; } }
