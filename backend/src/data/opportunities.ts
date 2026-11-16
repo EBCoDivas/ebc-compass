@@ -31,4 +31,5 @@ export const opportunities: Opportunity[] = [
   { id: 'procedure-transcript', type: 'procedure', title: 'Solicitud de constancia', description: 'Solicita una constancia de estudios para tus trámites.', career: ['banking', 'finance', 'marketing', 'business-administration'] },
   { id: 'career-internship', type: 'career-opportunity', title: 'Prácticas profesionales en banca', description: 'Programa de prácticas para estudiantes de últimos semestres.', career: ['banking', 'finance'], semester: [7, 8, 9, 10], deadline: '2027-01-30' },
   { id: 'career-marketing', type: 'career-opportunity', title: 'Becario de marketing digital', description: 'Vacante de medio tiempo para apoyar campañas digitales.', career: ['marketing'], semester: [5, 6, 7, 8, 9, 10], deadline: '2026-12-22' },
+  { id: 'career-finance', type: 'career-opportunity', title: 'Analista financiero junior', description: 'Oportunidad inicial para estudiantes de finanzas.', career: ['finance', 'business-administration'], semester: [7, 8, 9, 10], deadline: '2027-02-05' },
 ]
