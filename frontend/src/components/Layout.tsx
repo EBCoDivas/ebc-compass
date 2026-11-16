@@ -9,7 +9,6 @@ export function Layout({ children }: { children: ReactNode }) {
         <nav aria-label="Navegación principal">
           <NavLink className="nav-link" to="/">Inicio</NavLink>
           <NavLink className="nav-link" to="/catalogo">Oportunidades</NavLink>
-          <NavLink className="nav-link" to="/guardadas">Guardadas</NavLink>
         </nav>
       </header>
       {children}
