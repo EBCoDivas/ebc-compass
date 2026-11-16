@@ -11,6 +11,9 @@ export function loadProfile(): StudentProfile | null {
     return {
       ...emptyProfile,
       ...parsed,
+      campus: parsed.campus || 'CMS',
+      career: parsed.career || 'banking',
+      currentSemester: parsed.currentSemester || 2,
       interests: Array.isArray(parsed.interests) ? parsed.interests : [],
       preferences: Array.isArray(parsed.preferences) ? parsed.preferences : [],
     }
@@ -24,6 +27,6 @@ export function saveProfile(profile: StudentProfile): void {
 }
 
 export function profileCompleteness(profile: StudentProfile): number {
-  const required = [profile.name.trim(), profile.interests?.length, profile.preferences?.length]
+  const required = [profile.name.trim(), profile.campus, profile.career, profile.currentSemester]
   return Math.round((required.filter(Boolean).length / required.length) * 100)
 }
