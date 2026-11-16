@@ -1,0 +1,32 @@
+{
+  "name": "ebc-compass-local",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Entorno local: AWS Emulator, puente Bedrock a OpenAI y aprovisionamiento. Independiente de platform/ (SST).",
+  "scripts": {
+    "up": "docker compose up -d",
+    "down": "docker compose down",
+    "provision": "node ../scripts/with-emulator-env.mjs tsx scripts/provision.ts",
+    "bridge": "tsx --env-file=.env bedrock-bridge/server.ts",
+    "spike": "bash scripts/spike-emulator.sh",
+    "typecheck": "tsc --noEmit",
+    "kb:upload": "tsx --env-file=.env kb/cli.ts upload",
+    "kb:status": "tsx --env-file=.env kb/cli.ts status",
+    "kb:query": "tsx --env-file=.env kb/cli.ts query",
+    "kb:verify": "tsx --env-file=.env kb/cli.ts verify",
+    "kb:export": "tsx --env-file=.env kb/cli.ts export",
+    "kb:sync-s3": "node ../scripts/with-emulator-env.mjs tsx --env-file=.env kb/cli.ts sync-s3",
+    "kb:reset": "tsx --env-file=.env kb/cli.ts reset"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1170.0",
+    "@aws-sdk/client-s3": "^3.1170.0",
+    "openai": "latest"
+  },
+  "devDependencies": {
+    "@types/node": "^24.7.2",
+    "tsx": "^4.20.6",
+    "typescript": "~5.9.3"
+  }
+}
