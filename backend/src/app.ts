@@ -2,6 +2,7 @@ import cors from 'cors'
 import express from 'express'
 import { profileRoutes } from './routes/profileRoutes.js'
 import { opportunityRoutes } from './routes/opportunityRoutes.js'
+import { recommendationRoutes } from './routes/recommendationRoutes.js'
 
 export const app = express()
 
@@ -14,3 +15,4 @@ app.get('/api/health', (_request, response) => {
 
 app.use('/api/profiles', profileRoutes)
 app.use('/api/opportunities', opportunityRoutes)
+app.use('/api/recommendations', recommendationRoutes)

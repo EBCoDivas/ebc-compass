@@ -13,6 +13,8 @@ export interface StudentProfile {
   completedCourses: string[]
   interests: string[]
   goals: string
+  gpa?: number
+  availability?: string
 }
 
 export type CreateStudentProfile = Omit<StudentProfile, 'id'>

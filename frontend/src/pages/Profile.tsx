@@ -95,6 +95,11 @@ export function Profile() {
           <p className="field-help">Puedes elegir varias opciones para personalizar tus recomendaciones.</p>
           <div className="choice-list">{preferenceOptions.map((option) => <button type="button" className={`choice ${profile.preferences.includes(option) ? 'selected' : ''}`} key={option} onClick={() => update('preferences', profile.preferences.includes(option) ? profile.preferences.filter((item) => item !== option) : [...profile.preferences, option])}>{option}</button>)}</div>
         </section>
+        <section className="form-card">
+          <h2>Información para recomendaciones</h2>
+          <label>Materias completadas <input value={profile.completedCourses.join(', ')} onChange={(e) => update('completedCourses', e.target.value.split(',').map((item) => item.trim()).filter(Boolean))} placeholder="Ej. Contabilidad, Matemáticas" /><span className="field-help">Sepáralas con comas.</span></label>
+          <label>Metas profesionales <textarea rows={3} value={profile.goals} onChange={(e) => update('goals', e.target.value)} placeholder="Ej. Trabajar en banca digital" /></label>
+        </section>
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="button primary" type="submit">Guardar perfil</button>
       </form>

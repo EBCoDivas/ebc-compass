@@ -21,6 +21,10 @@ export interface StudentProfile {
   interests: string[]
   preferences: string[]
   updatedAt: string
+  completedCourses: string[]
+  goals: string
+  gpa?: number
+  availability?: string
 }
 
 export const emptyProfile: StudentProfile = {
@@ -32,6 +36,8 @@ export const emptyProfile: StudentProfile = {
   interests: [],
   preferences: [],
   updatedAt: '',
+  completedCourses: [],
+  goals: '',
 }
 
 export const simulatedAcademicData = {

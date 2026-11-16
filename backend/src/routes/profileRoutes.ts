@@ -26,6 +26,8 @@ profileRoutes.post('/', (request, response) => {
     completedCourses: profile.completedCourses ?? [],
     interests: profile.interests ?? [],
     goals: profile.goals ?? '',
+    gpa: profile.gpa,
+    availability: profile.availability,
   }
 
   profiles.push(newProfile)

@@ -11,6 +11,8 @@ export interface Opportunity {
   location?: string
 }
 
+export interface Recommendation { opportunity: Opportunity; relevanceScore: number; explanation: string }
+
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 
 export async function fetchOpportunities(params: { type?: string; career?: string; semester?: number; search?: string } = {}): Promise<Opportunity[]> {
@@ -18,5 +20,12 @@ export async function fetchOpportunities(params: { type?: string; career?: strin
   const response = await fetch(`${API_URL}/api/opportunities?${query}`)
   if (!response.ok) throw new Error('No fue posible cargar las oportunidades.')
   return response.json() as Promise<Opportunity[]>
+}
+
+export async function fetchRecommendations(profile: { career?: string; currentSemester?: number | 'na' | ''; interests?: string[] }): Promise<Recommendation[]> {
+  const params = new URLSearchParams({ career: profile.career ?? '', semester: String(profile.currentSemester ?? ''), interests: (profile.interests ?? []).join(',') })
+  const response = await fetch(`${API_URL}/api/recommendations?${params}`)
+  if (!response.ok) throw new Error('No fue posible cargar las recomendaciones.')
+  return response.json() as Promise<Recommendation[]>
 }
 
