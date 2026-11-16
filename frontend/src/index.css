@@ -1,5 +1,6 @@
 :root {
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 18px;
   color: #1f2937;
   background: #f8fafc;
   font-synthesis: none;
@@ -10,4 +11,14 @@
 
 body { margin: 0; min-width: 320px; }
 
-main { padding: 2rem; }
+body { background: #f5f7fb; color: #172033; }
+button, input, select { font: inherit; }
+.site-header { align-items: center; background: #102a43; color: white; display: flex; justify-content: space-between; padding: 1rem clamp(1rem, 5vw, 4rem); }
+.brand { color: white; font-size: 1.2rem; font-weight: 800; text-decoration: none; }.brand span { color: #8ed1c5; font-weight: 500; }
+nav { display: flex; gap: 1rem; }.nav-link { color: #d9e5ee; text-decoration: none; }.nav-link.active { color: white; font-weight: 700; }
+.page { margin: 0 auto; max-width: 860px; padding: clamp(2rem, 6vw, 4rem) 1rem; }.page-heading { margin-bottom: 1.5rem; }.eyebrow { color: #13795b; font-size: .75rem; font-weight: 800; letter-spacing: .12em; }.page h1 { font-size: clamp(2rem, 5vw, 3.25rem); margin: .25rem 0 .5rem; }.intro, .page-heading > p:last-child { color: #526274; font-size: 1.1rem; }
+.welcome-card, .summary-card, .form-card, .completeness { background: white; border: 1px solid #dfe7ef; border-radius: 14px; box-shadow: 0 8px 24px #102a4310; padding: 1.5rem; }.welcome-card, .summary-card { margin-top: 2rem; }.summary-card { align-items: center; display: flex; justify-content: space-between; gap: 1rem; }.summary-card h2 { margin: .35rem 0; }.summary-card p { color: #526274; }.summary-label, .field-help { color: #526274; font-size: .9rem; }.completeness { margin-bottom: 1rem; }.completeness-row { display: flex; justify-content: space-between; }.progress-track { background: #e5edf2; border-radius: 10px; height: 9px; margin: .75rem 0 .5rem; overflow: hidden; }.progress-value { background: #17805d; border-radius: inherit; height: 100%; transition: width .2s; }.completeness small { color: #7a4f00; }
+.profile-form { display: grid; gap: 1rem; }.form-card { display: grid; gap: 1rem; }.form-card h2 { font-size: 1.25rem; margin: 0; }.form-card label { display: grid; gap: .4rem; font-weight: 650; }.form-grid { display: grid; gap: 1rem; grid-template-columns: 1fr 1fr; }input, select { background: #fff; border: 1px solid #b8c7d3; border-radius: 8px; color: #172033; padding: .8rem .9rem; width: 100%; }.interest-entry { display: flex; gap: .5rem; }.interest-entry input { flex: 1; }.tags, .choice-list, .suggestions { display: flex; flex-wrap: wrap; gap: .5rem; }.choice, .suggestions button { background: #f5f8fa; border: 1px solid #b8c7d3; border-radius: 22px; color: #172033; cursor: pointer; padding: .55rem .8rem; }.choice.selected { background: #d9f1e9; border-color: #13795b; color: #105c47; font-weight: 700; }.suggestions { align-items: center; color: #526274; font-size: .9rem; }.suggestions button { background: white; padding: .35rem .6rem; }.tag { background: #e2f3ee; border-radius: 20px; color: #135c49; padding: .35rem .65rem; }.tag button { background: none; border: 0; color: inherit; cursor: pointer; margin-left: .3rem; }.button { border: 0; border-radius: 8px; cursor: pointer; display: inline-block; font-weight: 700; padding: .8rem 1rem; text-align: center; text-decoration: none; }.primary { background: #13795b; color: white; }.secondary { background: #e8eef3; color: #172033; }.form-error { color: #a12a2a; font-weight: 650; margin: 0; }footer { color: #526274; font-size: .85rem; padding: 1rem; text-align: center; }
+@media (max-width: 600px) { .site-header { align-items: flex-start; flex-direction: column; gap: .75rem; } .form-grid { grid-template-columns: 1fr; } .summary-card { align-items: stretch; flex-direction: column; } }
+.academic-summary { display: grid; gap: .75rem; grid-template-columns: repeat(2, 1fr); }.academic-summary div { background: #f5f8fa; border: 1px solid #dfe7ef; border-radius: 10px; display: grid; gap: .25rem; padding: .85rem 1rem; }.academic-summary span { color: #526274; font-size: .85rem; }.assistant-link { align-items: center; background: transparent; border: 0; color: #13795b; cursor: pointer; display: flex; font: inherit; gap: .45rem; padding: 0; text-align: left; text-decoration: underline; }.assistant-icon { font-size: 1.25rem; text-decoration: none; }
+@media (max-width: 600px) { .academic-summary { grid-template-columns: 1fr; } }
