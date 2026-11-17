@@ -4,6 +4,7 @@
 export function createBackend(input: {
   stage: string;
   streaming?: boolean;
+  inputGuardrail: { id: any; arn: any; version: any };
   table: { name: any };
   profilesTable: { name: any; arn: any };
   historyTable: { name: any; arn: any };
@@ -33,10 +34,17 @@ export function createBackend(input: {
     environment: {
       APP_STAGE: input.stage,
       ASSISTANT_MODE: "llm",
-      ASSISTANT_LLM_TIMEOUT_MS: input.streaming ? "60000" : "22000",
+      // Reserva cinco segundos para la evaluación de entrada dentro del presupuesto buffered.
+      ASSISTANT_LLM_TIMEOUT_MS: input.streaming ? "60000" : "17000",
       ASSISTANT_PROMPT_CACHE: promptCacheMode,
       ASSISTANT_PROMPTS_DIR: "/var/task/prompts",
       BEDROCK_MODEL_ID: modelId,
+      BEDROCK_LUNNA_MODEL_ID: process.env.BEDROCK_LUNNA_MODEL_ID ?? modelId,
+      BEDROCK_TERRA_MODEL_ID: process.env.BEDROCK_TERRA_MODEL_ID ?? "",
+      ASSISTANT_LUNNA_PROMPT_CACHE: process.env.ASSISTANT_LUNNA_PROMPT_CACHE ?? promptCacheMode,
+      ASSISTANT_TERRA_PROMPT_CACHE: process.env.ASSISTANT_TERRA_PROMPT_CACHE ?? promptCacheMode,
+      BEDROCK_INPUT_GUARDRAIL_ID: input.inputGuardrail.id,
+      BEDROCK_INPUT_GUARDRAIL_VERSION: input.inputGuardrail.version,
       KNOWLEDGE_BASE_ID: input.knowledgeBaseId,
       CONVERSATIONS_TABLE: input.table.name,
       CONVERSATION_HISTORY_TABLE: input.historyTable.name,
@@ -45,6 +53,7 @@ export function createBackend(input: {
       KNOWLEDGE_DIR: "/var/task/knowledge",
     },
     permissions: [
+      { actions: ["bedrock:ApplyGuardrail"], resources: [input.inputGuardrail.arn] },
       { actions: ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:Query", "dynamodb:BatchWriteItem"], resources: [input.historyTable.arn] },
       { actions: ["dynamodb:GetItem", "dynamodb:PutItem"], resources: [input.profilesTable.arn] },
       // Converse usa la acción bedrock:InvokeModel. Con perfiles de inferencia entre regiones el recurso cambia por modelo.

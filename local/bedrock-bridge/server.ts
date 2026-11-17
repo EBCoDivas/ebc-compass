@@ -118,6 +118,7 @@ function vectorStoreId(): string | undefined {
 
 async function converse(modelId: string, body: ConverseRequest) {
   const client = requireOpenAI()
+  const model = modelId === 'local-terra' ? process.env.OPENAI_TERRA_MODEL ?? 'gpt-6.1-terra' : process.env.OPENAI_LUNNA_MODEL ?? process.env.OPENAI_MODEL ?? 'gpt-6-luna'
   const prompt = openAiPrompt(body, model)
   if (!prompt.messages.some(message => message.role === 'user')) throw new HttpError(400, 'ValidationException', 'La conversación no tiene mensajes con texto.')
 
@@ -143,8 +144,9 @@ async function converse(modelId: string, body: ConverseRequest) {
   }
 }
 
-async function converseStream(body: ConverseRequest, response: ServerResponse) {
+async function converseStream(modelId: string, body: ConverseRequest, response: ServerResponse) {
   const client = requireOpenAI()
+  const model = modelId === 'local-terra' ? process.env.OPENAI_TERRA_MODEL ?? 'gpt-6.1-terra' : process.env.OPENAI_LUNNA_MODEL ?? process.env.OPENAI_MODEL ?? 'gpt-6-luna'
   const prompt = openAiPrompt(body, model)
   if (!prompt.messages.some(message => message.role === 'user')) throw new HttpError(400, 'ValidationException', 'Falta un mensaje de usuario.')
   const abort = new AbortController()
@@ -236,6 +238,10 @@ async function health(deep: boolean) {
   const base = {
     status: 'ok',
     service: 'ebc-compass-bedrock-bridge',
+    models: {
+      lunna: process.env.OPENAI_LUNNA_MODEL ?? process.env.OPENAI_MODEL ?? 'gpt-6-luna',
+      terra: process.env.OPENAI_TERRA_MODEL ?? 'gpt-6.1-terra',
+    },
     model,
     reasoningEffort,
     apiKeyConfigured: Boolean(apiKey),
@@ -269,7 +275,7 @@ const server = createServer(async (request, response) => {
     if (request.method === 'GET' && url.pathname === '/health') {
       send(response, 200, await health(url.searchParams.get('deep') === '1'))
     } else if (request.method === 'POST' && streamMatch) {
-      await converseStream(await readJson<ConverseRequest>(request), response)
+      await converseStream(decodeURIComponent(streamMatch[1]), await readJson<ConverseRequest>(request), response)
     } else if (request.method === 'POST' && converseMatch) {
       send(response, 200, await converse(decodeURIComponent(converseMatch[1]), await readJson<ConverseRequest>(request)))
     } else if (request.method === 'POST' && retrieveMatch) {

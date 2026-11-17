@@ -50,3 +50,13 @@ describe('valoración de respuestas', () => {
     expect(html).toContain('tu valoración quedó guardada')
   })
 })
+
+
+describe('solicitudes bloqueadas', () => {
+  it('muestra la orientación segura sin acciones de valoración ni reintento de generación', () => {
+    const html = render({ id: 'blocked', role: 'assistant', content: 'No puedo revelar información interna.', inputBlock: { category: 'prompt-injection', source: 'local' } })
+    expect(html).toContain('No puedo revelar información interna.')
+    expect(html).not.toContain('Respuesta útil')
+    expect(html).not.toContain('Reintentar')
+  })
+})

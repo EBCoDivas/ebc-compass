@@ -6,6 +6,7 @@ import type { PromptCacheMode } from '../assistant/types.js'
 export interface AssistantConfig {
   /** llm = el modelo redacta; rules = solo plantillas. */
   mode: 'llm' | 'rules'
+  inputGuardrail?: { id: string; version: string }
   llmTimeoutMs: number
   promptCacheMode: PromptCacheMode
   bedrockModelId: string
@@ -25,7 +26,11 @@ export function loadAssistantConfig(env: NodeJS.ProcessEnv = process.env): Assis
   const here = dirname(fileURLToPath(import.meta.url))
   const promptCacheMode = env.ASSISTANT_PROMPT_CACHE ?? 'system'
   if (!['off', 'system', 'system-history'].includes(promptCacheMode)) throw new Error('ASSISTANT_PROMPT_CACHE debe ser off, system o system-history.')
+  const guardrailId = env.BEDROCK_INPUT_GUARDRAIL_ID?.trim()
+  const guardrailVersion = env.BEDROCK_INPUT_GUARDRAIL_VERSION?.trim()
+  if (Boolean(guardrailId) !== Boolean(guardrailVersion)) throw new Error('Configura BEDROCK_INPUT_GUARDRAIL_ID y BEDROCK_INPUT_GUARDRAIL_VERSION juntos.')
   return {
+    inputGuardrail: guardrailId && guardrailVersion ? { id: guardrailId, version: guardrailVersion } : undefined,
     mode: env.ASSISTANT_MODE === 'rules' ? 'rules' : 'llm',
     llmTimeoutMs: Number(env.ASSISTANT_LLM_TIMEOUT_MS ?? 45_000),
     promptCacheMode: promptCacheMode as PromptCacheMode,

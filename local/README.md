@@ -6,7 +6,9 @@ Demo local del asistente: **AWS Emulator** (DynamoDB, S3…) + un **puente** que
 
 ## Requisitos
 
-- macOS con Node 22, npm y **Docker Desktop encendido**.
+- Node 22 y npm. **El setup no instala ni cambia Node**: si tu versión es otra, solo muestra una alerta y tú lo configuras a tu manera (nvm, fnm, volta o el instalador oficial).
+- **Docker Desktop encendido** (macOS, Windows o Linux). Si falta, `npm run setup` lo detecta y te ofrece instalarlo con Homebrew (macOS) o winget (Windows), **siempre pidiendo confirmación**. En Linux solo muestra las instrucciones.
+- AWS CLI (opcional, solo para depurar). El setup también ofrece instalarlo.
 - Una clave de la API de OpenAI (solo para el modo con LLM).
 
 ## Primer arranque
@@ -25,7 +27,7 @@ Sin clave de OpenAI: `npm run dev:rules` (el asistente responde solo con reglas 
 | Comando | Qué hace |
 |---|---|
 | `npm run env:create` | Crea los `.env` que falten (nunca sobrescribe) y lista qué debes llenar |
-| `npm run setup` | Verifica prerrequisitos, instala dependencias (`--skip-platform` omite SST), levanta el emulador y aprovisiona |
+| `npm run setup` | Verifica prerrequisitos (ofrece instalar Docker y el AWS CLI si faltan; Node solo alerta), instala dependencias (`--skip-platform` omite SST), levanta el emulador y aprovisiona |
 | `npm run dev` / `dev:rules` | Levanta todo, con o sin LLM. Ctrl+C detiene backend, frontend y puente |
 | `npm run stop` | Detiene el emulador (**borra sus datos: viven en memoria**) |
 | `npm run doctor` | Diagnóstico ✔/✖ con la acción correctiva |
@@ -64,7 +66,8 @@ Backend ─ AWS_ENDPOINT_URL ─────────────────
 
 | Síntoma | Solución |
 |---|---|
-| `Docker no responde` | Abre Docker Desktop y espera a que arranque |
+| `Docker no está instalado` | `npm run setup` ofrece instalarlo; o instala Docker Desktop a mano |
+| `Docker está instalado pero no responde` | Abre Docker Desktop y espera a que arranque (en macOS el setup puede abrirlo por ti) |
 | `OPENAI_API_KEY vacía` | Edita `local/.env`, o usa `npm run dev:rules` |
 | `El emulador no está en marcha` | `npm run emulator:up` |
 | Perdí las conversaciones | Se reinició el emulador (datos en memoria); es esperado |

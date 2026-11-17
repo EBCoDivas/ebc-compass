@@ -162,8 +162,8 @@ function missingLine(facts: FactSheet): string | undefined {
 export function suggestionsFor(intent: Intent, language: Language): string[] {
   const es = language === 'es'
   const general = es
-    ? ['¿Qué becas hay disponibles?', '¿Cuáles son las próximas fechas importantes?', '¿Cómo me reinscribo?']
-    : ['Which scholarships are available?', 'What are the upcoming important dates?', 'How do I re-enroll?']
+    ? ['¿Qué becas hay disponibles?', '¿Cuáles son las próximas fechas importantes?', '¿Qué oportunidades me recomiendas según mi perfil?']
+    : ['Which scholarships are available?', 'What are the upcoming important dates?', 'Which opportunities do you recommend for my profile?']
   const byIntent: Partial<Record<Intent, string[]>> = {
     'scholarship-info': es
       ? ['¿Cuál es la fecha límite de la beca?', '¿Cómo solicito una beca?', '¿Qué me recomiendas?']
@@ -184,8 +184,8 @@ export function suggestionsFor(intent: Intent, language: Language): string[] {
       ? ['¿Qué becas hay disponibles?', '¿Qué eventos hay próximamente?', '¿Cuáles son las próximas fechas importantes?']
       : ['Which scholarships are available?', 'Which events are coming up?', 'What are the upcoming important dates?'],
     'deadline-query': es
-      ? ['¿Qué becas hay disponibles?', '¿Cómo me reinscribo?', '¿Qué me recomiendas?']
-      : ['Which scholarships are available?', 'How do I re-enroll?', 'What do you recommend for me?'],
+      ? ['¿Qué becas hay disponibles?', '¿Qué oportunidades me recomiendas según mi perfil?', '¿Qué me recomiendas?']
+      : ['Which scholarships are available?', 'Which opportunities do you recommend for my profile?', 'What do you recommend for me?'],
   }
   return byIntent[intent] ?? general
 }

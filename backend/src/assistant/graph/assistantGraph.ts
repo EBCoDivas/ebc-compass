@@ -1,5 +1,5 @@
 // Grafo de LangGraph del asistente. Es determinista (no un agente que elige herramientas):
-//   validate -> detectLanguage -> analyze -> gatherFacts -> [retrieve] -> composeTemplate -> [generate -> guardrail] -> finalize
+//   validate -> detectLanguage -> checkInput -> analyze -> gatherFacts -> [retrieve] -> composeTemplate -> [generate -> guardrail] -> finalize
 // `retrieve` solo corre si hay un KnowledgeRetriever; `generate` y `guardrail` solo si hay un LlmProvider (modo llm).
 // composeTemplate calcula los resultados por reglas; ante un fallo solo se ofrecen bajo una acción explícita.
 // Cada nodo es un envoltorio fino de funciones puras de domain/. El estado se guarda por conversación
@@ -8,6 +8,7 @@
 import { randomUUID } from 'node:crypto'
 import { Annotation, END, START, StateGraph, getWriter, type LangGraphRunnableConfig } from '@langchain/langgraph'
 import type { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint'
+import { assessInput, inputBlockMessage } from '../domain/inputGuardrail.js'
 import { extractEntities } from '../domain/entities.js'
 import { buildFactSheet, type FactDeps } from '../domain/facts.js'
 import { validateGeneration } from '../domain/guardrail.js'
@@ -20,6 +21,8 @@ import { normalize } from '../domain/text.js'
 import { beginTurn, persistTurn, registerConversations, releaseTurn } from '../conversations/lifecycle.js'
 import type { ConversationRepository, MemoryFact, Turn } from '../conversations/repository.js'
 import type {
+  InputBlock,
+  InputGuardrail,
   AssistantProfile,
   AssistantFailure,
   AssistantReply,
@@ -42,8 +45,10 @@ const MAX_HISTORY = 20
 const TOPIC_INTENTS: Intent[] = ['scholarship-info', 'course-info', 'procedure-info', 'event-info', 'career-info', 'recommendation-request', 'deadline-query']
 
 export interface AssistantDeps extends FactDeps {
+  inputGuardrail?: InputGuardrail
   retriever?: KnowledgeRetriever
   /** Si se omite, el asistente responde solo con plantillas (modo rules). */
+  models?: Partial<Record<'lunna' | 'terra', LlmProvider>>
   llm?: LlmProvider
   llmTimeoutMs?: number
   systemPromptsDir?: string
@@ -80,6 +85,8 @@ const State = Annotation.Root({
   lastIntent: Annotation<Intent | undefined>({ reducer: replace<Intent | undefined>(), default: () => undefined }),
   conversationLanguage: Annotation<Language>({ reducer: replace<Language>(), default: () => 'es' }),
   // --- Del turno actual (validate los reinicia en cada turno) ---
+  inputBlock: Annotation<InputBlock | undefined>({ reducer: replace<InputBlock | undefined>(), default: () => undefined }),
+  model: Annotation<'lunna' | 'terra'>({ reducer: replace<'lunna' | 'terra'>(), default: () => 'lunna' }),
   userMessage: Annotation<string>({ reducer: replace<string>(), default: () => '' }),
   profile: Annotation<AssistantProfile | undefined>({ reducer: replace<AssistantProfile | undefined>(), default: () => undefined }),
   requestedLanguage: Annotation<Language | undefined>({ reducer: replace<Language | undefined>(), default: () => undefined }),
@@ -121,6 +128,7 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
       if (message.length > MAX_MESSAGE_LENGTH) throw new InvalidInputError(`El mensaje excede ${MAX_MESSAGE_LENGTH} caracteres.`)
       return {
         userMessage: message,
+        inputBlock: undefined,
         classification: undefined,
         entities: undefined,
         facts: undefined,
@@ -137,6 +145,17 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
     .addNode('detectLanguage', (state: AssistantState) => ({
       language: state.requestedLanguage ?? detectLanguage(state.userMessage, state.conversationLanguage),
     }))
+    .addNode('checkInput', async (state: AssistantState) => {
+      let inputBlock = assessInput(state.userMessage)
+      if (!inputBlock && deps.inputGuardrail) {
+        try { inputBlock = await deps.inputGuardrail.assess(state.userMessage) }
+        catch { inputBlock = { category: 'guardrail-unavailable', source: 'bedrock' } }
+      }
+      if (!inputBlock) return {}
+      console.info(JSON.stringify({ event: 'assistant.input.blocked', category: inputBlock.category, source: inputBlock.source }))
+      return { inputBlock, reply: { content: inputBlockMessage(inputBlock, state.language), language: state.language,
+        intent: 'unknown' as const, sources: [], suggestions: [], generatedBy: 'rules' as const, degraded: false, inputBlock } }
+    })
     .addNode('analyze', async (state: AssistantState) => {
       const normalized = normalize(state.userMessage)
       const catalog = await deps.catalog.list()
@@ -201,15 +220,15 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
       const writer = getWriter(config)
       try {
         signal?.throwIfAborted()
-        if (writer && deps.llm!.stream) {
-          for await (const text of deps.llm!.stream({ system: prompt.system, language: state.language, messages: prompt.messages, timeoutMs: deps.llmTimeoutMs ?? 45_000, signal, onUsage })) {
+        if (writer && (deps.models?.[state.model] ?? deps.llm)!.stream) {
+          for await (const text of (deps.models?.[state.model] ?? deps.llm)!.stream!({ system: prompt.system, language: state.language, messages: prompt.messages, timeoutMs: deps.llmTimeoutMs ?? 45_000, signal, onUsage })) {
             partial += text
             writer({ event: 'token', text })
           }
           signal?.throwIfAborted()
           return { prompt, draft: partial, usage }
         }
-        const draft = await deps.llm!.generate({ system: prompt.system, language: state.language, messages: prompt.messages, timeoutMs: deps.llmTimeoutMs ?? 45_000, signal, onUsage })
+        const draft = await (deps.models?.[state.model] ?? deps.llm)!.generate({ system: prompt.system, language: state.language, messages: prompt.messages, timeoutMs: deps.llmTimeoutMs ?? 45_000, signal, onUsage })
         return { prompt, draft, usage }
       } catch {
         if (signal?.aborted) return { prompt, draft: undefined, usage, interrupted: true, reply: { ...state.reply!, content: partial, interrupted: true, generatedBy: partial ? 'llm' as const : 'rules' as const } }
@@ -245,11 +264,11 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
     })
     .addNode('finalize', (state: AssistantState) => {
       // `degraded` se fija aquí: así refleja también un fallo del retriever, del LLM o del guardrail.
-      const reply: DraftReply = { ...state.reply!, ...(state.usage ? { usage: state.usage } : {}), degraded: state.degraded, ...(state.interrupted ? { interrupted: true } : {}) }
+      const reply: DraftReply = { ...state.reply!, model: state.model, ...(state.usage ? { usage: state.usage } : {}), degraded: state.degraded, ...(state.interrupted ? { interrupted: true } : {}) }
       const stamp = now().toISOString()
-      const student: ChatMessage = { id: randomUUID(), role: 'student', content: state.userMessage, language: state.language, intent: reply.intent, createdAt: stamp }
+      const student: ChatMessage = { id: randomUUID(), role: 'student', content: state.userMessage, language: state.language, intent: reply.intent, createdAt: stamp, ...(state.inputBlock ? { inputBlock: state.inputBlock } : {}) }
       const assistant: ChatMessage = { id: randomUUID(), role: 'assistant', content: reply.content, language: reply.language, intent: reply.intent, createdAt: stamp,
-        ...(reply.failure ? { failure: reply.failure, catalogFallback: reply.catalogFallback } : {}), ...(state.interrupted ? { interrupted: true } : {}) }
+        ...(state.inputBlock ? { inputBlock: state.inputBlock } : {}), ...(reply.failure ? { failure: reply.failure, catalogFallback: reply.catalogFallback } : {}), ...(state.interrupted ? { interrupted: true } : {}) }
       // Los saludos y la ayuda no cambian el tema; así los seguimientos ("¿y la fecha límite?") siguen funcionando.
       const keepsTopic = TOPIC_INTENTS.includes(reply.intent)
       return {
@@ -263,7 +282,8 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
     })
     .addEdge(START, 'validate')
     .addEdge('validate', 'detectLanguage')
-    .addEdge('detectLanguage', 'analyze')
+    .addEdge('detectLanguage', 'checkInput')
+    .addConditionalEdges('checkInput', (state: AssistantState) => state.inputBlock ? 'finalize' : 'analyze', { finalize: 'finalize', analyze: 'analyze' })
     .addEdge('analyze', 'gatherFacts')
     .addConditionalEdges(
       'gatherFacts',
@@ -312,6 +332,7 @@ function appendSummary(summary: string, intent: Intent): string {
 export type AssistantGraph = ReturnType<typeof buildAssistantGraph>
 
 export interface TurnInput {
+  model?: 'lunna' | 'terra'
   threadId: string
   message: string
   profile?: AssistantProfile
@@ -327,7 +348,7 @@ export interface TurnInput {
 }
 
 function graphInput(input: TurnInput) {
-  return { userMessage: input.message, profile: input.profile, requestedLanguage: input.language,
+  return { model: input.model ?? 'lunna', userMessage: input.message, profile: input.profile, requestedLanguage: input.language,
     history: input.history, compactedSummary: input.compactedSummary, memories: input.memories ?? [],
     ...(input.history ? { conversationLanguage: input.restoredLanguage, lastIntent: input.restoredIntent } : {}),
   }
@@ -335,11 +356,12 @@ function graphInput(input: TurnInput) {
 
 /** Ejecuta un turno y guarda el registro íntegro con una clave de reintento estable. */
 export async function runTurn(graph: AssistantGraph, input: TurnInput): Promise<AssistantReply> {
+  const started = performance.now()
   const prepared = await beginTurn(graph, input)
   try {
     if (prepared.replay) return prepared.replay
     const result = await graph.invoke(graphInput(prepared.input), { configurable: { thread_id: input.threadId } })
-    return await persistTurn(graph, prepared.input, result.messages.at(-2)!, result.final!)
+    return await persistTurn(graph, prepared.input, result.messages.at(-2)!, { ...result.final!, model: input.model ?? 'lunna', latencyMs: Math.round(performance.now() - started) })
   } finally { await releaseTurn(graph, input.threadId, prepared.token) }
 }
 
@@ -350,6 +372,7 @@ export type TurnStreamEvent =
 
 /** No aborta el grafo completo: permite que finalize guarde el turno parcial tras cancelar el proveedor. */
 export async function runTurnStreaming(graph: AssistantGraph, input: TurnInput, signal: AbortSignal, onEvent: (event: TurnStreamEvent) => Promise<void>): Promise<AssistantReply> {
+  const started = performance.now()
   const prepared = await beginTurn(graph, input)
   try {
     if (prepared.replay) return prepared.replay
@@ -365,6 +388,6 @@ export async function runTurnStreaming(graph: AssistantGraph, input: TurnInput, 
       }
     }
     if (!reply || !student) throw new Error('El turno no produjo una respuesta final.')
-    return await persistTurn(graph, prepared.input, student, reply)
+    return await persistTurn(graph, prepared.input, student, { ...reply, model: input.model ?? 'lunna', latencyMs: Math.round(performance.now() - started) })
   } finally { await releaseTurn(graph, input.threadId, prepared.token) }
 }

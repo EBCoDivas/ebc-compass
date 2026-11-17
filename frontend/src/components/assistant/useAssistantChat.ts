@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AssistantError, clearConversation, fetchSuggestions, loadConversation, sendMessageStreaming, setActiveConversation } from '../../services/assistantService'
+import { AssistantError, fetchModelNames, clearConversation, fetchSuggestions, loadConversation, sendMessageStreaming, setActiveConversation } from '../../services/assistantService'
 import { loadProfile } from '../../services/profileService'
+import { restoreChatEntries } from './restoreChatEntries'
 import type { ChatEntry } from '../../types/assistant'
 
 /** Estado y acciones de una conversación con el asistente. Lo comparten la página y el panel flotante. */
 export function useAssistantChat() {
+  const [modelNames, setModelNames] = useState<Partial<Record<'lunna' | 'terra', string>>>({})
+  const [model, setModel] = useState<'lunna' | 'terra'>('lunna')
   const [entries, setEntries] = useState<ChatEntry[]>([])
   const [suggestions, setSuggestions] = useState<string[]>([])
   const [draft, setDraft] = useState('')
@@ -30,9 +33,7 @@ export function useAssistantChat() {
     setActiveConversation(id)
     try {
       const messages = await loadConversation()
-      setEntries(messages.map((message, index) => ({ id: message.id, role: message.role, content: message.content, feedback: message.feedback, interrupted: message.interrupted,
-        failure: message.failure, catalogFallback: message.catalogFallback, sources: message.sources, suggestions: message.suggestions,
-        retryQuestion: messages.slice(0, index).reverse().find(previous => previous.role === 'student')?.content })))
+      setEntries(restoreChatEntries(messages))
     } catch (error) {
       setNotice(error instanceof AssistantError ? error.message : 'No fue posible abrir la conversación.')
     } finally { setLoading(false) }
@@ -42,11 +43,10 @@ export function useAssistantChat() {
     let active = true
     loadConversation().then((messages) => {
       if (!active) return
-      setEntries(messages.map((message, index) => ({ id: message.id, role: message.role, content: message.content, feedback: message.feedback, interrupted: message.interrupted,
-        failure: message.failure, catalogFallback: message.catalogFallback, sources: message.sources, suggestions: message.suggestions,
-        retryQuestion: messages.slice(0, index).reverse().find(previous => previous.role === 'student')?.content })))
+      setEntries(restoreChatEntries(messages))
       setLoading(false)
     })
+    fetchModelNames().then(names => { if (active) setModelNames(names) })
     fetchSuggestions('es').then((list) => active && setSuggestions(list))
     return () => { active = false }
   }, [])
@@ -75,7 +75,7 @@ export function useAssistantChat() {
         { id, role: 'assistant', content: '', isStreaming: true, retryQuestion: message, requestId },
       ])
       try {
-        const reply = await sendMessageStreaming(message, loadProfile(), {
+        const reply = await sendMessageStreaming(message, loadProfile(), { model,
           signal: abort.signal, requestId,
           onEvent: event => {
             if (event.event === 'token' && typeof event.data.text === 'string') {
@@ -93,7 +93,7 @@ export function useAssistantChat() {
         if (mountedRef.current) {
           setEntries(current => current.map(entry => entry.id === id ? {
             id: reply.message.id, role: 'assistant', content: reply.message.content, sources: reply.message.sources,
-            suggestions: reply.message.suggestions, meta: reply.meta, interrupted: reply.message.interrupted,
+            inputBlock: reply.message.inputBlock, suggestions: reply.message.suggestions, meta: reply.meta, interrupted: reply.message.interrupted,
             failure: reply.message.failure, catalogFallback: reply.message.catalogFallback, retryQuestion: message, requestId,
           } : entry))
           setAnnouncement(reply.message.failure ? reply.message.content : reply.message.interrupted ? 'Respuesta detenida.' : 'Respuesta lista.')
@@ -112,7 +112,7 @@ export function useAssistantChat() {
         if (mountedRef.current) { setPending(false); inputRef.current?.focus() }
       }
     },
-    [loading],
+    [loading, model],
   )
 
   function submit(message: string) {
@@ -135,7 +135,7 @@ export function useAssistantChat() {
   }
 
   return {
-    entries, suggestions, draft, setDraft, loading, pending, notice, announcement, inputRef,
+    modelNames, model, setModel, entries, suggestions, draft, setDraft, loading, pending, notice, announcement, inputRef,
     submit, clear, openConversation,
     stop: () => abortRef.current?.abort(),
     retry: (entry: ChatEntry) => void ask(entry.retryQuestion ?? lastQuestion, { showQuestion: false, requestId: entry.failure ? undefined : entry.requestId }),

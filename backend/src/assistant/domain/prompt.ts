@@ -67,7 +67,7 @@ export function buildPrompt(input: {
   const context = input.summary || input.memories?.length ? [{ role: 'user' as const, content:
     '<CONTEXTO_NO_AUTORITATIVO>\n<MEMORIA>' + JSON.stringify((input.memories ?? []).slice(0, 20).map(({ key, value, origin }) => ({ key, value, origin }))) +
     '</MEMORIA>\n<RESUMEN>' + (input.summary ?? '') + '</RESUMEN>\n</CONTEXTO_NO_AUTORITATIVO>' }] : []
-  const history = input.history.slice(-6).map((message) => ({ role: message.role === 'student' ? ('user' as const) : ('assistant' as const), content: message.content }))
+  const history = input.history.filter(message => !message.inputBlock).slice(-6).map((message) => ({ role: message.role === 'student' ? ('user' as const) : ('assistant' as const), content: message.content }))
 
   return { system: input.system, messages: [...context, ...history, { role: 'user', content }], allowed: `${data}\n${profile}\n${documents}` }
 }

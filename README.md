@@ -4,8 +4,9 @@ EBC Compass es una plataforma colaborativa de orientación académica y profesio
 
 ## Requisitos
 
-- Node.js 22 (la plataforma declara `>=22 <23`).
+- Node.js 22 (la plataforma declara `>=22 <23`). El setup solo alerta si tu versión es otra; no la cambia.
 - npm.
+- Docker Desktop, para la demo local. `npm run setup` detecta si falta y ofrece instalarlo con confirmación.
 - SST v4 se instala como dependencia del paquete `platform`.
 - Para despliegues futuros: credenciales de AWS autorizadas, región `us-east-1` y acceso a los servicios requeridos. No son necesarias para las pruebas locales de la función de salud.
 
@@ -34,9 +35,10 @@ Desde la raíz del repo hay un punto de entrada único para la demo local del as
 
 ```sh
 npm run env:create   # crea los .env desde los .env.example; completa OPENAI_API_KEY en local/.env
-npm run setup        # instala dependencias, levanta el emulador y aprovisiona
+npm run setup        # revisa prerrequisitos, instala dependencias, levanta el emulador y aprovisiona
 npm run dev          # levanta todo (npm run dev:rules: sin OpenAI)
 npm run doctor       # diagnóstico del entorno
+npm run test:scripts # pruebas de los scripts del repo (setup y doctor)
 ```
 
 Detalle y lista completa de comandos en [local/README.md](local/README.md). Para desplegar al lab de AWS (cuando esté disponible): `npm run lab:check` y `npm run lab:deploy -- --confirm`; guía en [docs/deploy-lab.md](docs/deploy-lab.md). Cada paquete (`frontend/`, `backend/`, `platform/`, `local/`) mantiene además sus propios scripts.

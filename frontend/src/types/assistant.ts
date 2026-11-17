@@ -1,3 +1,4 @@
+export interface InputBlock { category: 'prompt-injection' | 'other-person-data' | 'harmful-content' | 'out-of-scope' | 'guardrail-unavailable'; source: 'local' | 'bedrock' }
 // Tipos del contrato de la API del asistente (backend: /api/assistant).
 
 export type AssistantLanguage = 'es' | 'en'
@@ -35,6 +36,7 @@ export interface CatalogFallback { content: string; sources: AssistantSource[] }
 export interface AssistantReply {
   conversationId: string
   message: {
+    inputBlock?: InputBlock
     id: string
     role: 'assistant'
     content: string
@@ -51,6 +53,11 @@ export interface AssistantReply {
 }
 
 export interface StoredMessage {
+  inputBlock?: InputBlock
+  mode?: AssistantReplyMeta['mode']
+  latencyMs?: number
+  degraded?: boolean
+  usage?: AssistantReplyMeta['usage']
   feedback?: 'positive' | 'negative'
   id: string
   role: 'student' | 'assistant'
@@ -77,6 +84,7 @@ export interface AssistantProfile {
 
 /** Un mensaje tal como se muestra en pantalla. */
 export interface ChatEntry {
+  inputBlock?: InputBlock
   feedback?: 'positive' | 'negative'
   id: string
   role: 'student' | 'assistant'

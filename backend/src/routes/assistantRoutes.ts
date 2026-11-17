@@ -57,12 +57,14 @@ function parseLanguage(value: unknown): Language | undefined {
 }
 
 function present(message: ChatMessage) {
-  return { id: message.id, role: message.role, content: message.content, language: message.language, intent: message.intent, createdAt: message.createdAt,
+  return { id: message.id, role: message.role, inputBlock: message.inputBlock, content: message.content, language: message.language, intent: message.intent, createdAt: message.createdAt,
     ...(message.failure ? { failure: message.failure, catalogFallback: message.catalogFallback } : {}), ...(message.interrupted ? { interrupted: true } : {}) }
 }
 
 export function parseTurn(request: Request) {
   const body = (request.body ?? {}) as Record<string, unknown>
+  if (body.model !== undefined && body.model !== 'lunna' && body.model !== 'terra') throw new BadRequest('El modelo debe ser lunna o terra.')
+  const model = (body.model ?? 'lunna') as 'lunna' | 'terra'
   const message = typeof body.message === 'string' ? body.message.trim() : ''
   if (message.length < 1 || message.length > MAX_MESSAGE_LENGTH) throw new BadRequest('El mensaje debe tener entre 1 y ' + MAX_MESSAGE_LENGTH + ' caracteres.')
   const studentId = verifiedSubject(request)
@@ -73,7 +75,7 @@ export function parseTurn(request: Request) {
   const conversationId = (body.conversationId as string | undefined) ?? randomUUID()
   const trustedProfile = verifiedAcademicProfile(request)
   const profile = parseProfile({ ...parseProfile(body.profile), ...trustedProfile })
-  return { studentId, conversationId, input: { threadId: studentId + '#' + conversationId, message, profile, trustedProfile,
+  return { studentId, conversationId, input: { model, threadId: studentId + '#' + conversationId, message, profile, trustedProfile,
     requestId: (body.requestId as string | undefined) ?? randomUUID(), requireExisting: body.conversationId !== undefined, language: parseLanguage(body.language) } }
 }
 
@@ -106,6 +108,7 @@ export function assistantRoutes(assistant: Assistant): Router {
       response.json({
         conversationId,
         message: {
+          model: reply.model, inputBlock: reply.inputBlock,
           interrupted: reply.interrupted,
           failure: reply.failure,
           catalogFallback: reply.catalogFallback,
@@ -118,7 +121,7 @@ export function assistantRoutes(assistant: Assistant): Router {
           suggestions: reply.suggestions,
           sources: reply.sources,
         },
-        meta: { mode: reply.generatedBy, latencyMs: Math.round(performance.now() - started), degraded: reply.degraded, historyStatus: reply.historyStatus, ...(reply.usage ? { usage: reply.usage } : {}) },
+        meta: { mode: reply.generatedBy, latencyMs: reply.latencyMs ?? Math.round(performance.now() - started), degraded: reply.degraded, historyStatus: reply.historyStatus, ...(reply.usage ? { usage: reply.usage } : {}) },
       })
       await maintainConversation(assistant.graph, input.threadId)
     } catch (error) {
@@ -153,10 +156,10 @@ export function assistantRoutes(assistant: Assistant): Router {
       })
       await writeSse(response, 'done', {
         conversationId,
-        message: { id: reply.id, role: 'assistant', content: reply.content, language: reply.language, intent: reply.intent,
+        message: { model: reply.model, inputBlock: reply.inputBlock, id: reply.id, role: 'assistant', content: reply.content, language: reply.language, intent: reply.intent,
           createdAt: reply.createdAt, sources: reply.sources, suggestions: reply.suggestions, interrupted: reply.interrupted,
           failure: reply.failure, catalogFallback: reply.catalogFallback },
-        meta: { mode: reply.generatedBy, latencyMs: Math.round(performance.now() - started), degraded: reply.degraded, historyStatus: reply.historyStatus, ...(reply.usage ? { usage: reply.usage } : {}) },
+        meta: { mode: reply.generatedBy, latencyMs: reply.latencyMs ?? Math.round(performance.now() - started), degraded: reply.degraded, historyStatus: reply.historyStatus, ...(reply.usage ? { usage: reply.usage } : {}) },
       })
       response.end()
       await maintainConversation(assistant.graph, input.threadId)
@@ -226,9 +229,24 @@ export function assistantRoutes(assistant: Assistant): Router {
     }
   })
 
-  router.get('/suggestions', (request, response) => {
+  router.get('/suggestions', async (request, response) => {
     try {
-      response.json({ suggestions: suggestionsFor('unknown', parseLanguage(request.query.language) ?? 'es') })
+      let models: Partial<Record<'lunna' | 'terra', string>> = {
+        lunna: process.env.BEDROCK_LUNNA_MODEL_ID,
+        terra: process.env.BEDROCK_TERRA_MODEL_ID,
+      }
+      const bridge = process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME
+      if (bridge) {
+        models = {}
+        try {
+          const health = await fetch(new URL('/health', bridge), { signal: AbortSignal.timeout(1500) })
+          if (health.ok) {
+            const body = await health.json() as { models?: Partial<Record<'lunna' | 'terra', string>> }
+            models = body.models ?? {}
+          }
+        } catch { /* Los alias siguen disponibles si el puente no publica metadatos. */ }
+      }
+      response.json({ models, suggestions: suggestionsFor('unknown', parseLanguage(request.query.language) ?? 'es') })
     } catch (error) {
       fail(response, 400, 'INVALID_INPUT', (error as Error).message)
     }
