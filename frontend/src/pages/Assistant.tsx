@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { useSearchParams } from 'react-router-dom'
 import { ChatSurface } from '../components/assistant/ChatSurface'
 import { useAssistantChat } from '../components/assistant/useAssistantChat'
 import { MAX_MESSAGE_LENGTH, getConversationId } from '../services/assistantService'
@@ -11,7 +11,7 @@ import '../components/assistant/assistant.css'
 export function Assistant() {
   const profile = useMemo(() => loadProfile(), [])
   const chat = useAssistantChat()
-  const { entries, loading, pending, submit, inputRef, setDraft, openConversation } = chat
+  const { entries, loading, pending, inputRef, setDraft, openConversation } = chat
   const [conversations, setConversations] = useState<ConversationSummary[]>([])
   const [memory, setMemory] = useState<MemoryData | null>(null)
   const [panelError, setPanelError] = useState('')
@@ -69,20 +69,11 @@ export function Assistant() {
     inputRef.current?.focus()
   }, [incoming, setSearchParams, setDraft, inputRef])
 
-  const incomplete = !profile || profileCompleteness(profile) < 100
   const sortedConversations = [...conversations].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   // Si dos conversaciones comparten día, se agrega la hora para distinguirlas.
   const dayCounts = sortedConversations.reduce((counts, item) => counts.set(dayLabel(item.updatedAt), (counts.get(dayLabel(item.updatedAt)) ?? 0) + 1), new Map<string, number>())
   const repeatedDays = new Set([...dayCounts].filter(([, count]) => count > 1).map(([day]) => day))
 
-  // Los temas envían directamente su pregunta al asistente.
-  const topics: [string, string][] = [
-    ['Becas y apoyos', '¿Qué becas puedo solicitar?'],
-    ['Cursos y certificaciones', '¿Qué cursos me recomiendas para mi carrera?'],
-    ['Trámites escolares', '¿Qué trámites tengo pendientes este periodo?'],
-    ['Eventos y networking', '¿Qué eventos hay en las próximas semanas?'],
-    ['Fechas importantes', '¿Cuáles son mis próximas fechas importantes?'],
-  ]
 
   return (
     <main className="assistant-page">
@@ -117,28 +108,7 @@ export function Assistant() {
             {!conversations.length && <p className="side-empty">Tus conversaciones aparecerán aquí. Empieza con una pregunta.</p>}
           </div>}
           {sideTab === 'context' && <div role="tabpanel" id="panel-context" aria-labelledby="tab-context">
-          <div className="side-section">
-            <h2>Hablas como</h2>
-            {profile ? (
-              <p className="side-persona">
-                <strong>{profile.name || 'Estudiante EBC'}</strong>
-                <span>{profileCompleteness(profile)}% de tu perfil completo</span>
-              </p>
-            ) : (
-              <p className="side-persona"><strong>Sin perfil</strong><span>Respuestas generales</span></p>
-            )}
-            {incomplete && (
-              <p className="side-hint">
-                {profile ? 'Completa tu perfil' : 'Crea tu perfil'} para respuestas más personalizadas. <Link to="/perfil">Ir a mi perfil</Link>
-              </p>
-            )}
-          </div>
-          <MemoryPanel memory={memory} onChanged={refreshPanels} onError={setPanelError} />
-          <div className="side-section">
-            <h2>Puedo ayudarte con</h2>
-            <ul className="side-topics">{topics.map(([topic, question]) => <li key={topic}><button type="button" disabled={loading || pending} onClick={() => { closeContextIfFloating(); submit(question) }}>{topic}</button></li>)}</ul>
-          </div>
-          <p className="side-disclaimer">Respuestas orientativas: para decisiones oficiales consulta a Servicios Escolares.</p>
+            <MemoryPanel memory={memory} profileName={profile?.name} completeness={profile ? profileCompleteness(profile) : 0} onChanged={refreshPanels} onError={setPanelError} />
           </div>}
           {panelError && <p className="form-error" role="alert">{panelError}</p>}
           </div>

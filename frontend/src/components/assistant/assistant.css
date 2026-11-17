@@ -45,8 +45,6 @@
 .memory-chip { align-items: center; background: var(--cyan-soft); border-radius: 999px; color: var(--cyan-ink); display: inline-flex; font-size: .76rem; font-weight: 600; padding: .15rem .55rem; }
 .memory-chip button { background: none; border: 0; border-radius: 50%; color: inherit; cursor: pointer; font-size: .95rem; line-height: 1; margin-left: .15rem; min-height: 1.5rem; min-width: 1.5rem; }
 .memory-chip button:hover { background: #ffffff99; }
-.memory-edit { align-items: center; display: flex; gap: .2rem; min-width: 0; }
-.memory-edit select { border-color: var(--line); border-radius: 8px; font-size: .82rem; min-width: 0; padding: .35rem 2rem .35rem .5rem; background-position: right .45rem center; background-size: .95rem; }
 .side-new { display: none; }
 .side-empty { margin: .35rem 0 0; }
 
@@ -71,7 +69,7 @@
 .chat-title::after { background: var(--grad); bottom: -1px; content: ''; height: 2px; left: 0; position: absolute; width: 64px; }
 
 .chat-log { min-height: 0; display: flex; flex: 1; flex-direction: column; gap: 1rem; overflow-y: auto; padding: 1.25rem; position: relative; }
-.chat-empty { min-height: 0; overflow-y: auto; align-content: center; color: var(--ink-soft); display: grid; flex: 1; gap: .6rem; justify-items: center; padding: 1.5rem; text-align: center; }
+.chat-empty { min-height: 0; overflow-y: auto; align-content: safe center; color: var(--ink-soft); display: grid; flex: 1; gap: .6rem; justify-items: center; padding: 1.5rem; text-align: center; }
 .chat-empty h2 { color: var(--navy); font-size: 1.4rem; margin: .4rem 0 0; }
 .chat-empty p { margin: 0; max-width: 46ch; }
 
@@ -136,7 +134,7 @@
 .chat-form { align-items: end; border-top: 1px solid var(--line); display: grid; gap: .25rem .6rem; grid-template-columns: 1fr auto; padding: .8rem 1.25rem; }
 .chat-form textarea { line-height: 1.4; max-height: 200px; min-height: 2.9rem; resize: none; }
 .chat-form .button { min-height: 2.9rem; }
-.chat-help { color: var(--ink-soft); font-size: .72rem; grid-column: 1 / -1; margin: 0; }
+.chat-help { color: var(--ink-soft); display: flex; flex-wrap: wrap; font-size: .72rem; gap: .15rem 1rem; grid-column: 1 / -1; justify-content: space-between; margin: 0; }
 .chat-help.warn { color: var(--gold-ink); font-weight: 700; }
 
 @media (max-width: 900px) {
@@ -182,7 +180,7 @@
   .chat-form { gap: .5rem; padding: .55rem .75rem; }
   .chat-form textarea { border-radius: 22px; padding: .7rem 1rem; }
   .chat-form .chat-icon-button { border-radius: 50%; }
-  .chat-form textarea:not([aria-invalid="true"]) ~ .chat-help:not(.warn) { display: none; }
+  .chat-form .chat-help:not(.warn) .chat-help-keys { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .chat-dots::after { animation: none; content: '…'; } }
 
@@ -238,7 +236,7 @@
 .dock-chat .chat-form { padding: .6rem .75rem; }
 .dock-chat .chat-form textarea { border-radius: 20px; padding: .6rem .9rem; }
 .dock-chat .chat-form .chat-icon-button { border-radius: 50%; }
-.dock-chat .chat-form textarea:not([aria-invalid="true"]) ~ .chat-help:not(.warn) { display: none; }
+.dock-chat .chat-form .chat-help:not(.warn) .chat-help-keys { display: none; }
 @media (max-width: 900px) { .dock-launcher, .dock-panel { display: none !important; } }
 
 
@@ -308,3 +306,34 @@
   .conversation-row.menu-open .conversation-tools .row-icon.rename { color: var(--blue); }
   .conversation-row.menu-open .conversation-tools .row-icon.delete { color: var(--coral-ink); }
 }
+
+/* "Lo que Compass aprendió": cada dato es una afirmación legible; corregir muestra las opciones como botones. */
+.side-note { color: var(--ink-soft); font-size: .76rem; line-height: 1.4; margin: .25rem 0 .6rem; }
+.learned-list { display: grid; gap: .5rem; list-style: none; margin: 0; padding: 0; }
+.learned-item { background: var(--mist); border: 1px solid var(--line); border-radius: 10px; padding: .45rem .5rem .55rem .7rem; }
+.learned-item.editing { background: var(--surface); border-color: var(--blue); }
+.learned-head { align-items: center; display: flex; justify-content: space-between; min-height: 2rem; }
+.learned-key { color: var(--ink-soft); font-size: .74rem; font-weight: 600; }
+.learned-actions { display: inline-flex; gap: .1rem; }
+.learned-actions .row-icon { height: 2rem; width: 2rem; }
+.learned-value { color: var(--ink); font-size: .9rem; font-weight: 650; margin: 0; }
+.learned-options { border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .55rem; padding-top: .55rem; }
+.option-chip { background: var(--surface); border: 1px solid #aebfd2; border-radius: 999px; color: var(--ink); cursor: pointer; font-size: .78rem; min-height: 2rem; padding: .25rem .7rem; }
+.option-chip:hover:not(:disabled) { border-color: var(--blue); color: var(--blue); }
+.option-chip[aria-pressed="true"] { background: var(--blue); border-color: var(--blue); color: #fff; font-weight: 700; }
+.option-chip:disabled { cursor: not-allowed; opacity: .55; }
+.option-done { background: none; border: 0; color: var(--blue); cursor: pointer; font-size: .78rem; font-weight: 700; margin-left: auto; min-height: 2rem; padding: .25rem .4rem; }
+.forget-all { background: none; border: 0; color: var(--coral-ink); cursor: pointer; font-size: .78rem; font-weight: 600; margin-top: .6rem; padding: .35rem 0; }
+.forget-all:hover:not(:disabled) { text-decoration: underline; text-underline-offset: 3px; }
+.forget-all:disabled { opacity: .55; }
+
+/* Mi contexto: tarjeta compacta del perfil. */
+.profile-card-name { color: var(--navy); font-family: var(--font-display); font-size: 1rem; font-weight: 700; margin: .3rem 0 .1rem; }
+.profile-card-line { color: var(--ink-soft); font-size: .8rem; line-height: 1.4; margin: 0 0 .45rem; }
+.profile-card .side-hint { margin-top: .5rem; }
+
+/* Chat vacío: temas como etiquetas debajo de las preguntas sugeridas. */
+.chat-suggestions ul.chat-topics { display: flex; flex-wrap: wrap; gap: .4rem; justify-content: center; }
+.chat-suggestions .chat-topics li button { background: var(--cyan-soft); border: 1px solid transparent; border-left: 1px solid transparent; border-radius: 999px; color: var(--cyan-ink); font-size: .8rem; font-weight: 600; height: auto; min-height: 2.25rem; padding: .3rem .8rem; text-align: center; width: auto; }
+.chat-suggestions .chat-topics li button:hover:not(:disabled) { border-color: var(--cyan); }
+.chat-empty .chat-suggestions ul + .chat-suggestions-title { margin-top: 1rem; }

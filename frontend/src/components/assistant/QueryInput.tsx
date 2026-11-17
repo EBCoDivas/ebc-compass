@@ -73,7 +73,10 @@ export const QueryInput = forwardRef<HTMLTextAreaElement, Props>(function QueryI
         </svg>
       </button>
       <p id="assistant-question-help" className={`chat-help${nearLimit ? ' warn' : ''}`}>
-        {touched && !trimmed ? 'Escribe una pregunta para enviarla.' : `Enter envía · Shift+Enter nueva línea · ${value.length}/${MAX_MESSAGE_LENGTH}`}
+        {touched && !trimmed ? 'Escribe una pregunta para enviarla.' : <>
+          <span className="chat-help-note">Compass orienta; para decisiones oficiales consulta a Servicios Escolares.</span>
+          <span className="chat-help-keys">Enter envía, Shift+Enter nueva línea, {value.length}/{MAX_MESSAGE_LENGTH}</span>
+        </>}
       </p>
     </form>
   )
