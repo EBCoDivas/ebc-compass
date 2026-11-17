@@ -14,7 +14,7 @@ export interface ArchivedMessage extends ChatMessage {
   latencyMs?: number; degraded?: boolean
 }
 export interface Turn { requestId: string; student: ChatMessage; reply: AssistantReply }
-export type MemoryKey = 'career' | 'campus' | 'semester' | 'interests' | 'goal' | 'schedule' | 'language' | 'modality'
+export type MemoryKey = `note:${number}` | 'career' | 'campus' | 'semester' | 'interests' | 'goal' | 'schedule' | 'language' | 'modality'
 export interface MemoryFact {
   key: MemoryKey; value: string; origin: 'profile' | 'conversation' | 'user'; sourceMessageId?: string; updatedAt: string
   version: number; suppressed?: boolean
@@ -174,9 +174,27 @@ export class ConversationRepository {
     const page = await this.store.page(owner, 'MEM#', 50)
     return page.items.map(item => item.value as unknown as MemoryFact)
   }
+  async saveNote(owner: string, text: string): Promise<boolean> {
+    if ((await this.memories(owner)).some(fact => !fact.suppressed && fact.value === text && fact.key.startsWith('note:'))) return true
+    for (let slot = 1; slot <= 10; slot++) {
+      const key = 'note:' + slot as MemoryKey
+      const current = await this.store.get(owner, 'MEM#' + key) as unknown as MemoryFact | undefined
+      if (current?.value && !current.suppressed) {
+        if (current.value === text) return true
+        continue
+      }
+      const stamp = new Date().toISOString()
+      try {
+        await this.store.write(owner, [{ key: 'MEM#' + key, value: value({ key, value: text, origin: 'user', observedAt: stamp, updatedAt: stamp, version: (current?.version ?? -1) + 1 }), version: current?.version }])
+        return true
+      } catch (error) { if (!(error instanceof Conflict)) throw error }
+    }
+    return false
+  }
   async saveMemory(owner: string, fact: Omit<MemoryFact, 'version' | 'updatedAt'>, respectSuppression = true) {
     const current = await this.store.get(owner, 'MEM#' + fact.key) as unknown as MemoryFact | undefined
     if (respectSuppression && current?.suppressed) return
+    if (fact.origin !== 'user' && current?.origin === 'user' && current.value) return
     if (current && fact.origin === 'profile' && current.value === fact.value && current.origin === fact.origin && !current.suppressed && !fact.suppressed) return
     if (fact.origin === 'conversation' && current?.origin === 'profile' && current.value) return
     const observedAt = fact.observedAt ?? new Date().toISOString()

@@ -5,6 +5,8 @@
 // Cada nodo es un envoltorio fino de funciones puras de domain/. El estado se guarda por conversación
 // (thread_id) en el checkpointer; en la Fase 4 será DynamoDB y mientras tanto basta MemorySaver.
 
+import { personalContextQuery, personalContextReply } from '../domain/personalContext.js'
+import { rememberRequested, requestsMemory } from '../conversations/explicitMemory.js'
 import { randomUUID } from 'node:crypto'
 import { Annotation, END, START, StateGraph, getWriter, type LangGraphRunnableConfig } from '@langchain/langgraph'
 import type { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint'
@@ -156,6 +158,16 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
       return { inputBlock, reply: { content: inputBlockMessage(inputBlock, state.language), language: state.language,
         intent: 'unknown' as const, sources: [], suggestions: [], generatedBy: 'rules' as const, degraded: false, inputBlock } }
     })
+    .addNode('personalContext', (state: AssistantState) => ({
+      reply: { content: personalContextReply(personalContextQuery(state.userMessage)!, state.memories, state.language), language: state.language,
+        intent: 'profile-help' as const, sources: [], suggestions: [], generatedBy: 'rules' as const, degraded: false },
+    }))
+    .addNode('remember', async (state: AssistantState, config: LangGraphRunnableConfig) => {
+      const content = await rememberRequested({ text: state.userMessage, owner: String(config.configurable?.thread_id).split('#')[0],
+        repo: deps.conversations, llm: deps.models?.[state.model] ?? deps.llm, language: state.language,
+        signal: config.context?.generationSignal as AbortSignal | undefined, guardrail: deps.inputGuardrail })
+      return { reply: { content, language: state.language, intent: 'unknown' as const, sources: [], suggestions: [], generatedBy: 'rules' as const, degraded: false } }
+    })
     .addNode('analyze', async (state: AssistantState) => {
       const normalized = normalize(state.userMessage)
       const catalog = await deps.catalog.list()
@@ -283,7 +295,9 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
     .addEdge(START, 'validate')
     .addEdge('validate', 'detectLanguage')
     .addEdge('detectLanguage', 'checkInput')
-    .addConditionalEdges('checkInput', (state: AssistantState) => state.inputBlock ? 'finalize' : 'analyze', { finalize: 'finalize', analyze: 'analyze' })
+    .addConditionalEdges('checkInput', (state: AssistantState) => state.inputBlock ? 'finalize' : requestsMemory(state.userMessage) ? 'remember' : personalContextQuery(state.userMessage) ? 'personalContext' : 'analyze', { personalContext: 'personalContext', finalize: 'finalize', remember: 'remember', analyze: 'analyze' })
+    .addEdge('personalContext', 'finalize')
+    .addEdge('remember', 'finalize')
     .addEdge('analyze', 'gatherFacts')
     .addConditionalEdges(
       'gatherFacts',

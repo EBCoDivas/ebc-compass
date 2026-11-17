@@ -13,7 +13,7 @@ import { buildAssistantGraph, type AssistantDeps } from './graph/assistantGraph.
 import { ConversationRepository } from './conversations/repository.js'
 import { DynamoDocumentStore, MemoryDocumentStore } from './conversations/store.js'
 import { DynamoProfileRepository } from '../profiles/repository.js'
-import type { AssistantProfile } from './types.js'
+import type { AssistantProfile, LlmProvider, InputGuardrail } from './types.js'
 
 export { runTurnStreaming, runTurn, InvalidInputError, MAX_MESSAGE_LENGTH, type AssistantGraph } from './graph/assistantGraph.js'
 export { suggestionsFor } from './domain/templates.js'
@@ -21,6 +21,8 @@ export type * from './types.js'
 export { ensureConversation, maintainConversation } from './conversations/lifecycle.js'
 
 export interface AssistantRuntime {
+  memoryLlm?: LlmProvider
+  inputGuardrail?: InputGuardrail
   config: AssistantConfig
   checkpointer: BaseCheckpointSaver
   graph: ReturnType<typeof buildAssistantGraph>
@@ -80,5 +82,5 @@ export function createAssistant(options: { config?: AssistantConfig; checkpointe
           ttlSeconds: config.conversationTtlSeconds,
         }))
 
-  return { config, checkpointer, conversations, profileReader, graph: buildAssistantGraph(deps, checkpointer) }
+  return { memoryLlm: deps.llm, inputGuardrail: deps.inputGuardrail, config, checkpointer, conversations, profileReader, graph: buildAssistantGraph(deps, checkpointer) }
 }
