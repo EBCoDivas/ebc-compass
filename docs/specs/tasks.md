@@ -1087,43 +1087,43 @@ This implementation plan breaks down the EBC Compass MVP into 11 phases covering
 
 ## Notes
 
-- **Task Classification**: 
+- **Task Classification**:
   - `MVP` = Core implementation task required for minimum viable product
   - `MVP Testing` = Test task (unit, component, property-based, integration, accessibility)
   - Tasks marked with `*` are optional testing tasks (can be skipped for faster MVP delivery)
-  
-- **Property-Based Tests**: 
+
+- **Property-Based Tests**:
   - 20 property-based tests covering universal correctness properties
   - All property tests marked as optional (`*`) but highly recommended for quality assurance
   - Each property test validates specific requirements from design document
-  
-- **Estimated Effort**: 
+
+- **Estimated Effort**:
   - All tasks sized to 2-4 hours for manageable implementation
   - Total estimated effort: ~220-280 hours
   - Can be completed in 6-8 weeks with 1 full-time developer
-  
-- **Checkpoints**: 
+
+- **Checkpoints**:
   - 11 checkpoint tasks after each phase
   - Allow for incremental validation and course correction
   - User can provide feedback at each checkpoint
-  
-- **Spanish Language**: 
+
+- **Spanish Language**:
   - All user-facing text must be in Spanish (primary language)
   - English translations available via language toggle
   - All mock data in Spanish with Mexican context
-  
-- **Accessibility**: 
+
+- **Accessibility**:
   - WCAG 2.1 Level AA compliance is mandatory
   - Keyboard navigation for all interactive elements
   - Screen reader support throughout
   - Color contrast ratios verified
-  
-- **Responsive Design**: 
+
+- **Responsive Design**:
   - Mobile-first approach (320px minimum)
   - Three breakpoints: mobile (320-767px), tablet (768-1023px), desktop (1024px+)
   - All features must work on all screen sizes
-  
-- **Mock Data**: 
+
+- **Mock Data**:
   - 5 student personas with realistic EBC data
   - 20+ opportunities across 6 types
   - Spanish language content

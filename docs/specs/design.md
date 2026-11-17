@@ -184,14 +184,14 @@ graph TB
         Storage[LocalStorage<br/>Persistence]
         MockAPI[Mock API Provider<br/>Simulated Backend]
     end
-    
+
     User[EBC Student] --> UI
     UI --> Controller
     Controller --> Services
     Services --> Models
     Services --> MockAPI
     Models --> Storage
-    
+
     style UI fill:#E3F2FD
     style Controller fill:#FFF3E0
     style Services fill:#F3E5F5
@@ -277,7 +277,7 @@ erDiagram
     STUDENT_PROFILE ||--o{ RECOMMENDATION : receives
     STUDENT_PROFILE ||--o{ ALERT : receives
     STUDENT_PROFILE ||--o{ CONVERSATION_MESSAGE : creates
-    
+
     RECOMMENDATION }o--|| OPPORTUNITY : references
     OPPORTUNITY ||--o| COURSE : "is type"
     OPPORTUNITY ||--o| SCHOLARSHIP : "is type"
@@ -285,10 +285,10 @@ erDiagram
     OPPORTUNITY ||--o| EVENT : "is type"
     OPPORTUNITY ||--o| PROCEDURE : "is type"
     OPPORTUNITY ||--o| CAREER_OPPORTUNITY : "is type"
-    
+
     COURSE ||--o{ COURSE_PREREQUISITE : requires
     SCHOLARSHIP ||--o{ ELIGIBILITY_CRITERIA : has
-    
+
     IMPORTANT_DATE ||--o{ ALERT : triggers
 ```
 
@@ -342,7 +342,7 @@ interface PendingCourse {
 }
 ```
 
-**Storage:** LocalStorage key `ebc_compass_profile`  
+**Storage:** LocalStorage key `ebc_compass_profile`
 **Validation Rules:**
 - name: 1-100 characters
 - currentSemester: integer 1-10
@@ -371,13 +371,13 @@ function calculateProgress(profile: StudentProfile): AcademicProgress {
   const totalRequired = CAREER_TOTAL_COURSES[profile.career]; // e.g., 40 courses
   const completedCount = profile.completedCourses.length;
   const percentage = (completedCount / totalRequired) * 100;
-  
+
   // Expected graduation based on current semester and progress
   const semestersRemaining = Math.ceil((totalRequired - completedCount) / 5); // Assume 5 courses/semester
   const expectedSemester = profile.currentSemester + semestersRemaining;
   const expectedYear = Math.floor(2024 + expectedSemester / 2);
   const expectedMonth = (expectedSemester % 2 === 0) ? "06" : "12";
-  
+
   return {
     profileId: profile.id,
     completedCount,
@@ -546,7 +546,7 @@ function generateExplanation(
   matchedFactors: MatchedFactor[]
 ): string {
   const factors: string[] = [];
-  
+
   // Check matched interests
   const matchedInterests = matchedFactors
     .filter(f => f.type === "interest")
@@ -554,20 +554,20 @@ function generateExplanation(
   if (matchedInterests.length > 0) {
     factors.push(`tu interés en ${matchedInterests.join(" y ")}`);
   }
-  
+
   // Check career match
   if (matchedFactors.some(f => f.type === "career")) {
     factors.push(`tu carrera de ${CAREER_NAMES_ES[profile.career]}`);
   }
-  
+
   // Check semester appropriateness
   if (matchedFactors.some(f => f.type === "semester")) {
     factors.push(`tu semestre actual (${profile.currentSemester})`);
   }
-  
+
   const factorsText = factors.join(", ");
   const typeText = OPPORTUNITY_TYPE_NAMES_ES[opportunity.type];
-  
+
   return `Esta ${typeText} coincide con ${factorsText}.`;
 }
 ```
@@ -611,15 +611,15 @@ interface Alert {
 function generateAlerts(profile: StudentProfile, dates: ImportantDate[]): Alert[] {
   const today = new Date();
   const alerts: Alert[] = [];
-  
+
   dates.forEach(date => {
     const daysRemaining = Math.floor((date.date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-    
+
     if (daysRemaining >= 1 && daysRemaining <= 7) {
       let urgency: Alert["urgency"] = "normal";
       if (daysRemaining <= 1) urgency = "urgent";  // BR-04.3
       else if (daysRemaining <= 3) urgency = "high";  // BR-04.2
-      
+
       alerts.push({
         id: generateUUID(),
         profileId: profile.id,
@@ -633,10 +633,10 @@ function generateAlerts(profile: StudentProfile, dates: ImportantDate[]): Alert[
       });
     }
   });
-  
+
   // Deduplicate (BR-04.4)
   const uniqueAlerts = deduplicateAlerts(alerts);
-  
+
   // Limit to 5 (BR-04.6)
   return uniqueAlerts
     .sort((a, b) => a.daysRemaining - b.daysRemaining)  // Most urgent first
@@ -842,7 +842,7 @@ class RecommendationEngine {
     opportunities: Opportunity[]
   ): Recommendation[] {
     const recommendations: Recommendation[] = [];
-    
+
     // Filter opportunities by type and apply type-specific logic
     const courses = opportunities.filter(o => o.type === "course") as Course[];
     const scholarships = opportunities.filter(o => o.type === "scholarship") as Scholarship[];
@@ -850,29 +850,29 @@ class RecommendationEngine {
     const events = opportunities.filter(o => o.type === "event");
     const procedures = opportunities.filter(o => o.type === "procedure");
     const careers = opportunities.filter(o => o.type === "career-opportunity");
-    
+
     // Generate course recommendations
     recommendations.push(...this.recommendCourses(profile, courses));
-    
+
     // Generate scholarship recommendations
     recommendations.push(...this.recommendScholarships(profile, scholarships));
-    
+
     // Generate professional development recommendations
     recommendations.push(...this.recommendProfDev(profile, profDev));
-    
+
     // Generate event recommendations
     recommendations.push(...this.recommendEvents(profile, events));
-    
+
     // Generate procedure recommendations
     recommendations.push(...this.recommendProcedures(profile, procedures));
-    
+
     // Generate career opportunity recommendations
     recommendations.push(...this.recommendCareers(profile, careers));
-    
+
     // Rank and return top recommendations
     return this.rankRecommendations(recommendations).slice(0, 10);
   }
-  
+
   private recommendCourses(profile: StudentProfile, courses: Course[]): Recommendation[] {
     return courses
       .filter(course => {
@@ -881,25 +881,25 @@ class RecommendationEngine {
           profile.completedCourses.some(cc => cc.courseCode === prereq)
         );
         if (!prerequisitesMet) return false;
-        
+
         // BR-01.2: Check semester offering
         if (!course.semesterOffered.includes(profile.currentSemester)) return false;
-        
+
         // BR-01.3: No duplicates
         if (profile.completedCourses.some(cc => cc.courseCode === course.courseCode)) return false;
-        
+
         // Check career relevance
         if (course.career && course.career !== profile.career) return false;
-        
+
         // Check campus availability
         if (!course.campus.includes(profile.campus)) return false;
-        
+
         return true;
       })
       .map(course => {
         const score = this.calculateCourseScore(course, profile);
         const explanation = this.generateCourseExplanation(course, profile);
-        
+
         return {
           id: generateUUID(),
           profileId: profile.id,
@@ -911,16 +911,16 @@ class RecommendationEngine {
         };
       });
   }
-  
+
   private calculateCourseScore(course: Course, profile: StudentProfile): number {
     let score = 0;
-    
+
     // BR-01.4: Required courses get higher priority
     if (course.required) score += 50;
-    
+
     // Career match
     if (course.career === profile.career) score += 30;
-    
+
     // Interest match
     const matchedInterests = course.tags.filter(tag =>
       profile.interests.some(interest =>
@@ -928,33 +928,33 @@ class RecommendationEngine {
       )
     );
     score += matchedInterests.length * 10;
-    
+
     // Semester appropriateness (prefer earlier semesters)
     if (course.semesterOffered.includes(profile.currentSemester)) score += 20;
-    
+
     return Math.min(score, 100);
   }
-  
+
   private recommendScholarships(profile: StudentProfile, scholarships: Scholarship[]): Recommendation[] {
     return scholarships
       .filter(scholarship => {
         const criteria = scholarship.eligibilityCriteria;
-        
+
         // BR-02.1: GPA requirement
         if (criteria.minGPA && profile.gpa && profile.gpa < criteria.minGPA) return false;
-        
+
         // BR-02.2: Career-specific
         if (criteria.careers && !criteria.careers.includes(profile.career)) return false;
-        
+
         // BR-02.3: Semester requirements
         if (criteria.semesters && !criteria.semesters.includes(profile.currentSemester)) return false;
-        
+
         // BR-02.4: Campus restrictions
         if (criteria.campuses && !criteria.campuses.includes(profile.campus)) return false;
-        
+
         // BR-02.5: Deadline not passed
         if (scholarship.deadline < new Date()) return false;
-        
+
         return true;
       })
       .map(scholarship => ({
@@ -967,22 +967,22 @@ class RecommendationEngine {
         dismissed: false
       }));
   }
-  
+
   private rankRecommendations(recommendations: Recommendation[]): Recommendation[] {
     // Sort by relevance score descending, then by date ascending
     return recommendations.sort((a, b) => {
       if (b.relevanceScore !== a.relevanceScore) {
         return b.relevanceScore - a.relevanceScore;
       }
-      
+
       // For opportunities with dates, sort by date
       const aDate = (a.opportunity as any).date || (a.opportunity as any).deadline;
       const bDate = (b.opportunity as any).date || (b.opportunity as any).deadline;
-      
+
       if (aDate && bDate) {
         return aDate.getTime() - bDate.getTime();
       }
-      
+
       return 0;
     });
   }
@@ -1003,19 +1003,19 @@ class PrerequisiteValidator {
   } {
     const completedCodes = new Set(completedCourses.map(c => c.courseCode));
     const missing: string[] = [];
-    
+
     for (const prereq of course.prerequisites) {
       if (!completedCodes.has(prereq)) {
         missing.push(prereq);
       }
     }
-    
+
     return {
       valid: missing.length === 0,
       missingPrerequisites: missing
     };
   }
-  
+
   // BR-01.5: Calculate optimal course sequence
   calculatePrerequisiteChain(
     targetCourse: Course,
@@ -1026,12 +1026,12 @@ class PrerequisiteValidator {
     const chain: Course[] = [];
     const toProcess = [targetCourse];
     const processed = new Set<string>();
-    
+
     while (toProcess.length > 0) {
       const current = toProcess.pop()!;
       if (processed.has(current.courseCode)) continue;
       processed.add(current.courseCode);
-      
+
       for (const prereqCode of current.prerequisites) {
         if (!completedCodes.has(prereqCode)) {
           const prereqCourse = allCourses.find(c => c.courseCode === prereqCode);
@@ -1042,7 +1042,7 @@ class PrerequisiteValidator {
         }
       }
     }
-    
+
     chain.push(targetCourse);
     return chain;
   }
@@ -1059,7 +1059,7 @@ class PrerequisiteValidator {
 class ConversationalAssistant {
   private keywordMatcher: KeywordMatcher;
   private contextEnricher: ContextEnricher;
-  
+
   async processQuery(
     query: string,
     profile: StudentProfile,
@@ -1068,12 +1068,12 @@ class ConversationalAssistant {
     // RF-05.4: Fuzzy keyword matching
     const keywords = this.keywordMatcher.extractKeywords(query);
     const language = this.detectLanguage(query);  // RF-05.3
-    
+
     // Match query against known intents
     const intent = this.matchIntent(keywords, language);
-    
+
     let response: string;
-    
+
     if (intent.type === "course-info") {
       // RF-05.8: Explain prerequisites
       response = this.explainCoursePrerequisites(intent.courseCode, opportunities, language);
@@ -1091,10 +1091,10 @@ class ConversationalAssistant {
       // RF-05.13-14: Fallback
       response = this.generateFallbackResponse(keywords, language);
     }
-    
+
     // RF-05.5-7: Context enrichment
     response = this.contextEnricher.enrich(response, profile);
-    
+
     return {
       id: generateUUID(),
       profileId: profile.id,
@@ -1104,16 +1104,16 @@ class ConversationalAssistant {
       timestamp: new Date()
     };
   }
-  
+
   private detectLanguage(query: string): "es" | "en" {
     // Simple language detection based on common words
     const spanishIndicators = ["que", "como", "cuando", "donde", "porque", "para", "con"];
     const englishIndicators = ["what", "how", "when", "where", "why", "for", "with"];
-    
+
     const lowerQuery = query.toLowerCase();
     const spanishScore = spanishIndicators.filter(word => lowerQuery.includes(word)).length;
     const englishScore = englishIndicators.filter(word => lowerQuery.includes(word)).length;
-    
+
     return spanishScore >= englishScore ? "es" : "en";
   }
 }
@@ -1478,17 +1478,17 @@ const spacing = {
 // Focus trap for modals
 const FocusTrap: React.FC = ({ children }) => {
   const trapRef = useRef<HTMLDivElement>(null);
-  
+
   useEffect(() => {
     const focusableElements = trapRef.current?.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     );
     const firstElement = focusableElements?.[0] as HTMLElement;
     const lastElement = focusableElements?.[focusableElements.length - 1] as HTMLElement;
-    
+
     const handleTab = (e: KeyboardEvent) => {
       if (e.key !== 'Tab') return;
-      
+
       if (e.shiftKey && document.activeElement === firstElement) {
         e.preventDefault();
         lastElement?.focus();
@@ -1497,13 +1497,13 @@ const FocusTrap: React.FC = ({ children }) => {
         firstElement?.focus();
       }
     };
-    
+
     document.addEventListener('keydown', handleTab);
     firstElement?.focus();
-    
+
     return () => document.removeEventListener('keydown', handleTab);
   }, []);
-  
+
   return <div ref={trapRef}>{children}</div>;
 };
 ```
@@ -1943,7 +1943,7 @@ const MOCK_CAREER_OPPS: CareerOpportunity[] = [
 class MockDataProvider {
   private personas: StudentProfile[];
   private opportunities: Opportunity[];
-  
+
   constructor() {
     this.personas = [
       // Initialize all 5 personas
@@ -1957,42 +1957,42 @@ class MockDataProvider {
       ...MOCK_CAREER_OPPS
     ];
   }
-  
+
   async getPersonas(): Promise<StudentProfile[]> {
     await this.simulateDelay(200);
     return [...this.personas];
   }
-  
+
   async getPersonaById(id: string): Promise<StudentProfile | null> {
     await this.simulateDelay(200);
     return this.personas.find(p => p.id === id) || null;
   }
-  
+
   async getOpportunities(filters?: OpportunityFilters): Promise<Opportunity[]> {
     await this.simulateDelay(200);
-    
+
     let filtered = [...this.opportunities];
-    
+
     if (filters?.type) {
       filtered = filtered.filter(o => o.type === filters.type);
     }
-    
+
     if (filters?.career) {
       filtered = filtered.filter(o => !o.career || o.career === filters.career);
     }
-    
+
     if (filters?.semester) {
       filtered = filtered.filter(o => {
         if (!o.semester) return true;
-        return Array.isArray(o.semester) 
+        return Array.isArray(o.semester)
           ? o.semester.includes(filters.semester!)
           : o.semester === filters.semester;
       });
     }
-    
+
     return filtered;
   }
-  
+
   private simulateDelay(ms: number): Promise<void> {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
@@ -2030,7 +2030,7 @@ fc.assert(
   fc.property(studentProfileGenerator(), (profile) => {
     profileService.save(profile);
     const loaded = profileService.load(profile.id);
-    
+
     expect(loaded).toEqual(profile);
     expect(loaded.name).toBe(profile.name);
     expect(loaded.completedCourses).toEqual(profile.completedCourses);
@@ -2049,7 +2049,7 @@ fc.assert(
 fc.assert(
   fc.property(fc.integer(), (semester) => {
     const result = validateSemester(semester);
-    
+
     if (semester >= 1 && semester <= 10) {
       expect(result.valid).toBe(true);
     } else {
@@ -2070,13 +2070,13 @@ fc.assert(
 fc.assert(
   fc.property(partialProfileGenerator(), (profile) => {
     const completeness = calculateCompleteness(profile);
-    
+
     let filledCount = 0;
     if (profile.name) filledCount++;
     if (profile.campus) filledCount++;
     if (profile.career) filledCount++;
     if (profile.currentSemester) filledCount++;
-    
+
     const expected = (filledCount / 4) * 100;
     expect(completeness).toBe(expected);
     expect(completeness).toBeGreaterThanOrEqual(0);
@@ -2101,12 +2101,12 @@ fc.assert(
         { completedCourses, /* ... */ },
         [course]
       );
-      
+
       const isRecommended = recommendations.some(r => r.opportunity.id === course.id);
       const prerequisitesMet = course.prerequisites.every(prereq =>
         completedCourses.some(cc => cc.courseCode === prereq)
       );
-      
+
       if (prerequisitesMet) {
         // May be recommended (depending on other criteria)
         // No assertion here, as other factors affect recommendation
@@ -2133,10 +2133,10 @@ fc.assert(
     (course, currentSemester) => {
       const profile = { currentSemester, completedCourses: [], /* ... */ };
       const recommendations = generateCourseRecommendations(profile, [course]);
-      
+
       const isRecommended = recommendations.some(r => r.opportunity.id === course.id);
       const semesterOffered = course.semesterOffered.includes(currentSemester);
-      
+
       if (!semesterOffered) {
         expect(isRecommended).toBe(false);
       }
@@ -2156,7 +2156,7 @@ fc.assert(
   fc.property(studentProfileGenerator(), courseCatalogGenerator(), (profile, courses) => {
     const recommendations = generateCourseRecommendations(profile, courses);
     const completedCodes = new Set(profile.completedCourses.map(c => c.courseCode));
-    
+
     recommendations.forEach(rec => {
       if (rec.opportunity.type === 'course') {
         expect(completedCodes.has((rec.opportunity as Course).courseCode)).toBe(false);
@@ -2180,30 +2180,30 @@ fc.assert(
     (scholarship, profile) => {
       const recommendations = generateScholarshipRecommendations(profile, [scholarship]);
       const isRecommended = recommendations.some(r => r.opportunity.id === scholarship.id);
-      
+
       const criteria = scholarship.eligibilityCriteria;
       let eligible = true;
-      
+
       // Check GPA
       if (criteria.minGPA && profile.gpa && profile.gpa < criteria.minGPA) {
         eligible = false;
       }
-      
+
       // Check career
       if (criteria.careers && !criteria.careers.includes(profile.career)) {
         eligible = false;
       }
-      
+
       // Check semester
       if (criteria.semesters && !criteria.semesters.includes(profile.currentSemester)) {
         eligible = false;
       }
-      
+
       // Check campus
       if (criteria.campuses && !criteria.campuses.includes(profile.campus)) {
         eligible = false;
       }
-      
+
       if (!eligible) {
         expect(isRecommended).toBe(false);
       }
@@ -2226,10 +2226,10 @@ fc.assert(
     (scholarship, profile) => {
       // Set scholarship deadline to past
       scholarship.deadline = new Date(Date.now() - 86400000); // Yesterday
-      
+
       const recommendations = generateScholarshipRecommendations(profile, [scholarship]);
       const isRecommended = recommendations.some(r => r.opportunity.id === scholarship.id);
-      
+
       expect(isRecommended).toBe(false);
     }
   )
@@ -2252,10 +2252,10 @@ fc.assert(
         completedCourses: Array(completedCount).fill({ courseCode: 'TEST', courseName: 'Test' }),
         career: Career.FINANCE
       };
-      
+
       const progress = calculateAcademicProgress(profile, totalRequired);
       const expectedPercentage = Math.min((completedCount / totalRequired) * 100, 100);
-      
+
       expect(progress.percentage).toBe(expectedPercentage);
       expect(progress.completedCount).toBe(completedCount);
       expect(progress.totalRequired).toBe(totalRequired);
@@ -2279,9 +2279,9 @@ fc.assert(
     (daysUntil) => {
       const deadline = new Date(Date.now() + daysUntil * 86400000);
       const importantDate = { id: 'test', type: 'deadline', title: 'Test', date: deadline, description: '' };
-      
+
       const alerts = generateAlerts(mockProfile, [importantDate]);
-      
+
       if (daysUntil < 1 || daysUntil > 7) {
         expect(alerts.length).toBe(0);
       } else if (daysUntil === 1) {
@@ -2312,9 +2312,9 @@ fc.assert(
     (dates) => {
       // Create some duplicates
       const datesWithDuplicates = [...dates, ...dates.slice(0, 2)];
-      
+
       const alerts = generateAlerts(mockProfile, datesWithDuplicates);
-      
+
       // Check for uniqueness
       const uniqueKeys = new Set(alerts.map(a => `${a.title}-${a.relatedDate.getTime()}`));
       expect(uniqueKeys.size).toBe(alerts.length);
@@ -2339,11 +2339,11 @@ fc.assert(
         ...d,
         date: new Date(Date.now() + (i % 7 + 1) * 86400000)
       }));
-      
+
       const alerts = generateAlerts(mockProfile, alertDates);
-      
+
       expect(alerts.length).toBeLessThanOrEqual(5);
-      
+
       // Verify they are the most urgent (earliest)
       for (let i = 0; i < alerts.length - 1; i++) {
         expect(alerts[i].daysRemaining).toBeLessThanOrEqual(alerts[i + 1].daysRemaining);
@@ -2365,7 +2365,7 @@ fc.assert(
     fc.array(recommendationGenerator(), { minLength: 2, maxLength: 20 }),
     (recommendations) => {
       const ranked = rankRecommendations(recommendations);
-      
+
       for (let i = 0; i < ranked.length - 1; i++) {
         expect(ranked[i].relevanceScore).toBeGreaterThanOrEqual(ranked[i + 1].relevanceScore);
       }
@@ -2386,13 +2386,13 @@ fc.assert(
     fc.string({ minLength: 5, maxLength: 100 }),
     async (query) => {
       const response = await conversationalAssistant.processQuery(query, mockProfile, mockOpportunities);
-      
+
       expect(['es', 'en']).toContain(response.language);
-      
+
       // If query contains Spanish indicators, response should be Spanish
       const hasSpanishWords = /\b(que|como|cuando|donde|becas|cursos)\b/i.test(query);
       const hasEnglishWords = /\b(what|how|when|where|scholarships|courses)\b/i.test(query);
-      
+
       if (hasSpanishWords && !hasEnglishWords) {
         expect(response.language).toBe('es');
       } else if (hasEnglishWords && !hasSpanishWords) {
@@ -2416,14 +2416,14 @@ fc.assert(
     (deadline) => {
       const opportunity = { deadline, /* ... */ } as Scholarship;
       const daysRemaining = calculateDaysRemaining(opportunity);
-      
+
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const deadlineDay = new Date(deadline);
       deadlineDay.setHours(0, 0, 0, 0);
-      
+
       const expected = Math.floor((deadlineDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       expect(daysRemaining).toBe(expected);
       expect(daysRemaining).toBeGreaterThanOrEqual(0);
     }
@@ -2444,7 +2444,7 @@ fc.assert(
     opportunityCatalogGenerator(),
     (selectedType, catalog) => {
       const filtered = filterByType(catalog, selectedType);
-      
+
       filtered.forEach(opportunity => {
         expect(opportunity.type).toBe(selectedType);
       });
@@ -2466,7 +2466,7 @@ fc.assert(
     opportunityCatalogGenerator(),
     (selectedCareer, catalog) => {
       const filtered = filterByCareer(catalog, selectedCareer);
-      
+
       filtered.forEach(opportunity => {
         if (opportunity.career) {
           expect(opportunity.career).toBe(selectedCareer);
@@ -2492,12 +2492,12 @@ fc.assert(
     (keyword, catalog) => {
       const results = searchOpportunities(catalog, keyword);
       const lowerKeyword = keyword.toLowerCase();
-      
+
       results.forEach(opportunity => {
         const titleMatch = opportunity.title.toLowerCase().includes(lowerKeyword);
         const descMatch = opportunity.description.toLowerCase().includes(lowerKeyword);
         const tagMatch = opportunity.tags.some(tag => tag.toLowerCase().includes(lowerKeyword));
-        
+
         expect(titleMatch || descMatch || tagMatch).toBe(true);
       });
     }
@@ -2515,15 +2515,15 @@ fc.assert(
 fc.assert(
   fc.property(alertGenerator(), (alert) => {
     alertService.dismissAlert(alert.id);
-    
+
     const dismissed = alertService.getAlertById(alert.id);
     expect(dismissed?.dismissed).toBe(true);
-    
+
     // Generate alerts again with same date
     const newAlerts = generateAlerts(mockProfile, [
       { id: 'test', type: 'deadline', title: alert.title, date: alert.relatedDate, description: '' }
     ]);
-    
+
     // Should not appear if same urgency
     const sameUrgency = newAlerts.find(a => a.title === alert.title && a.urgency === alert.urgency);
     expect(sameUrgency).toBeUndefined();
@@ -2546,24 +2546,24 @@ fc.assert(
         originalProfile,
         mockOpportunities
       );
-      
+
       // Modify profile
       const modifiedProfile = {
         ...originalProfile,
         interests: [...originalProfile.interests, 'blockchain'],
         currentSemester: originalProfile.currentSemester + 1
       };
-      
+
       const recommendations2 = recommendationEngine.generateRecommendations(
         modifiedProfile,
         mockOpportunities
       );
-      
+
       // Recommendations should be recalculated (may be same or different)
       // Verify they are based on new profile data
       expect(recommendations2).toBeDefined();
       expect(Array.isArray(recommendations2)).toBe(true);
-      
+
       // Timestamp should reflect new generation
       if (recommendations2.length > 0) {
         expect(recommendations2[0].generatedAt.getTime()).toBeGreaterThan(
@@ -2655,7 +2655,7 @@ const courseGenerator = () => fc.record({
     / Integr.  \ (15%)
    /____________\
   /              \
- / Property (10%) \ 
+ / Property (10%) \
 /__________________\
 /                  \
 /   Unit Tests      \ (70%)
@@ -2685,24 +2685,24 @@ describe('PrerequisiteValidator', () => {
   it('should validate course with no prerequisites', () => {
     const course: Course = { prerequisites: [], /* ... */ };
     const completed: CompletedCourse[] = [];
-    
+
     const result = prerequisiteValidator.validate(course, completed);
-    
+
     expect(result.valid).toBe(true);
     expect(result.missingPrerequisites).toEqual([]);
   });
-  
+
   it('should reject course with unmet prerequisites', () => {
-    const course: Course = { 
-      prerequisites: ['FIN-101', 'FIN-102'], 
-      /* ... */ 
+    const course: Course = {
+      prerequisites: ['FIN-101', 'FIN-102'],
+      /* ... */
     };
     const completed: CompletedCourse[] = [
       { courseCode: 'FIN-101', courseName: 'Intro' }
     ];
-    
+
     const result = prerequisiteValidator.validate(course, completed);
-    
+
     expect(result.valid).toBe(false);
     expect(result.missingPrerequisites).toContain('FIN-102');
   });
@@ -2714,21 +2714,21 @@ describe('ProgressCalculator', () => {
       completedCourses: Array(20).fill({ courseCode: 'TEST' }),
       career: Career.FINANCE
     };
-    
+
     const progress = calculateAcademicProgress(profile, 40);
-    
+
     expect(progress.percentage).toBe(50);
     expect(progress.completedCount).toBe(20);
   });
-  
+
   it('should cap percentage at 100', () => {
     const profile = {
       completedCourses: Array(50).fill({ courseCode: 'TEST' }),
       career: Career.FINANCE
     };
-    
+
     const progress = calculateAcademicProgress(profile, 40);
-    
+
     expect(progress.percentage).toBe(100);
   });
 });
@@ -2742,36 +2742,36 @@ describe('ProgressCalculator', () => {
 describe('ProfileForm Component', () => {
   it('should render all required fields', () => {
     render(<ProfileForm onSave={jest.fn()} onCancel={jest.fn()} />);
-    
+
     expect(screen.getByLabelText(/nombre/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/campus/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/carrera/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/semestre/i)).toBeInTheDocument();
   });
-  
+
   it('should validate semester range', async () => {
     const onSave = jest.fn();
     render(<ProfileForm onSave={onSave} onCancel={jest.fn()} />);
-    
+
     const semesterInput = screen.getByLabelText(/semestre/i);
     await userEvent.type(semesterInput, '15');
     await userEvent.click(screen.getByText(/guardar/i));
-    
+
     expect(onSave).not.toHaveBeenCalled();
     expect(screen.getByText(/debe estar entre 1 y 10/i)).toBeInTheDocument();
   });
-  
+
   it('should call onSave with valid profile data', async () => {
     const onSave = jest.fn();
     render(<ProfileForm onSave={onSave} onCancel={jest.fn()} />);
-    
+
     await userEvent.type(screen.getByLabelText(/nombre/i), 'Juan Pérez');
     await userEvent.selectOptions(screen.getByLabelText(/campus/i), 'ciudad-de-mexico');
     await userEvent.selectOptions(screen.getByLabelText(/carrera/i), 'finance');
     await userEvent.type(screen.getByLabelText(/semestre/i), '5');
-    
+
     await userEvent.click(screen.getByText(/guardar/i));
-    
+
     expect(onSave).toHaveBeenCalledWith(expect.objectContaining({
       name: 'Juan Pérez',
       campus: Campus.CIUDAD_DE_MEXICO,
@@ -2785,19 +2785,19 @@ describe('RecommendationCard Component', () => {
   it('should display opportunity details', () => {
     const recommendation = createMockRecommendation();
     render(<RecommendationCard recommendation={recommendation} />);
-    
+
     expect(screen.getByText(recommendation.opportunity.title)).toBeInTheDocument();
     expect(screen.getByText(recommendation.explanation)).toBeInTheDocument();
   });
-  
+
   it('should handle dismiss action', async () => {
     const onDismiss = jest.fn();
     const recommendation = createMockRecommendation();
-    
+
     render(<RecommendationCard recommendation={recommendation} onDismiss={onDismiss} />);
-    
+
     await userEvent.click(screen.getByLabelText(/descartar/i));
-    
+
     expect(onDismiss).toHaveBeenCalledWith(recommendation.id);
   });
 });
@@ -2810,27 +2810,27 @@ describe('Accessibility Compliance', () => {
   it('should have no axe violations on Dashboard', async () => {
     const { container } = render(<Dashboard profile={mockProfile} />);
     const results = await axe(container);
-    
+
     expect(results).toHaveNoViolations();
   });
-  
+
   it('should support keyboard navigation', async () => {
     render(<ProfileForm onSave={jest.fn()} onCancel={jest.fn()} />);
-    
+
     const nameInput = screen.getByLabelText(/nombre/i);
     nameInput.focus();
-    
+
     await userEvent.tab();
     expect(screen.getByLabelText(/campus/i)).toHaveFocus();
-    
+
     await userEvent.tab();
     expect(screen.getByLabelText(/carrera/i)).toHaveFocus();
   });
-  
+
   it('should have sufficient color contrast', () => {
     const { container } = render(<Dashboard profile={mockProfile} />);
     const textElements = container.querySelectorAll('p, h1, h2, h3, span');
-    
+
     textElements.forEach(element => {
       const contrast = getContrastRatio(element);
       expect(contrast).toBeGreaterThanOrEqual(4.5);
@@ -2849,21 +2849,21 @@ describe('Recommendation Flow Integration', () => {
     const { rerender } = render(
       <RecommendationEngine profile={mockProfile1} opportunities={mockOpportunities} />
     );
-    
+
     const recommendations1 = screen.getAllByRole('article');
     expect(recommendations1).toHaveLength(5);
-    
+
     // Update profile
     const updatedProfile = {
       ...mockProfile1,
       currentSemester: mockProfile1.currentSemester + 1,
       interests: [...mockProfile1.interests, 'blockchain']
     };
-    
+
     rerender(
       <RecommendationEngine profile={updatedProfile} opportunities={mockOpportunities} />
     );
-    
+
     const recommendations2 = screen.getAllByRole('article');
     expect(recommendations2).toBeDefined();
     // Recommendations may change based on new profile
@@ -2875,14 +2875,14 @@ describe('Mock Data Provider Integration', () => {
     const startTime = Date.now();
     const personas = await mockDataProvider.getPersonas();
     const endTime = Date.now();
-    
+
     expect(personas).toHaveLength(5);
     expect(endTime - startTime).toBeGreaterThanOrEqual(200);
   });
-  
+
   it('should filter opportunities by type', async () => {
     const courses = await mockDataProvider.getOpportunities({ type: 'course' });
-    
+
     courses.forEach(opp => {
       expect(opp.type).toBe('course');
     });
@@ -2896,26 +2896,26 @@ describe('Mock Data Provider Integration', () => {
 describe('User Journey: New Student Onboarding', () => {
   test('should complete profile and view recommendations', async ({ page }) => {
     await page.goto('http://localhost:3000');
-    
+
     // Verify welcome message
     await expect(page.getByText(/bienvenido a ebc compass/i)).toBeVisible();
-    
+
     // Fill profile form
     await page.getByLabel(/nombre/i).fill('Test Student');
     await page.getByLabel(/campus/i).selectOption('ciudad-de-mexico');
     await page.getByLabel(/carrera/i).selectOption('finance');
     await page.getByLabel(/semestre/i).fill('3');
-    
+
     // Add interests
     await page.getByPlaceholder(/intereses/i).fill('finanzas');
     await page.keyboard.press('Enter');
-    
+
     // Save profile
     await page.getByRole('button', { name: /guardar perfil/i }).click();
-    
+
     // Verify dashboard loads
     await expect(page.getByText(/progreso académico/i)).toBeVisible();
-    
+
     // Verify recommendations appear
     const recommendations = page.getByRole('article');
     await expect(recommendations).toHaveCount.greaterThan(0);
@@ -2925,21 +2925,21 @@ describe('User Journey: New Student Onboarding', () => {
 describe('User Journey: Search and Filter Opportunities', () => {
   test('should filter opportunities by type and career', async ({ page }) => {
     await page.goto('http://localhost:3000/opportunities');
-    
+
     // Apply type filter
     await page.getByLabel(/tipo: becas/i).check();
-    
+
     // Apply career filter
     await page.getByLabel(/carrera: finanzas/i).check();
-    
+
     // Verify filtered results
     const results = page.getByRole('article');
     await expect(results.first()).toContainText(/beca/i);
-    
+
     // Search by keyword
     await page.getByPlaceholder(/buscar/i).fill('santander');
     await page.getByRole('button', { name: /buscar/i }).click();
-    
+
     // Verify search results
     await expect(page.getByText(/santander/i)).toBeVisible();
   });
@@ -3011,19 +3011,19 @@ add_header Referrer-Policy "no-referrer-when-downgrade" always;
 // Validate all user inputs before processing
 function validateProfile(profile: Partial<StudentProfile>): ValidationResult {
   const errors: string[] = [];
-  
+
   if (profile.name && profile.name.length > 100) {
     errors.push('Nombre debe tener máximo 100 caracteres');
   }
-  
+
   if (profile.currentSemester && (profile.currentSemester < 1 || profile.currentSemester > 10)) {
     errors.push('Semestre debe estar entre 1 y 10');
   }
-  
+
   if (profile.interests && profile.interests.length > 10) {
     errors.push('Máximo 10 intereses permitidos');
   }
-  
+
   return {
     valid: errors.length === 0,
     errors
@@ -3041,7 +3041,7 @@ function saveEncryptedProfile(profile: StudentProfile): void {
     JSON.stringify(profile),
     getUserDerivedKey()
   ).toString();
-  
+
   localStorage.setItem('ebc_compass_profile_encrypted', encrypted);
 }
 ```
@@ -3162,7 +3162,6 @@ The MVP focuses on delivering core value—personalized recommendations for six 
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** 2024  
+**Document Version:** 1.0
+**Last Updated:** 2024
 **Status:** Ready for Implementation
-

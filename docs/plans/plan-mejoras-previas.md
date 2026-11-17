@@ -88,14 +88,37 @@ Responsable: ______
 
 Responsable: ______
 
+## Fase 5: memoria a petición
+
+**Hoy:** la memoria a largo plazo solo guarda 8 categorías fijas (carrera, campus, semestre, intereses, meta, horario, idioma y modalidad), con valores de una lista cerrada y detectadas con reglas de texto. Si el alumno pide "recuerda que trabajo por las tardes", no se guarda nada. Dentro de una misma conversación sí lo toma en cuenta (mensajes recientes y resumen), pero no en la siguiente.
+
+**Objetivo:** que Compass guarde lo que el alumno le pide recordar explícitamente y lo use en conversaciones futuras.
+
+- **Detectar la intención de recordar** ("recuerda que…", "no olvides que…", "remember that…") y extraer el dato con el modelo, no con reglas de texto.
+- **Primero intentar una categoría existente:** si encaja en una de las 8 (por ejemplo, horario), se guarda ahí con su valor controlado.
+- **Si no encaja, guardarlo como nota breve:** límite de longitud y de cantidad de notas por alumno, y redactada en tercera persona ("Trabaja por las tardes"), sin copiar el mensaje original.
+- **Filtrar antes de guardar:**
+  - Datos sensibles (contraseñas, números de cuenta o tarjeta, salud, datos de otras personas). `AGENTS.md` prohíbe guardar información sensible real.
+  - Instrucciones o intentos de inyección. Un texto guardado vuelve a entrar al prompt en cada turno, así que pasa por el mismo filtro de entrada de la fase 2.
+- **Confirmación en la respuesta:** Compass dice qué guardó ("Listo, recordaré que trabajas por las tardes"). Si no lo guardó, lo dice y explica por qué. Nunca promete recordar algo que no quedó guardado.
+- **Visible y borrable:** las notas aparecen en "Lo que Compass recuerda", con las mismas acciones de corregir y olvidar que el resto de la memoria.
+- **Uso en el prompt:** las notas entran en el bloque `<MEMORIA>`, que el prompt ya trata como contexto no autoritativo.
+- **Para el hackatón:** evaluar AgentCore Memory como almacenamiento y extracción de esta memoria. No existe en el emulador, así que solo se puede probar en el lab; en local se mantiene la tabla actual.
+
+**Listo cuando:** el alumno pide recordar algo, Compass confirma qué guardó, el dato aparece en "Lo que Compass recuerda", se usa en una conversación nueva, y un dato sensible o un intento de inyección no se guarda.
+
+Responsable: ______
+
 ## Orden y relación con el plan del hackatón
 
 1. **Fase 1** primero, en paralelo: deja el repo fácil de levantar y el chat confiable.
 2. **Fase 2** después: el registro de bloqueos alimenta el panel de administración y el momento de "inyección bloqueada" de la demo.
 3. **Fases 3 y 4** en paralelo. La 3 deja listo el contrato de datos que usará la tarea de Banner. La 4 deja registrado el modelo, que sirve para comparar en la tarea de evaluaciones.
+4. **Fase 5** después de la 2, porque reutiliza su filtro de entrada para decidir qué se puede guardar.
 
 ## Decisiones pendientes
 
 - **Lunna y Terra:** qué modelo de Bedrock corresponde a cada uno y cuál es el predeterminado.
 - **Setup:** si las instalaciones se ofrecen en los tres sistemas operativos o solo en macOS y Windows.
 - **Guardrails:** si Bedrock Guardrails entra desde esta fase o solo las reglas locales, con Bedrock en el hackatón.
+- **Memoria a petición:** cuántas notas y de qué longitud máxima se guardan por alumno, y si AgentCore Memory reemplaza la tabla actual en el lab o solo se usa para las notas.
