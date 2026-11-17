@@ -121,7 +121,7 @@ export function ConversationHistory({ entries, pending, onRetry, onPickSuggestio
             </div>
           )}
 
-          {entry.role === 'assistant' && !entry.isError && !entry.failure && !entry.streamError && !entry.isStreaming && Boolean(entry.content) && (
+          {entry.role === 'assistant' && !entry.inputBlock && !entry.isError && !entry.failure && !entry.streamError && !entry.isStreaming && Boolean(entry.content) && (
             <div className="chat-actions">
               <button type="button" className="chat-icon-button" onClick={() => void copy(entry)} aria-label={copiedId === entry.id ? 'Respuesta copiada' : 'Copiar respuesta'} title={copiedId === entry.id ? 'Respuesta copiada' : 'Copiar respuesta'}>
                 <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

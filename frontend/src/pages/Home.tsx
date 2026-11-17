@@ -11,6 +11,8 @@ import { Rumbo } from '../components/Rumbo'
 import { daysUntil, formatShortDate } from '../utils/dates'
 import { DateLine } from '../components/DateLine'
 import { dateLabelFor } from '../utils/opportunityTypes'
+import { fetchAcademicProgress, type AcademicProgress } from '../services/academicProgressService'
+import type { Recommendation } from '../services/opportunityService'
 
 const SAVED_KEY = 'ebc_compass_saved_opportunities'
 
@@ -25,8 +27,20 @@ function upcomingOf(list: Opportunity[], limit: number) {
 export function Home() {
   const profile = loadProfile()
   const academic = academicDataFromClaims(getToken())
+  const [academicProgress, setAcademicProgress] = useState<AcademicProgress | null>(null)
+  const [progressLoading, setProgressLoading] = useState(true)
+  const [progressError, setProgressError] = useState('')
+  const [recommendationsLoading, setRecommendationsLoading] = useState(Boolean(profile))
+  const [recommendationsError, setRecommendationsError] = useState('')
   const [all, setAll] = useState<Opportunity[]>([])
-  const [recommended, setRecommended] = useState<Opportunity[]>([])
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([])
+  useEffect(() => {
+    if (progressLoading || recommendationsLoading) return
+    const key = personaStorageKey('home-return-scroll')
+    const saved = sessionStorage.getItem(key)
+    if (saved !== null) { window.scrollTo(0, Number(saved)); sessionStorage.removeItem(key) }
+  }, [progressLoading, recommendationsLoading])
+  const recommended = recommendations.map((item) => item.opportunity)
   const [savedIds, setSavedIds] = useState<string[]>(() => JSON.parse(window.localStorage.getItem(personaStorageKey(SAVED_KEY)) ?? '[]') as string[])
 
   useEffect(() => {
@@ -39,18 +53,39 @@ export function Home() {
     fetchOpportunities({ campus: profile?.campus || undefined, career: profile?.career || undefined }).then(setAll).catch(() => setAll([]))
   }, [profile?.campus, profile?.career])
 
+  useEffect(() => {
+    let active = true
+    fetchAcademicProgress()
+      .then(value => { if (active) setAcademicProgress(value) })
+      .catch(() => { if (active) setProgressError('No pudimos cargar tu avance académico. Recarga la página para intentar de nuevo.') })
+      .finally(() => { if (active) setProgressLoading(false) })
+    return () => { active = false }
+  }, [])
+
   const profileInterests = profile?.interests.join(',')
   useEffect(() => {
     if (!profile) return
+    let active = true
+    setRecommendationsLoading(true)
+    setRecommendationsError('')
     fetchRecommendations({ career: profile.career, currentSemester: profile.currentSemester, interests: profile.interests, campus: profile.campus })
-      .then((list) => setRecommended(list.map((item) => item.opportunity)))
-      .catch(() => setRecommended([]))
+      .then(value => { if (active) setRecommendations(value) })
+      .catch(() => { if (active) { setRecommendations([]); setRecommendationsError('No pudimos cargar tus recomendaciones. Recarga la página para intentar de nuevo.') } })
+      .finally(() => { if (active) setRecommendationsLoading(false) })
+    return () => { active = false }
   }, [profile?.career, profile?.campus, profile?.currentSemester, profileInterests])
 
   // Con perfil, el rumbo usa lo recomendado; si hay pocas fechas, se completa con las generales.
   const personal = upcomingOf(recommended, 5)
   const route = personal.length >= 3 ? personal : upcomingOf([...personal, ...all.filter((item) => !personal.some((p) => p.id === item.id))], 5)
   const picks = (profile ? recommended : all).slice(0, 3)
+  const recommendationGroups = [
+    { label: 'Cursos y desarrollo profesional', types: ['course', 'professional-development'] },
+    { label: 'Becas', types: ['scholarship'] },
+    { label: 'Eventos', types: ['event'] },
+    { label: 'Trámites', types: ['procedure'] },
+    { label: 'Oportunidades laborales', types: ['career-opportunity'] },
+  ].map((group) => ({ ...group, items: recommendations.filter((item) => group.types.includes(item.opportunity.type)) }))
   function removeSaved(id: string) {
     const next = savedIds.filter((savedId) => savedId !== id)
     setSavedIds(next)
@@ -92,12 +127,55 @@ export function Home() {
           </section>
         )}
 
+        {progressLoading && <p role="status">Cargando avance académico…</p>}
+        {progressError && <p className="form-error" role="alert">{progressError}</p>}
+        {!progressLoading && !progressError && !academicProgress && <p>No hay datos de avance académico disponibles para tu cuenta.</p>}
+        {academicProgress && (
+          <section className="academic-progress-card" aria-labelledby="academic-progress-title">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Avance académico{academicProgress.source === 'demo' ? ' · Datos demo' : ''}</p>
+                <h2 id="academic-progress-title">Tu avance en {academicProgress.program.name}</h2>
+              </div>
+              <span>{academicProgress.currentPeriod.number}.º {academicProgress.currentPeriod.type}</span>
+            </div>
+            <p>{academicProgress.campus.name} · Actualizado al {formatShortDate(academicProgress.asOf)}</p>
+            {academicProgress.credits && academicProgress.credits.total > 0 && <div className="academic-credit-progress"><label htmlFor="academic-credits">Créditos obtenidos: {academicProgress.credits.earned} de {academicProgress.credits.total}</label><progress id="academic-credits" value={academicProgress.credits.earned} max={academicProgress.credits.total} /></div>}
+            <div className="academic-progress-facts">
+              {academicProgress.courses && <p><strong>{academicProgress.courses.completed} de {academicProgress.courses.total}</strong><span>materias cursadas</span></p>}
+
+              {academicProgress.gpa && <p><strong>{academicProgress.gpa.value} / {academicProgress.gpa.scale}</strong><span>promedio</span></p>}
+            </div>
+          </section>
+        )}
+
         <section className="home-section">
           <div className="section-heading">
             <h2>{profile ? 'Recomendaciones para ti' : 'Oportunidades abiertas'}</h2>
             <Link to="/catalogo">Ver todas</Link>
           </div>
-          <div className="opportunity-grid">
+          <p className="recommendations-demo-note">Oportunidades de demostración con datos simulados. Consulta los requisitos y fechas oficiales con EBC.</p>
+          {profile && recommendationsLoading && <p role="status">Cargando recomendaciones…</p>}
+          {profile && recommendationsError && <p className="form-error" role="alert">{recommendationsError}</p>}
+          {profile && !recommendationsLoading && !recommendationsError && recommendations.length === 0 && <p>No hay recomendaciones disponibles para tu perfil en este momento.</p>}
+          {profile ? <div className="home-category-grid">{recommendationGroups.filter((group) => group.items.length > 0).map((group) => (
+            <section className="home-recommendation-group" key={group.label} aria-label={group.label}>
+              <h3>{group.label}</h3><p className="category-count">{group.items.length} {group.items.length === 1 ? 'recomendación' : 'recomendaciones'}</p>
+              <div className="opportunity-grid">
+                {group.items.slice(0, 1).map(({ opportunity: item, explanation }) => (
+                  <article className="opportunity-card" key={item.id}>
+                    <span className="card-top"><TypeBadge type={item.type} />{savedIds.includes(item.id) && <span className="saved-label">Guardada</span>}</span>
+                    {item.deadline && <DateLine type={item.type} deadline={item.deadline} />}
+                    <h4><Link className="card-link" to={`/catalogo?search=${encodeURIComponent(item.title)}`}>{item.title}</Link></h4>
+                    <p>{item.description.replace(/^Demo simulada:\s*(\p{L})/iu, (_match, initial: string) => initial.toLocaleUpperCase('es-MX'))}</p>
+                    <div className="recommendation-reason"><span>Por qué te lo recomendamos</span><ul aria-label="Razones de la recomendación">{explanation.split(/(?<=\.)\s+/).filter(Boolean).map(reason => <li key={reason}>{reason.replace('Coincide con tu carrera.', 'Tu carrera').replace('Se ofrece en tu campus.', 'Tu campus').replace('Está disponible para tu periodo académico.', 'Tu periodo académico').replace('Se relaciona con tus intereses:', 'Intereses:')}</li>)}</ul></div>
+                    <span className="opportunity-action" aria-hidden="true">Ver oportunidad →</span>
+                  </article>
+                ))}
+              </div>
+              <Link className="category-more" to={`/catalogo?recommended=1&types=${group.types.join(',')}`} onClick={() => sessionStorage.setItem(personaStorageKey('home-return-scroll'), String(window.scrollY))}>Ver {group.items.length === 1 ? 'la recomendación' : `las ${group.items.length} recomendaciones`} de {group.label.toLowerCase()} →</Link>
+            </section>
+          ))}</div> : <div className="opportunity-grid">
             {picks.map((item) => (
               <article className="opportunity-card" key={item.id}>
                 <span className="card-top">
@@ -106,10 +184,10 @@ export function Home() {
                 </span>
                 {item.deadline && <DateLine type={item.type} deadline={item.deadline} />}
                 <h3><Link className="card-link" to={`/catalogo?search=${encodeURIComponent(item.title)}`}>{item.title}</Link></h3>
-                <p>{item.description}</p>
+                <p>{item.description.replace(/^Demo simulada:\s*(\p{L})/iu, (_match, initial: string) => initial.toLocaleUpperCase('es-MX'))}</p>
               </article>
             ))}
-          </div>
+          </div>}
         </section>
 
         {savedItems.length > 0 && (

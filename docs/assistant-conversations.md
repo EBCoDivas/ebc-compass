@@ -152,3 +152,7 @@ tipos de los cinco paquetes, build, lint, git diff --check y verify:lambda
 correctos. El prompt del sistema es único y está escrito en español; la
 instrucción de idioma se coloca después del punto de caché. Cero llamadas a
 OpenAI en esta fase.
+
+### Metadatos visibles al recargar
+
+Los mensajes archivados del asistente incluyen `mode`, `latencyMs` y `degraded`, además de `sources`, `suggestions` y `usage` cuando están disponibles. La respuesta del turno y el historial comparten el mismo tiempo medido; no se recalcula al leer. El frontend restaura estos campos para conservar fuentes, sugerencias, tiempo y avisos después de recargar. Los archivos antiguos sin métricas se muestran sin inventar valores. No cambian las rutas ni los permisos de la tabla.

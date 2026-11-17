@@ -11,6 +11,7 @@
     "dev:rules": "node scripts/dev.mjs --rules",
     "stop": "npm --prefix local run down",
     "doctor": "node scripts/doctor.mjs",
+    "test:scripts": "node --test scripts/lib/*.test.mjs",
     "verify:rules": "npm --prefix backend run verify:rules",
     "verify:flow": "npm --prefix backend run verify:flow",
     "verify:lambda": "npm --prefix backend run verify:lambda",

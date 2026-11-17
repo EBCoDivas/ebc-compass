@@ -1,6 +1,8 @@
 // Tipos propios del asistente. No dependen de otras partes del backend: los adaptadores traducen
 // el catálogo y el perfil actuales a estas formas (si los datos cambian, solo cambia el adaptador).
 
+export type ChatModel = 'lunna' | 'terra'
+
 export type Language = 'es' | 'en'
 
 export type Intent =
@@ -115,6 +117,8 @@ export interface Passage {
 }
 
 export interface ChatMessage {
+  model?: ChatModel
+  inputBlock?: InputBlock
   id: string
   role: 'student' | 'assistant'
   content: string
@@ -130,6 +134,8 @@ export type AssistantFailure = 'MODEL_UNAVAILABLE' | 'VALIDATION_FAILED'
 export interface CatalogFallback { content: string; sources: Source[] }
 
 export interface AssistantReply {
+  model?: ChatModel
+  inputBlock?: InputBlock
   /** Id y fecha del mensaje del asistente guardado en el historial. */
   id: string
   createdAt: string
@@ -145,6 +151,8 @@ export interface AssistantReply {
   /** error = generación fallida o rechazada; no es una respuesta por reglas. */
   generatedBy: 'rules' | 'llm' | 'error'
   usage?: LlmUsage
+  /** Milisegundos que tardó el turno. Se guarda con el mensaje para mostrarlo igual al recargar. */
+  latencyMs?: number
   historyStatus?: 'saved' | 'pending'
 }
 
@@ -199,3 +207,9 @@ export interface LlmInput {
   signal?: AbortSignal
   onUsage?: (usage: LlmUsage) => void
 }
+
+export interface InputBlock {
+  category: 'prompt-injection' | 'other-person-data' | 'harmful-content' | 'out-of-scope' | 'guardrail-unavailable'
+  source: 'local' | 'bedrock'
+}
+export interface InputGuardrail { assess(text: string): Promise<InputBlock | undefined> }

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import type { Opportunity } from '../services/opportunityService'
 import { AskAssistantLink } from './assistant/AskAssistantLink'
@@ -16,6 +17,7 @@ function dayAndMonth(date: string) {
  * Las paradas van espaciadas por igual; la distancia real se lee en "Faltan N días".
  */
 export function Rumbo({ items }: { items: Opportunity[] }) {
+  const [expanded, setExpanded] = useState(false)
   if (items.length === 0) {
     return (
       <section className="rumbo rumbo-empty" aria-labelledby="rumbo-title">
@@ -31,7 +33,7 @@ export function Rumbo({ items }: { items: Opportunity[] }) {
         <h2 id="rumbo-title">Tu rumbo</h2>
         <Link to="/calendario">Ver calendario</Link>
       </div>
-      <ol className="rumbo-track">
+      <ol className={`rumbo-track${expanded ? ' expanded' : ''}`} id="rumbo-dates">
         <li className="rumbo-today">
           <span className="rumbo-dot" aria-hidden="true" />
           <span className="rumbo-today-label">Hoy</span>
@@ -53,6 +55,7 @@ export function Rumbo({ items }: { items: Opportunity[] }) {
           )
         })}
       </ol>
+      {items.length > 2 && <button className="rumbo-expand" type="button" aria-expanded={expanded} aria-controls="rumbo-dates" onClick={() => setExpanded(!expanded)}>{expanded ? 'Ver menos fechas' : 'Ver todas las fechas'}</button>}
       <div className="rumbo-next">
         <p>
           Tu siguiente paso es <strong>{next.title}</strong>.

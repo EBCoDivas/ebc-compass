@@ -41,7 +41,7 @@ export const handler = awslambda.streamifyResponse(async (event, raw) => {
       await writeSse(output, name, { conversationId, ...data })
     })
     await writeSse(output, 'done', { conversationId, message: { role: 'assistant', ...reply },
-      meta: { mode: reply.generatedBy, latencyMs: Math.round(performance.now() - time), degraded: reply.degraded, historyStatus: reply.historyStatus, ...(reply.usage ? { usage: reply.usage } : {}) } })
+      meta: { mode: reply.generatedBy, latencyMs: reply.latencyMs ?? Math.round(performance.now() - time), degraded: reply.degraded, historyStatus: reply.historyStatus, ...(reply.usage ? { usage: reply.usage } : {}) } })
     output.end()
     await maintainConversation(assistant.graph, input.threadId)
   } catch (error) {

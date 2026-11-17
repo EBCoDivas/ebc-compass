@@ -5,6 +5,7 @@ import { MemorySaver } from '@langchain/langgraph'
 import type { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint'
 import { loadAssistantConfig, type AssistantConfig } from '../config/env.js'
 import { CatalogDates, InMemoryCatalog, ProfileRecommendations } from './adapters/catalog.js'
+import { BedrockInputGuardrail } from './adapters/bedrockInputGuardrail.js'
 import { BedrockLlmProvider } from './adapters/bedrockLlm.js'
 import { DynamoDBSaver } from './adapters/dynamoSaver.js'
 import { BedrockKnowledgeBaseRetriever, FallbackRetriever, KeywordRetriever } from './adapters/retrievers.js'
@@ -43,6 +44,7 @@ export function createAssistant(options: { config?: AssistantConfig; checkpointe
   } : undefined)
   const deps: AssistantDeps = {
     catalog,
+    inputGuardrail: config.inputGuardrail ? new BedrockInputGuardrail({ region: config.region, ...config.inputGuardrail }) : undefined,
     recommendations: new ProfileRecommendations(catalog),
     dates: new CatalogDates(catalog),
     conversations,
@@ -51,7 +53,15 @@ export function createAssistant(options: { config?: AssistantConfig; checkpointe
 
   // Modo llm: LLM por Bedrock Converse y conocimiento por Retrieve (con respaldo por palabras clave).
   if (config.mode === 'llm') {
-    deps.llm = new BedrockLlmProvider({ modelId: config.bedrockModelId, region: config.region, cacheMode: config.promptCacheMode })
+    deps.models = Object.fromEntries((['lunna', 'terra'] as const).map(name => {
+      const key = name.toUpperCase()
+      const modelId = process.env['BEDROCK_' + key + '_MODEL_ID']?.trim() || (config.bedrockModelId === 'local-chat' ? 'local-' + name : undefined)
+      if (!modelId) throw new Error('Configura BEDROCK_' + key + '_MODEL_ID para habilitar el selector.')
+      const cacheMode = process.env['ASSISTANT_' + key + '_PROMPT_CACHE'] ?? config.promptCacheMode
+      if (!['off', 'system', 'system-history'].includes(cacheMode)) throw new Error('Configuración de caché inválida para ' + name)
+      return [name, new BedrockLlmProvider({ modelId, region: config.region, cacheMode: cacheMode as typeof config.promptCacheMode })]
+    }))
+    deps.llm = deps.models.lunna
     deps.llmTimeoutMs = config.llmTimeoutMs
     deps.retriever = new FallbackRetriever(
       new BedrockKnowledgeBaseRetriever({ knowledgeBaseId: config.knowledgeBaseId, region: config.region }),

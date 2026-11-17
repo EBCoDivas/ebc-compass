@@ -7,6 +7,7 @@ import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 import { cleanBaseEnv, emulatorEnv, emulatorReady, loadEnvFile, root } from './lib/emulator-env.mjs'
 import { waitForEmulator } from './lib/wait.mjs'
+import { checkAws, checkNode, ensureDocker, composeInstalled } from './lib/prerequisites.mjs'
 
 const skipPlatform = process.argv.includes('--skip-platform')
 const warnings = []
@@ -24,21 +25,25 @@ function run(command, args, options = {}) {
 }
 
 step('1/5 Verificando prerrequisitos')
-const nodeMajor = Number(process.versions.node.split('.')[0])
-if (nodeMajor !== 22) {
-  console.error(`✖ Se requiere Node 22 (tienes ${process.versions.node}).`)
+// Node solo genera una alerta: cada quien lo configura a su manera.
+const node = checkNode()
+if (node.state === 'ok') console.log(`✔ ${node.message}`)
+else {
+  console.log(`⚠ ${node.message}`)
+  console.log(`    → ${node.fix}`)
+  warnings.push(node.fix)
+}
+
+// Docker es obligatorio: si falta o no responde, se ofrece resolverlo (siempre con confirmación).
+const dockerReady = await ensureDocker()
+const awsWarning = await checkAws()
+if (awsWarning) { warnings.push(awsWarning); console.log(`⚠ ${awsWarning}`) }
+const composeReady = composeInstalled()
+console.log(composeReady ? '✔ Docker Compose' : '✖ Falta Docker Compose. Instala Docker Desktop o el plugin Compose y ejecuta npm run setup.')
+if (!dockerReady || !composeReady) {
+  console.error('\n✖ Prerrequisitos incompletos. Corrige lo indicado y ejecuta npm run setup (npm run doctor para diagnosticar).')
   process.exit(1)
 }
-console.log(`✔ Node ${process.versions.node}`)
-
-if (spawnSync('docker', ['info'], { stdio: 'ignore' }).status !== 0) {
-  console.error('✖ Docker no responde. Abre Docker Desktop, espera a que arranque y vuelve a ejecutar: npm run setup')
-  process.exit(1)
-}
-console.log('✔ Docker')
-
-if (spawnSync('aws', ['--version'], { stdio: 'ignore' }).status === 0) console.log('✔ AWS CLI')
-else warnings.push('AWS CLI no está instalado (solo se usa en el spike y para depurar).')
 
 step('2/5 Creando archivos .env')
 run('node', ['scripts/env-create.mjs'])

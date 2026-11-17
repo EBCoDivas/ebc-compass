@@ -46,7 +46,7 @@ export function createApi(
   api.route("GET /opportunities", opportunities.arn, { auth: { cognito: { authorizer: authorizer.id } } });
   // Backend completo (catálogo, recomendaciones, alertas y asistente) con las mismas rutas /api/* que en local.
   // Rutas explícitas: REST no retrocede al proxy voraz si existe un recurso hijo sin ese método.
-  for (const path of ["/api/profiles", "/api/opportunities", "/api/recommendations", "/api/alerts",
+  for (const path of ["/api/academic-progress", "/api/profiles", "/api/opportunities", "/api/recommendations", "/api/alerts",
     "/api/assistant/messages", "/api/assistant/conversations", "/api/assistant/conversations/{id}",
     "/api/assistant/conversations/{id}/messages/{messageId}/feedback",
     "/api/assistant/memory", "/api/assistant/memory/{key}", "/api/assistant/suggestions", "/api/assistant/health", "/api/{proxy+}"]) {

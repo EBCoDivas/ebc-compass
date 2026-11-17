@@ -1,7 +1,8 @@
-import { forwardRef, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { forwardRef, useLayoutEffect, useRef, useState, type FormEvent, type KeyboardEvent, type ReactNode } from 'react'
 import { MAX_MESSAGE_LENGTH } from '../../services/assistantService'
 
 interface Props {
+  modelSelector?: ReactNode
   value: string
   onChange: (value: string) => void
   onSubmit: (message: string) => void
@@ -10,7 +11,7 @@ interface Props {
   disabled: boolean
 }
 
-export const QueryInput = forwardRef<HTMLTextAreaElement, Props>(function QueryInput({ value, onChange, onSubmit, disabled, pending = false, onStop }, ref) {
+export const QueryInput = forwardRef<HTMLTextAreaElement, Props>(function QueryInput({ modelSelector, value, onChange, onSubmit, disabled, pending = false, onStop }, ref) {
   const [touched, setTouched] = useState(false)
   const trimmed = value.trim()
   const nearLimit = value.length >= MAX_MESSAGE_LENGTH - 50
@@ -52,6 +53,7 @@ export const QueryInput = forwardRef<HTMLTextAreaElement, Props>(function QueryI
 
   return (
     <form className="chat-form" onSubmit={handleSubmit}>
+      {modelSelector}
       <label htmlFor="assistant-question" className="visually-hidden">
         Escribe tu pregunta
       </label>

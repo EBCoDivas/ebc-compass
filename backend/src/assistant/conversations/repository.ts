@@ -10,6 +10,8 @@ export interface Conversation {
 }
 export interface ArchivedMessage extends ChatMessage {
   feedback?: 'positive' | 'negative'; sources?: Source[]; suggestions?: string[]; usage?: LlmUsage; mode?: AssistantReply['generatedBy']
+  /** Datos del turno que la interfaz muestra y no deben perderse al recargar. */
+  latencyMs?: number; degraded?: boolean
 }
 export interface Turn { requestId: string; student: ChatMessage; reply: AssistantReply }
 export type MemoryKey = 'career' | 'campus' | 'semester' | 'interests' | 'goal' | 'schedule' | 'language' | 'modality'
@@ -121,7 +123,7 @@ export class ConversationRepository {
     const { reply, student } = turn
     const assistant: ArchivedMessage = { id: reply.id, role: 'assistant', content: reply.content, language: reply.language, intent: reply.intent,
       createdAt: reply.createdAt, sources: reply.sources, suggestions: reply.suggestions, usage: reply.usage, mode: reply.generatedBy,
-      interrupted: reply.interrupted, failure: reply.failure, catalogFallback: reply.catalogFallback }
+      model: reply.model, inputBlock: reply.inputBlock, interrupted: reply.interrupted, failure: reply.failure, catalogFallback: reply.catalogFallback, latencyMs: reply.latencyMs, degraded: reply.degraded }
     await this.store.write(owner, [
       { key: metaKey(id), value: value({ ...current, version: current.version + 1,
         title: !current.messageCount && !current.renamed ? student.content.slice(0, 80) : current.title,

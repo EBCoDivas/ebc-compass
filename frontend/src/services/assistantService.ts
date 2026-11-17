@@ -172,12 +172,12 @@ export async function fetchSuggestions(language: AssistantLanguage = 'es'): Prom
 }
 
 
-export async function sendMessageStreaming(message: string, profile: StudentProfile | null, options: { signal: AbortSignal; requestId?: string; onEvent: (event: StreamEvent) => void }): Promise<AssistantReply> {
+export async function sendMessageStreaming(message: string, profile: StudentProfile | null, options: { model?: 'lunna' | 'terra'; signal: AbortSignal; requestId?: string; onEvent: (event: StreamEvent) => void }): Promise<AssistantReply> {
   const conversationId = await ensureActiveConversation()
   const requestId = options.requestId ?? crypto.randomUUID()
   const response = await sessionFetch(API_URL + '/api/assistant/messages/stream', {
     method: 'POST', signal: options.signal, headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ studentId: getStudentId(), conversationId, requestId, message, profile: toAssistantProfile(profile) }),
+    body: JSON.stringify({ model: options.model, studentId: getStudentId(), conversationId, requestId, message, profile: toAssistantProfile(profile) }),
   })
   // Un servidor anterior puede no tener la ruta. El respaldo solo se usa antes de iniciar un turno.
   if (response.status === 404 || response.status === 405) return sendMessage(message, profile, undefined, options.signal, requestId)
@@ -205,4 +205,9 @@ export async function saveFeedback(messageId: string, rating: 'positive' | 'nega
   const id = getConversationId()
   if (!id) throw new AssistantError('No encontramos la conversación para guardar tu valoración.')
   await request<void>(`/conversations/${id}/messages/${messageId}/feedback`, { method: 'PUT', body: JSON.stringify({ rating }) })
+}
+
+export async function fetchModelNames(): Promise<Partial<Record<'lunna' | 'terra', string>>> {
+  try { return (await request<{ models?: Partial<Record<'lunna' | 'terra', string>> }>('/suggestions')).models ?? {} }
+  catch { return {} }
 }

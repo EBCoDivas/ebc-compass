@@ -4,6 +4,13 @@ Cinco mejoras que se hacen antes de las tareas de [plan-hackaton-tareas.md](plan
 Están ordenadas para que ninguna se tenga que rehacer cuando lleguen esas tareas.
 Cada mejora va en su propia rama `feature/<nombre>` con Pull Request, pruebas y evidencia.
 
+## Estado del avance
+
+- Fase 1 implementada en `feature/mejoras-previas`: validación automatizada local del setup y del historial completada. Pendientes pruebas en máquinas nuevas de cada sistema y revisión manual en navegador.
+- Fase 2 implementada para validación local; capa nativa de Bedrock declarada, pendiente de despliegue y comprobación en el lab.
+- Fase 3 implementada en local con contrato compartido, avance demo en Inicio y recomendaciones agrupadas con razones. Pendiente revisión manual en navegador.
+- Fase 4 implementada para validación local; requiere configurar los dos modelos de Bedrock por entorno. Fase 5 pendiente.
+
 ## Fase 1: base estable
 
 Dos arreglos rápidos y sin dependencias entre sí. Se pueden hacer en paralelo.
@@ -42,6 +49,15 @@ Responsable: ______
 
 Responsable: ______
 
+### Evidencia de fase 1
+
+- Setup y doctor comparten detección de Node, Docker, Compose y AWS CLI. Node solo genera aviso; Docker/Compose son obligatorios y AWS CLI es opcional.
+- Instalaciones ofrecidas con confirmación en macOS/Homebrew y Windows/winget; Linux recibe instrucciones manuales. Sin terminal interactiva o con `--no-prompt` no se instala nada.
+- Prueba del setup con PATH vacío: revisa las herramientas faltantes, muestra el siguiente paso y se detiene antes de crear archivos o instalar dependencias.
+- El archivo de mensajes conserva `latencyMs`, `mode`, `degraded`, fuentes, sugerencias y métricas disponibles. JSON, SSE y Lambda usan el tiempo del turno guardado; el frontend restaura los mismos datos al abrir o recargar el chat. Los mensajes antiguos sin métricas no reciben tiempos inventados.
+- Pruebas de ida y vuelta JSON/SSE → historial y de representación antes/después de recargar, sin OpenAI ni AWS real.
+- No se ejecutó el setup completo, porque instala dependencias y aprovisiona recursos. Las plataformas Windows/Linux se cubren con pruebas de detección y planes de instalación, no con instalaciones reales. El Dockerfile actual del emulador sigue usando aarch64; el soporte nativo x86 no se valida en esta entrega.
+
 ## Fase 2: guardrails de entrada
 
 **Hoy:** el guardrail revisa solo la **salida** del modelo (idioma y que no invente datos). Las preguntas de entrada no se filtran.
@@ -58,6 +74,16 @@ Responsable: ______
 
 Responsable: ______
 
+### Avance de fase 2
+
+- Nodo `checkInput` antes del catálogo, la recuperación documental y el LLM; reglas locales y puerto de evaluación nativa compartidos por JSON/SSE/Lambda.
+- Respuestas fijas por categoría e idioma, eventos `assistant.input.blocked` sin texto de la pregunta en los logs y campo `inputBlock` persistido en los mensajes.
+- Mensajes bloqueados excluidos del contexto, los resúmenes y la extracción de memoria; acciones de feedback ocultas para las respuestas de bloqueo.
+- Adaptador `ApplyGuardrail` con cinco segundos de plazo y bloqueo temporal ante fallo; guardrail versionado, variables y permiso sobre su ARN declarados en SST para ambas Lambdas.
+- Pruebas de categorías, las 15 preguntas de oro, ausencia de llamadas a servicios posteriores, archivo/recarga JSON/SSE y fallo nativo simulado. Ver [contrato, límites y prueba manual](../input-guardrails.md).
+- Validación: 47 pruebas backend, 24 frontend y 6 de plataforma aprobadas; typecheck de backend/frontend/local/lab/plataforma, lint, build y `git diff --check` correctos.
+- La protección local es heurística. La eficacia nativa, sus falsos positivos y el flujo visual siguen pendientes de validación real; no se ejecutó ningún despliegue en AWS.
+
 ## Fase 3: avance académico y recomendaciones en Inicio
 
 **Decisión:** no se crea una página "Dashboard". Se amplía Inicio, que ya tiene el rumbo y las recomendaciones, para no duplicar pantallas.
@@ -72,13 +98,21 @@ Responsable: ______
 
 Responsable: ______
 
+### Avance de fase 3
+
+- Contrato compartido HTTP/MCP en [`academic-progress-contract.md`](../academic-progress-contract.md), con campos opcionales y fuente intercambiable para Banner.
+- Endpoint `GET /api/academic-progress` protegido por identidad verificada; deriva el registro de los claims y no acepta un identificador enviado por el cliente. La ruta autenticada ya está declarada en SST.
+- Ocho cuentas demo con perfil tienen snapshots explícitos de materias, créditos y periodo; el promedio solo está presente donde se definió. La cuenta `sin-perfil` devuelve `progress: null`; no se deducen datos académicos de un semestre.
+- Inicio carga la tarjeta de avance sin calcular valores faltantes y agrupa recomendaciones por cursos/desarrollo profesional, becas, eventos, trámites y oportunidades laborales. Cada recomendación muestra la explicación del motor de reglas.
+- Sin AWS real: el endpoint y la fuente actual son simulados; Banner queda para sustituir el lector, manteniendo el contrato.
+
 ## Fase 4: elegir el modelo del chat
 
 **Hoy:** el modelo es fijo por entorno (`BEDROCK_MODEL_ID`).
 
 **Objetivo:** que en el chat se pueda elegir entre **Lunna** y **Terra**, y nada más.
 
-- **Decisión pendiente:** qué modelo de Bedrock hay detrás de cada nombre, y cuál es el predeterminado.
+- **Decisión:** modelos configurables por entorno; Lunna es el predeterminado.
 - **Selector en el chat** (página y panel flotante), con una línea que explique la diferencia entre ambos, por ejemplo rapidez frente a profundidad.
 - **Backend:** lista cerrada de dos modelos. La petición indica cuál usar y el backend rechaza cualquier otro valor. Cada modelo con su propia configuración de caché de prompts.
 - **Local:** el puente de Bedrock debe traducir ambos nombres a modelos de OpenAI.
@@ -118,7 +152,7 @@ Responsable: ______
 
 ## Decisiones pendientes
 
-- **Lunna y Terra:** qué modelo de Bedrock corresponde a cada uno y cuál es el predeterminado.
-- **Setup:** si las instalaciones se ofrecen en los tres sistemas operativos o solo en macOS y Windows.
-- **Guardrails:** si Bedrock Guardrails entra desde esta fase o solo las reglas locales, con Bedrock en el hackatón.
+- **Lunna y Terra (resuelto):** configurables por entorno, con Lunna predeterminado.
+- **Setup (resuelto en fase 1):** instalación asistida en macOS y Windows; instrucciones manuales en Linux.
+- **Guardrails (resuelto en fase 2):** reglas locales activas y capa Bedrock declarada desde esta fase; despliegue y prueba real en el lab pendientes.
 - **Memoria a petición:** cuántas notas y de qué longitud máxima se guardan por alumno, y si AgentCore Memory reemplaza la tabla actual en el lab o solo se usa para las notas.

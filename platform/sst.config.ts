@@ -27,6 +27,7 @@ export default $config({
       { createConversationsTable, createProfilesTable, createHistoryTable },
       { createBackend },
       { createSite },
+      { createInputGuardrail },
     ] = await Promise.all([
       import("./infra/api"),
       import("./infra/auth"),
@@ -34,6 +35,7 @@ export default $config({
       import("./infra/data"),
       import("./infra/backend"),
       import("./infra/site"),
+      import("./infra/input-guardrail"),
     ]);
 
     const { userPool, webClient } = createAuth();
@@ -41,8 +43,10 @@ export default $config({
     const table = createConversationsTable();
     const profilesTable = createProfilesTable();
     const historyTable = createHistoryTable();
+    const inputGuardrail = createInputGuardrail();
     const backend = createBackend({
       stage: $app.stage,
+      inputGuardrail,
       table,
       profilesTable,
       historyTable,
@@ -52,6 +56,7 @@ export default $config({
     const streaming = createBackend({
       streaming: true,
       stage: $app.stage,
+      inputGuardrail,
       table,
       profilesTable,
       historyTable,
@@ -66,6 +71,8 @@ export default $config({
     });
 
     return {
+      inputGuardrailId: inputGuardrail.id,
+      inputGuardrailVersion: inputGuardrail.version,
       region,
       stage: $app.stage,
       siteUrl: site.url,

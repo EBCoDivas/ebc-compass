@@ -76,7 +76,7 @@ const TOPICS: Record<string, string> = { 'scholarship-info': 'becas', 'course-in
 export function compactSummary(previous: string, messages: ArchivedMessage[]): string {
   const topics = previous ? previous.split('; ') : []
   for (const message of messages) {
-    if (message.role !== 'assistant' || !message.intent || !TOPICS[message.intent]) continue
+    if (message.inputBlock || message.role !== 'assistant' || !message.intent || !TOPICS[message.intent]) continue
     const entry = (message.failure || message.interrupted ? 'Consulta pendiente: ' : 'Orientación recibida: ') + TOPICS[message.intent]
     if (!topics.includes(entry)) topics.push(entry)
   }

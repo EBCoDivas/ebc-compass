@@ -4,6 +4,7 @@ import { spawnSync } from 'node:child_process'
 import { join } from 'node:path'
 import { cleanBaseEnv, emulatorEnv, loadEnvFile, root } from './lib/emulator-env.mjs'
 import { emulatorHealthy, httpGet } from './lib/wait.mjs'
+import { awsInstalled, checkNode, detectPlatform, dockerStartHint, dockerState, installPlan, availableManagers, composeInstalled } from './lib/prerequisites.mjs'
 
 let failures = 0
 const ok = (text) => console.log(`✔ ${text}`)
@@ -25,10 +26,17 @@ async function probe(url) {
 console.log('EBC Compass · doctor\n')
 
 // Node y Docker
-Number(process.versions.node.split('.')[0]) === 22 ? ok(`Node ${process.versions.node}`) : bad(`Node ${process.versions.node} (se requiere 22)`, 'Instala Node 22')
-spawnSync('docker', ['info'], { stdio: 'ignore' }).status === 0
-  ? ok('Docker responde')
-  : bad('Docker no responde', 'Abre Docker Desktop')
+const node = checkNode()
+node.state === 'ok' ? ok(node.message) : warn(node.message, node.fix)
+const docker = dockerState()
+if (docker === 'ok') ok('Docker responde')
+else if (docker === 'stopped') bad('Docker está instalado pero no responde', dockerStartHint().text)
+else {
+  const plan = installPlan('docker', detectPlatform(), availableManagers())
+  bad('Docker no está instalado', plan.command ? plan.command.join(' ') : plan.manual)
+}
+composeInstalled() ? ok('Docker Compose') : bad('Falta Docker Compose', 'Instala Docker Desktop o el plugin Compose de Docker')
+awsInstalled() ? ok('AWS CLI') : warn('AWS CLI no está instalado (opcional, solo se usa para depurar)')
 
 // Archivos .env y clave (sin imprimir valores)
 for (const pkg of ['backend', 'frontend', 'local']) {

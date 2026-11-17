@@ -1,3 +1,4 @@
+import { academicProgressRoutes } from './routes/academicProgressRoutes.js'
 import cors from 'cors'
 import express from 'express'
 import { profileRoutes } from './routes/profileRoutes.js'
@@ -17,6 +18,7 @@ app.get('/api/health', (_request, response) => {
 })
 
 app.use('/api/profiles', profileRoutes)
+app.use('/api/academic-progress', academicProgressRoutes)
 app.use('/api/opportunities', opportunityRoutes)
 app.use('/api/recommendations', recommendationRoutes)
 app.use('/api/alerts', alertRoutes)
