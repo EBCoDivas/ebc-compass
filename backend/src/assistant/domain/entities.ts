@@ -1,5 +1,5 @@
 import type { AssistantOpportunity, CareerId, Entities } from '../types.js'
-import { CAREER_WORDS } from './lexicon.js'
+import { CAREER_PHRASES, CAREER_WORDS } from './lexicon.js'
 import { contentTokens, fuzzyEquals, normalize, tokenize } from './text.js'
 
 /** Misma palabra con erratas o misma raíz (p. ej. reinscribo ~ reinscripcion). */
@@ -41,7 +41,10 @@ export function extractEntities(normalized: string, catalog: AssistantOpportunit
   }
 
   const careers = new Set<CareerId>()
-  for (const token of tokenize(normalized)) {
+  const phrase = Object.entries(CAREER_PHRASES).sort(([a], [b]) => b.length - a.length)
+    .find(([text]) => (' ' + normalized + ' ').includes(' ' + text + ' '))
+  if (phrase) careers.add(phrase[1])
+  for (const token of phrase ? [] : tokenize(normalized)) {
     const career = CAREER_WORDS[token]
     if (career) careers.add(career)
   }

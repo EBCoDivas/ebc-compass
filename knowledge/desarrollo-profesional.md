@@ -1,27 +1,22 @@
 ---
 id: desarrollo-profesional
-title: Desarrollo profesional y certificaciones (contenido simulado)
-topic: career
+title: Desarrollo profesional: actividades demo
+topic: careers
 language: es
 simulated: true
 ---
-# Desarrollo profesional y certificaciones
+# Desarrollo profesional: actividades demo
 
-> Contenido simulado para la demo de EBC Compass.
+> Oferta simulada; no son vacantes ni convocatorias reales. Confirma disponibilidad con EBC.
 
-## Certificaciones recomendadas
+## Ruta de Empleabilidad FiT EBC
+Demo simulada: ejercita tu CV y una entrevista ficticia. Fecha ficticia: 12/12/2026.
 
-- **Bloomberg Market Concepts:** curso en línea de unas 8 horas sobre mercados financieros. Recomendado para Finanzas y Banca desde 3.er semestre.
-- **Certificación AMIB (simulada):** orientada a quienes quieren trabajar en casas de bolsa. Se recomienda a partir de 5.º semestre.
-- **Excel avanzado para finanzas:** taller práctico de 20 horas, útil para todas las carreras.
+## Catapulta: asesoría de emprendimiento
+Demo simulada: explora un proyecto ficticio con un equipo. Fecha ficticia: 13/12/2026.
 
-## Cómo elegir
+## Microcredencial de negocios
+Demo simulada: actividad ficticia de educación continua; no acredita una certificación real. Fecha ficticia: 14/12/2026.
 
-- Si tu meta es banca corporativa, empieza por Excel avanzado y luego Bloomberg Market Concepts.
-- Si te interesa el análisis de inversiones, prioriza Bloomberg y después AMIB.
-- Si estás en Mercadotecnia, combina el curso de Marketing digital con analítica de datos.
-
-## Fechas de las certificaciones disponibles
-
-- **Bloomberg Market Concepts** (Finanzas): inscripción hasta el 18/12/2026.
-- **Certificación AMIB** (Finanzas y Banca): inscripción hasta el 20/01/2027.
+## EBC IA: exploración de herramientas
+Demo simulada: actividad ficticia para practicar con datos sintéticos. Fecha ficticia: 15/12/2026.

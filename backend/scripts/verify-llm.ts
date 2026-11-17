@@ -19,16 +19,16 @@ try {
 
 const finance: AssistantProfile = { name: 'María', campus: 'CMS', career: 'finance', currentSemester: 5, completedCourses: ['FIN-301'] }
 const cases: { thread: string; message: string; profile?: AssistantProfile }[] = [
-  { thread: 'ES', message: '¿Qué requisitos pide la Beca Fundación EBC?', profile: finance },
+  { thread: 'ES', message: '¿Qué requisitos pide la Beca de Excelencia Académica BEA?', profile: finance },
   { thread: 'ES', message: '¿y la fecha límite?', profile: finance },
   { thread: 'EN', message: 'How do I apply for a scholarship?' },
   { thread: 'EN', message: 'Until when can I re-enroll?' },
 ]
 
-const { graph } = createAssistant({ config: { ...loadAssistantConfig(), mode: 'llm' }, checkpointer: new MemorySaver() })
+const { graph } = createAssistant({ config: { ...loadAssistantConfig(), mode: 'llm', store: 'memory' }, checkpointer: new MemorySaver() })
 for (const item of cases) {
   const started = performance.now()
-  const reply = await runTurn(graph, { threadId: `verify-llm-${item.thread}`, message: item.message, profile: item.profile })
+  const reply = await runTurn(graph, { threadId: `verify-llm#${item.thread}`, message: item.message, profile: item.profile })
   const seconds = ((performance.now() - started) / 1000).toFixed(1)
   console.log(`[${item.thread}] "${item.message}"`)
   console.log(`   intent ${reply.intent} · ${reply.language} · generado por ${reply.generatedBy}${reply.degraded ? ' · DEGRADADO' : ''} · ${seconds} s`)

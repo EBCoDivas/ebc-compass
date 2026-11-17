@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "files": [
     {
       "path": "becas-programas.md",
@@ -48,6 +48,26 @@
     {
       "path": "scholarships-and-procedures-en.md",
       "id": "scholarships-and-procedures-en"
+    },
+    {
+      "path": "campus-ebc.md",
+      "id": "campus-ebc"
+    },
+    {
+      "path": "fit-practicas.md",
+      "id": "fit-practicas"
+    },
+    {
+      "path": "programas-ebc.md",
+      "id": "programas-ebc"
+    },
+    {
+      "path": "servicio-social.md",
+      "id": "servicio-social"
+    },
+    {
+      "path": "titulacion-electronica.md",
+      "id": "titulacion-electronica"
     }
   ]
 }

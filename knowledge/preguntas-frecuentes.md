@@ -21,5 +21,5 @@ Sí. En el catálogo abre una oportunidad y elige "Guardar para después".
 ## ¿Dónde pido ayuda?
 En Servicios Escolares de tu campus, de lunes a viernes de 9:00 a 18:00.
 
-## ¿El asistente reemplaza a Servicios Escolares?
-No. El asistente orienta y resume información, pero para decisiones oficiales consulta siempre a Servicios Escolares.
+## ¿Compass reemplaza a Servicios Escolares?
+No. Compass orienta y resume información, pero para decisiones oficiales consulta siempre a Servicios Escolares.

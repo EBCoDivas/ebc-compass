@@ -33,8 +33,9 @@ function event(method: string, path: string, options: { query?: string; body?: u
 }
 
 async function invoke(method: string, path: string, options: { query?: string; body?: unknown; sub?: string } = {}) {
-  const result = (await handler(event(method, path, options), {} as never)) as { statusCode: number; body: string }
-  return { status: result.statusCode, json: result.body ? JSON.parse(result.body) : undefined }
+  const result = (await handler(event(method, path, options), {} as never)) as { statusCode: number; body: string; headers?: Record<string, string> }
+  const contentType = Object.entries(result.headers ?? {}).find(([key]) => key.toLowerCase() === 'content-type')?.[1] ?? ''
+  return { status: result.statusCode, json: result.body && contentType.includes('application/json') ? JSON.parse(result.body) : undefined }
 }
 
 const health = await invoke('GET', '/api/health')
@@ -62,6 +63,17 @@ check(removed.status === 204, 'DELETE de la conversación')
 
 const bad = await invoke('POST', '/api/assistant/messages', { sub: alice, body: { message: '' } })
 check(bad.status === 400 && bad.json.code === 'INVALID_INPUT', 'Mensaje vacío → 400 INVALID_INPUT')
+
+const restEvent = {
+  httpMethod: 'POST', path: '/api/assistant/messages', headers: { 'content-type': 'application/json' },
+  requestContext: { authorizer: { claims: { sub: alice } }, identity: { sourceIp: '127.0.0.1' } },
+  body: JSON.stringify({ message: 'Hola' }), isBase64Encoded: false,
+}
+const restResult = await handler(restEvent, {} as never) as { statusCode: number; body: string }
+check(restResult.statusCode === 200 && JSON.parse(restResult.body).message.intent === 'greeting', 'El handler buffered acepta REST payload v1 y authorizer.claims')
+
+const localSession = await invoke('POST', '/api/dev/session', { sub: alice, body: { username: 'fake', password: 'fake' } })
+check(localSession.status === 404, 'El login del emulador no está disponible en Lambda')
 
 console.log(failures === 0 ? '\nHandler de Lambda verificado.' : `\n${failures} verificación(es) fallaron.`)
 process.exit(failures === 0 ? 0 : 1)

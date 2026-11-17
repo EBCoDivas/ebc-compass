@@ -1,8 +1,8 @@
 {
-  "version": 1,
+  "version": 2,
   "questions": [
     {
-      "question": "¿Qué requisitos pide la Beca Fundación EBC?",
+      "question": "¿Qué es la Beca de Excelencia Académica BEA?",
       "language": "es",
       "expect": "becas-programas.md"
     },
@@ -27,7 +27,7 @@
       "expect": "servicios-escolares.md"
     },
     {
-      "question": "What GPA do I need for the Santander scholarship?",
+      "question": "What is the Academic Excellence Scholarship BEA?",
       "language": "en",
       "expect": "scholarships-and-procedures-en.md"
     },
@@ -50,6 +50,31 @@
       "question": "Until when can I re-enroll?",
       "language": "en",
       "expect": "scholarships-and-procedures-en.md"
+    },
+    {
+      "question": "¿Qué campus tiene EBC?",
+      "language": "es",
+      "expect": "campus-ebc.md"
+    },
+    {
+      "question": "¿Qué modalidades y programas académicos tiene EBC?",
+      "language": "es",
+      "expect": "programas-ebc.md"
+    },
+    {
+      "question": "¿Cómo preparo el alta y la terminación del servicio social?",
+      "language": "es",
+      "expect": "servicio-social.md"
+    },
+    {
+      "question": "¿Cómo inicio la titulación electrónica y la cédula profesional?",
+      "language": "es",
+      "expect": "titulacion-electronica.md"
+    },
+    {
+      "question": "¿Qué es FiT EBC para buscar prácticas?",
+      "language": "es",
+      "expect": "fit-practicas.md"
     }
   ]
 }
