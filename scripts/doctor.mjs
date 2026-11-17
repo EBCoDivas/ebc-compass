@@ -57,7 +57,7 @@ if (!bridge) warn('El puente no está corriendo', 'npm run dev')
 else {
   const info = JSON.parse(bridge.body)
   info.upstream === 'ok' ? ok(`Puente y OpenAI responden (modelo ${info.model})`) : bad(`El puente no puede usar OpenAI: ${info.detail ?? 'error'}`, 'Revisa OPENAI_API_KEY y OPENAI_MODEL en local/.env')
-  info.vectorStoreLoaded ? ok('Base de conocimiento cargada') : warn('Base de conocimiento sin cargar', 'npm run kb:upload (Fase 3)')
+  info.vectorStoreLoaded ? ok('Base de conocimiento cargada') : warn('Base de conocimiento sin cargar', 'Configura OPENAI_VECTOR_STORE_ID y ejecuta npm run kb:status')
 }
 ;(await probe('http://127.0.0.1:3000/api/health')) ? ok('Backend responde (:3000)') : warn('El backend no está corriendo', 'npm run dev')
 ;(await probe('http://localhost:5173')) ? ok('Frontend responde (:5173)') : warn('El frontend no está corriendo', 'npm run dev')

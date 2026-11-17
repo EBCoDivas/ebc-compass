@@ -10,6 +10,7 @@
 //
 // Solo se suben documentos marcados `simulated: true` (nunca información institucional real).
 
+import { reconcile } from './reconcile.js'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -27,7 +28,6 @@ const stateFile = join(stateDir, 'knowledge.json')
 const exportDir = join(stateDir, 'knowledge-s3')
 
 const storeName = process.env.OPENAI_VECTOR_STORE_NAME ?? 'ebc-compass-knowledge'
-const ttlDays = Number(process.env.OPENAI_VECTOR_STORE_TTL_DAYS ?? 30)
 const bucket = process.env.KNOWLEDGE_BUCKET ?? 'ebc-compass-knowledge-local'
 const MAX_FILE_BYTES = 100 * 1024
 const MAX_METADATA_BYTES = 10 * 1024
@@ -102,8 +102,7 @@ function loadCorpus(): Doc[] {
 }
 
 function readState(): State {
-  if (!existsSync(stateFile)) return { files: {} }
-  return JSON.parse(readFileSync(stateFile, 'utf8')) as State
+  return { vectorStoreId: process.env.OPENAI_VECTOR_STORE_ID?.trim(), files: {} }
 }
 
 function writeState(state: State): void {
@@ -121,40 +120,45 @@ function client(): OpenAI {
 
 const isGone = (error: unknown) => (error as { status?: number }).status === 404
 
-async function usableStore(openai: OpenAI, state: State): Promise<string | undefined> {
-  if (!state.vectorStoreId) return undefined
-  try {
-    const store = await openai.vectorStores.retrieve(state.vectorStoreId)
-    return store.status === 'expired' ? undefined : store.id
-  } catch (error) {
-    if (isGone(error)) return undefined
-    throw error
-  }
-}
-
 // ---------- Comandos ----------
 
 async function upload(): Promise<void> {
-  const openai = client()
   const docs = loadCorpus()
-  let state = readState()
-
-  let storeId = await usableStore(openai, state)
-  if (!storeId) {
-    const store = await openai.vectorStores.create({ name: storeName, expires_after: { anchor: 'last_active_at', days: ttlDays } })
+  const args = process.argv.slice(3)
+  const create = args.includes('--create')
+  const explicit = args.includes('--id')
+  if ((create && explicit) || args.some((a, i) => a !== '--create' && a !== '--id' && args[i - 1] !== '--id')) throw new Error('Usa --create o --id vs_…')
+  let storeId = explicit ? args[args.indexOf('--id') + 1] : process.env.OPENAI_VECTOR_STORE_ID?.trim()
+  if (explicit && !storeId?.startsWith('vs_')) throw new Error('Falta un ID válido después de --id')
+  const openai = client()
+  if (create) {
+    const store = await openai.vectorStores.create({ name: storeName }, { maxRetries: 0 })
     storeId = store.id
-    state = { vectorStoreId: storeId, files: {} }
-    console.log(`✔ Vector Store creado (${storeId}, expira tras ${ttlDays} días sin uso)`)
-  } else {
-    const store = await openai.vectorStores.retrieve(storeId)
-    if (store.expires_after?.days !== ttlDays) {
-      await openai.vectorStores.update(storeId, { expires_after: { anchor: 'last_active_at', days: ttlDays } })
-      console.log(`• Vector Store existente (${storeId}); expiración actualizada a ${ttlDays} días sin uso`)
-    } else {
-      console.log(`• Vector Store existente (${storeId})`)
-    }
+    console.log(`Vector Store creado: ${storeId}`)
   }
-
+  if (!storeId) throw new Error('Configura OPENAI_VECTOR_STORE_ID o usa --id vs_… o --create.')
+  const store = await openai.vectorStores.retrieve(storeId)
+  if (store.status === 'expired') throw new Error('El Vector Store expiró. Configura otro ID explícitamente.')
+  if (create || explicit) {
+    const envFile = join(here, '..', '.env')
+    const original = existsSync(envFile) ? readFileSync(envFile, 'utf8') : ''
+    const line = `OPENAI_VECTOR_STORE_ID=${storeId}`
+    const updated = /^OPENAI_VECTOR_STORE_ID=.*$/m.test(original)
+      ? original.replace(/^OPENAI_VECTOR_STORE_ID=.*$/gm, line)
+      : original + (original.endsWith('\n') || !original ? '' : '\n') + line + '\n'
+    writeFileSync(envFile, updated)
+    process.env.OPENAI_VECTOR_STORE_ID = storeId
+    console.log('ID guardado en local/.env. Reinicia el puente si está ejecutándose.')
+  }
+  if (store.expires_after) await openai.vectorStores.update(storeId, { expires_after: null })
+  const state: State = { vectorStoreId: storeId, files: {} }
+  const remote = []
+  for await (const file of openai.vectorStores.files.list(storeId)) remote.push(file)
+  const managed = remote.filter(f => f.attributes?.simulated === true && typeof f.attributes.id === 'string' && typeof f.attributes.sha256 === 'string')
+  if (managed.some(f => f.status === 'in_progress')) throw new Error('Hay archivos en procesamiento. Reintenta cuando terminen.')
+  const { files, retired } = reconcile(docs, managed)
+  state.files = files
+  if (remote.length !== managed.length) console.log('Se conservan archivos con metadatos no reconocidos.')
   const current = new Set(docs.map((d) => d.path))
   const rows: string[] = []
 
@@ -162,7 +166,7 @@ async function upload(): Promise<void> {
   for (const [path, entry] of Object.entries(state.files)) {
     if (current.has(path)) continue
     await openai.vectorStores.files.delete(entry.fileId, { vector_store_id: storeId }).catch(() => undefined)
-    await openai.files.delete(entry.fileId).catch(() => undefined)
+
     delete state.files[path]
     rows.push(`  − ${path} (eliminado)`)
   }
@@ -176,7 +180,7 @@ async function upload(): Promise<void> {
     }
     if (previous) {
       await openai.vectorStores.files.delete(previous.fileId, { vector_store_id: storeId }).catch(() => undefined)
-      await openai.files.delete(previous.fileId).catch(() => undefined)
+
     }
     const raw = readFileSync(join(knowledgeDir, doc.path))
     const file = await openai.files.create({ file: await toFile(raw, doc.path), purpose: 'assistants' })
@@ -193,6 +197,7 @@ async function upload(): Promise<void> {
     rows.push(`  ${previous ? '↻' : '+'} ${doc.path} (${previous ? 'actualizado' : 'nuevo'})`)
   }
 
+  for (const fileId of retired) await openai.vectorStores.files.delete(fileId, { vector_store_id: storeId })
   writeState(state)
   console.log(rows.join('\n'))
   await status()
@@ -202,7 +207,7 @@ async function status(): Promise<void> {
   const openai = client()
   const state = readState()
   if (!state.vectorStoreId) {
-    console.log('• Sin Vector Store. Ejecuta: npm run kb:upload')
+    console.log('• Sin Vector Store. Configura OPENAI_VECTOR_STORE_ID en local/.env')
     return
   }
   try {
@@ -210,9 +215,9 @@ async function status(): Promise<void> {
     const counts = store.file_counts
     const expires = store.expires_at ? new Date(store.expires_at * 1000).toLocaleString('es-MX') : 'sin expiración'
     console.log(`Vector Store ${store.id} · estado ${store.status} · archivos ${counts.completed}/${counts.total} completados, ${counts.failed} fallidos · expira ${expires}`)
-    if (store.status === 'expired') console.log('⚠ Expiró. Ejecuta: npm run kb:upload')
+    if (store.status === 'expired') console.log('⚠ Expiró. Configura OPENAI_VECTOR_STORE_ID en local/.env')
   } catch (error) {
-    if (isGone(error)) console.log('⚠ El Vector Store ya no existe. Ejecuta: npm run kb:upload')
+    if (isGone(error)) console.log('⚠ El Vector Store ya no existe. Configura OPENAI_VECTOR_STORE_ID en local/.env')
     else throw error
   }
 }
@@ -245,7 +250,7 @@ async function query(): Promise<void> {
     process.exit(2)
   }
   if (!state.vectorStoreId) {
-    console.error('✖ Sin Vector Store. Ejecuta: npm run kb:upload')
+    console.error('✖ Sin Vector Store. Configura OPENAI_VECTOR_STORE_ID en local/.env')
     process.exit(1)
   }
   const results = await search(openai, state.vectorStoreId, text, { language: flag('lang'), topic: flag('topic') })
@@ -260,7 +265,7 @@ async function verify(): Promise<void> {
   const openai = client()
   const state = readState()
   if (!state.vectorStoreId) {
-    console.error('✖ Sin Vector Store. Ejecuta: npm run kb:upload')
+    console.error('✖ Sin Vector Store. Configura OPENAI_VECTOR_STORE_ID en local/.env')
     process.exit(1)
   }
   const golden = JSON.parse(readFileSync(join(knowledgeDir, 'golden-questions.json'), 'utf8')) as {
@@ -319,20 +324,18 @@ async function reset(): Promise<void> {
     console.log('• No hay nada que borrar.')
     return
   }
-  if (!process.argv.includes('--yes')) {
-    const rl = createInterface({ input: process.stdin, output: process.stdout })
-    const answer = await rl.question(`¿Borrar el Vector Store ${state.vectorStoreId} y sus ${Object.keys(state.files).length} archivos de OpenAI? (s/N) `)
-    rl.close()
-    if (!/^s(i|í)?$/i.test(answer.trim())) {
-      console.log('Cancelado.')
-      return
-    }
-  }
+  const args = process.argv.slice(3)
+  if (args.length !== 2 || args[0] !== '--id' || args[1] !== state.vectorStoreId) throw new Error('Usa kb:reset -- --id con el ID configurado. --yes no está permitido.')
+  const rl = createInterface({ input: process.stdin, output: process.stdout })
+  const answer = await rl.question(`Esto afecta a todo el equipo. Escribe ${state.vectorStoreId} para borrar el store: `)
+  rl.close()
+  if (answer.trim() !== state.vectorStoreId) { console.log('Cancelado.'); return }
   const openai = client()
-  for (const entry of Object.values(state.files)) await openai.files.delete(entry.fileId).catch(() => undefined)
   await openai.vectorStores.delete(state.vectorStoreId).catch(() => undefined)
   rmSync(stateFile, { force: true })
-  console.log('✔ Vector Store y archivos eliminados.')
+  const envFile = join(here, '..', '.env')
+  writeFileSync(envFile, readFileSync(envFile, 'utf8').replace(/^OPENAI_VECTOR_STORE_ID=.*$/gm, 'OPENAI_VECTOR_STORE_ID='))
+  console.log('✔ Vector Store eliminado. Los archivos globales se conservan. El equipo debe actualizar su ID.')
 }
 
 const commands: Record<string, () => Promise<void>> = { upload, status, query, verify, export: exportCommand, 'sync-s3': syncS3, reset }

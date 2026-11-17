@@ -11,7 +11,7 @@
     "bridge": "tsx --env-file=.env bedrock-bridge/server.ts",
     "spike": "bash scripts/spike-emulator.sh",
     "typecheck": "tsc --noEmit",
-    "test": "node --import tsx --test bedrock-bridge/*.test.ts",
+    "test": "node --import tsx --test bedrock-bridge/*.test.ts kb/*.test.ts",
     "kb:upload": "tsx --env-file=.env kb/cli.ts upload",
     "kb:status": "tsx --env-file=.env kb/cli.ts status",
     "kb:query": "tsx --env-file=.env kb/cli.ts query",
