@@ -5,10 +5,12 @@ interface Props {
   value: string
   onChange: (value: string) => void
   onSubmit: (message: string) => void
+  pending?: boolean
+  onStop?: () => void
   disabled: boolean
 }
 
-export const QueryInput = forwardRef<HTMLTextAreaElement, Props>(function QueryInput({ value, onChange, onSubmit, disabled }, ref) {
+export const QueryInput = forwardRef<HTMLTextAreaElement, Props>(function QueryInput({ value, onChange, onSubmit, disabled, pending = false, onStop }, ref) {
   const [touched, setTouched] = useState(false)
   const trimmed = value.trim()
   const nearLimit = value.length >= MAX_MESSAGE_LENGTH - 50
@@ -20,7 +22,11 @@ export const QueryInput = forwardRef<HTMLTextAreaElement, Props>(function QueryI
     const el = innerRef.current
     if (!el) return
     el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, 200)}px`
+    // scrollHeight no incluye el borde; sin sumarlo aparece una barra de scroll falsa.
+    const border = el.offsetHeight - el.clientHeight
+    const height = Math.min(el.scrollHeight + border, 200)
+    el.style.height = `${height}px`
+    el.style.overflowY = height >= 200 ? 'auto' : 'hidden'
   }, [value])
 
   function setRefs(node: HTMLTextAreaElement | null) {
@@ -39,7 +45,7 @@ export const QueryInput = forwardRef<HTMLTextAreaElement, Props>(function QueryI
   function handleSubmit(event: FormEvent) {
     event.preventDefault()
     setTouched(true)
-    if (!trimmed || disabled) return
+    if (!trimmed || disabled || pending) return
     onSubmit(trimmed)
     setTouched(false)
   }
@@ -61,8 +67,10 @@ export const QueryInput = forwardRef<HTMLTextAreaElement, Props>(function QueryI
         aria-describedby="assistant-question-help"
         aria-invalid={touched && !trimmed}
       />
-      <button type="submit" className="button primary" disabled={disabled}>
-        Enviar
+      <button type={pending ? 'button' : 'submit'} onClick={pending ? onStop : undefined} className="button primary chat-icon-button" disabled={disabled} aria-label={pending ? 'Detener respuesta' : 'Enviar mensaje'} title={pending ? 'Detener respuesta' : 'Enviar mensaje'}>
+        <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          {pending ? <rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" stroke="none" /> : <path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13" />}
+        </svg>
       </button>
       <p id="assistant-question-help" className={`chat-help${nearLimit ? ' warn' : ''}`}>
         {touched && !trimmed ? 'Escribe una pregunta para enviarla.' : `Enter envía · Shift+Enter nueva línea · ${value.length}/${MAX_MESSAGE_LENGTH}`}

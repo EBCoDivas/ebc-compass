@@ -1,10 +1,11 @@
 interface Props {
   suggestions: string[]
   onPick: (text: string) => void
+  disabled?: boolean
 }
 
-/** Preguntas de ejemplo para empezar (estado vacío): al elegir una se copia al campo de texto. */
-export function SuggestedQuestions({ suggestions, onPick }: Props) {
+/** Preguntas de ejemplo para empezar: al elegir una se envía directamente. */
+export function SuggestedQuestions({ suggestions, onPick, disabled = false }: Props) {
   if (suggestions.length === 0) return null
   return (
     <div className="chat-suggestions">
@@ -12,7 +13,7 @@ export function SuggestedQuestions({ suggestions, onPick }: Props) {
       <ul>
         {suggestions.map((text) => (
           <li key={text}>
-            <button type="button" onClick={() => onPick(text)}>
+            <button type="button" disabled={disabled} onClick={() => onPick(text)}>
               {text}
             </button>
           </li>

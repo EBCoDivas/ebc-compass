@@ -4,6 +4,15 @@ export function formatDate(date: string): string {
   return `${day}/${month}/${year}`
 }
 
+const shortMonth = new Intl.DateTimeFormat('es-MX', { month: 'short' })
+
+/** Fecha corta para tarjetas y listas: "4 dic" (con año solo si no es el actual). */
+export function formatShortDate(date: string, now: Date = new Date()): string {
+  const [year, month, day] = date.split('-').map(Number)
+  const label = `${day} ${shortMonth.format(new Date(year, month - 1, day)).replace('.', '')}`
+  return year === now.getFullYear() ? label : `${label} ${year}`
+}
+
 export function daysUntil(date: string, now: number = Date.now()): number {
   return Math.ceil((new Date(`${date}T23:59:59`).getTime() - now) / 86400000)
 }

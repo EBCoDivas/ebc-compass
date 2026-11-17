@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Opportunity } from '../services/opportunityService'
-import { assistantPath } from '../services/assistantService'
+import { AskAssistantLink } from './assistant/AskAssistantLink'
 import { daysLabel, daysUntil, urgencyFor } from '../utils/dates'
 import { typeMeta } from '../utils/opportunityTypes'
 
@@ -57,9 +57,9 @@ export function Rumbo({ items }: { items: Opportunity[] }) {
         <p>
           Tu siguiente paso es <strong>{next.title}</strong>.
         </p>
-        <Link className="button primary" to={assistantPath(`¿Qué necesito para ${next.title}?`)}>
+        <AskAssistantLink className="button primary" question={`¿Qué necesito para ${next.title}?`}>
           Preguntar qué necesito
-        </Link>
+        </AskAssistantLink>
       </div>
     </section>
   )
