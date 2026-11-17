@@ -352,3 +352,8 @@
 .chat-model-picker summary svg { display: block; flex-shrink: 0; height: 16px; width: 16px; }
 
 .chat-model-menu .chat-model-name { color: var(--ink-soft); font-size: .78rem; overflow-wrap: anywhere; }
+
+.memory-note-form { display: grid; gap: .5rem; }
+.memory-note-form label { display: grid; gap: .35rem; font-size: .85rem; }
+.memory-note-form textarea { min-height: 5rem; resize: vertical; width: 100%; }
+.memory-note-form small { color: var(--ink-soft); }

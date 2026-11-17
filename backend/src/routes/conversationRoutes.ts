@@ -1,3 +1,4 @@
+import { extractRequestedMemory, isNoteKey } from '../assistant/conversations/explicitMemory.js'
 import { randomUUID } from 'node:crypto'
 import { Router, type Request, type Response } from 'express'
 import { identitySubject } from '../auth/identity.js'
@@ -62,10 +63,22 @@ export function conversationRoutes(assistant: AssistantRuntime) {
   }))
   router.put('/memory/:key', endpoint(async (request, response, owner) => {
     const key = request.params.key as MemoryKey
-    if (!MEMORY_KEYS.includes(key)) throw bad('Categoría de memoria no permitida.')
+    if (!MEMORY_KEYS.includes(key) && !isNoteKey(key)) throw bad('Categoría de memoria no permitida.')
     const current = (await repo.memories(owner)).find(fact => fact.key === key)
     if ((current?.origin === 'profile' && current.value) || ['career', 'campus', 'semester'].includes(key)) {
       response.status(409).json({ code: 'EDIT_PROFILE', message: 'Actualiza este dato desde tu perfil.' }); return
+    }
+    if (isNoteKey(key)) {
+      if (!current || current.suppressed || !current.value) throw bad('No encontramos esa nota.')
+      if (!assistant.memoryLlm) throw Object.assign(new Error('No se pudo corregir la nota: el modelo no está disponible.'), { status: 503, code: 'MEMORY_UNAVAILABLE' })
+      const raw = request.body?.value
+      if (typeof raw !== 'string' || !raw.trim() || raw.length > 200) throw bad('La nota debe tener entre 1 y 200 caracteres.')
+      const fact = await extractRequestedMemory('Recuerda que ' + raw, assistant.memoryLlm)
+      const text = fact?.kind === 'note' ? fact.value : fact?.summary
+      if (!text || (assistant.inputGuardrail && await assistant.inputGuardrail.assess(text))) throw bad('No se puede guardar ese contenido como nota.')
+      await repo.saveMemory(owner, { key, value: text, origin: 'user' }, false)
+      response.status(204).end()
+      return
     }
     const value = request.body?.value
     if (!validMemoryValue(key, value)) throw bad('Usa uno de los valores permitidos para esta categoría.')
@@ -74,7 +87,7 @@ export function conversationRoutes(assistant: AssistantRuntime) {
   }))
   router.delete('/memory/:key', endpoint(async (request, response, owner) => {
     const key = request.params.key as MemoryKey
-    if (!MEMORY_KEYS.includes(key)) throw bad('Categoría de memoria no permitida.')
+    if (!MEMORY_KEYS.includes(key) && !isNoteKey(key)) throw bad('Categoría de memoria no permitida.')
     await forgetMemory(repo, owner, key)
     response.status(204).end()
   }))

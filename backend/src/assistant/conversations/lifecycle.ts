@@ -1,3 +1,4 @@
+import { requestsMemory } from './explicitMemory.js'
 import { randomUUID } from 'node:crypto'
 import type { AssistantGraph, TurnInput } from '../graph/assistantGraph.js'
 import type { AssistantProfile, AssistantReply, ChatMessage } from '../types.js'
@@ -73,7 +74,7 @@ async function prepareTurn(graph: AssistantGraph, input: TurnInput) {
     const forgottenAt = storedMemories.filter(item => item.suppressed).map(item => item.updatedAt).sort().at(-1)
     const recent = await binding.repository.messages(owner, id, 6, undefined, true)
     // Forgetting memory keeps the user's archive, but prevents old chat text from silently reintroducing it.
-    const history = recent.messages.reverse().filter(message => !message.inputBlock && (!forgottenAt || message.createdAt > forgottenAt))
+    const history = recent.messages.reverse().filter(message => !message.inputBlock && !requestsMemory(message.content) && (!forgottenAt || message.createdAt > forgottenAt))
     console.info(JSON.stringify({ event: 'assistant.context', archivedMessages: conversation.messageCount, historyMessages: history.length,
       historyCharacters: history.reduce((size, item) => size + item.content.length, 0), summaryCharacters: conversation.summary.length, memoryItems: memories.length }))
     return { input: { ...input, requestId, profile, history, compactedSummary: conversation.summary, memories,
@@ -121,7 +122,7 @@ export async function maintainConversation(graph: AssistantGraph, threadId: stri
     const memoryPage = await binding.repository.store.page(owner, prefix, 100, metadata.memoryCursor)
     for (const item of memoryPage.items) {
       const message = item.value as unknown as ArchivedMessage
-      if (message.role !== 'student' || message.inputBlock) continue
+      if (message.role !== 'student' || message.inputBlock || requestsMemory(message.content)) continue
       for (const fact of extractMemories(message.content)) await binding.repository.saveMemory(owner, { ...fact, origin: 'conversation', sourceMessageId: message.id, observedAt: message.createdAt })
     }
     if (memoryPage.items.length) await binding.repository.saveMemoryCursor(owner, id, Buffer.from(memoryPage.items.at(-1)!.key).toString('base64url'))

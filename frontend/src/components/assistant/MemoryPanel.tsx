@@ -19,7 +19,7 @@ const valueLabels: Record<string, Record<string, string>> = {
   interests: { finanzas: 'Finanzas', banca: 'Banca', fintech: 'Fintech', marketing: 'Marketing', emprendimiento: 'Emprendimiento', contabilidad: 'Contabilidad', derecho: 'Derecho', becas: 'Becas' },
 }
 
-const keyLabel = (key: string) => keyLabels[key] ?? key
+const keyLabel = (key: string) => key.startsWith('note:') ? 'Nota' : keyLabels[key] ?? key
 const valueLabel = (key: string, value: string) => {
   if (key === 'semester' && /^\d+$/.test(value)) return `${value}.º semestre`
   return valueLabels[key]?.[value] ?? value
@@ -49,6 +49,7 @@ export function MemoryPanel({ memory, profileName, completeness, onChanged, onEr
   const profileInterests = interestList(profileValue('interests') ?? '')
   // Solo un dato a la vez se corrige; las opciones válidas vienen del backend.
   const [editing, setEditing] = useState<string | null>(null)
+  const [noteDraft, setNoteDraft] = useState('')
   const [saving, setSaving] = useState(false)
 
   async function run(action: () => Promise<void>, message: string) {
@@ -82,21 +83,22 @@ export function MemoryPanel({ memory, profileName, completeness, onChanged, onEr
       <div className="side-section">
         <h2>Lo que Compass recuerda</h2>
         {learnedFacts.length ? <>
-          <p className="side-note">Lo dedujo de tus mensajes. Si algo no es correcto, corrígelo o pídele que lo olvide.</p>
+          <p className="side-note">Recuerdos de tus conversaciones y datos que pediste guardar. Puedes corregirlos u olvidarlos aquí.</p>
           <ul className="learned-list">
             {learnedFacts.map(fact => {
               const label = keyLabel(fact.key)
               const options = memory?.allowedValues[fact.key] ?? []
               const isEditing = editing === fact.key
               const interests = fact.key === 'interests' ? interestList(fact.value) : []
-              const canEdit = fact.key === 'interests' ? options.some(option => !interests.includes(option)) : options.length > 1
+              const isNote = fact.key.startsWith('note:')
+              const canEdit = isNote || (fact.key === 'interests' ? options.some(option => !interests.includes(option)) : options.length > 1)
               return <li key={fact.key} className={`learned-item${isEditing ? ' editing' : ''}`}>
                 <div className="learned-head">
                   <span className="learned-key">{label}</span>
                   <span className="learned-actions">
                     {canEdit && <button type="button" className="row-icon rename" disabled={saving} aria-expanded={isEditing}
                       aria-label={fact.key === 'interests' ? 'Agregar intereses' : `Corregir ${label.toLowerCase()}`} title={fact.key === 'interests' ? 'Agregar' : 'Corregir'}
-                      onClick={() => setEditing(isEditing ? null : fact.key)}><Icon path={icon.edit} /></button>}
+                      onClick={() => { setNoteDraft(fact.value); setEditing(isEditing ? null : fact.key) }}><Icon path={icon.edit} /></button>}
                     <button type="button" className="row-icon delete" disabled={saving} aria-label={`Olvidar ${label.toLowerCase()}`} title="Olvidar"
                       onClick={() => void run(() => deleteMemory(fact.key), 'No fue posible olvidar este dato.')}><Icon path={icon.forget} /></button>
                   </span>
@@ -107,7 +109,13 @@ export function MemoryPanel({ memory, profileName, completeness, onChanged, onEr
                         <button type="button" disabled={saving} aria-label={`Quitar ${valueLabel('interests', item)} de tus intereses`} onClick={() => void removeInterest(fact, item)}>×</button>
                       </span>))}</span>
                   : <p className="learned-value">{valueLabel(fact.key, fact.value)}</p>}
-                {isEditing && <div className="learned-options" role="group" aria-label={fact.key === 'interests' ? 'Agregar intereses' : `Elige ${label.toLowerCase()}`}>
+                {isEditing && isNote && <form className="memory-note-form" onSubmit={event => { event.preventDefault(); void choose(fact, noteDraft) }}>
+                  <label>Corregir nota<textarea value={noteDraft} maxLength={200} onChange={event => setNoteDraft(event.target.value)} disabled={saving} /></label>
+                  <small>{noteDraft.length}/200 · Se revisa antes de guardar.</small>
+                  <button type="submit" disabled={saving || !noteDraft.trim()}>Guardar</button>
+                  <button type="button" disabled={saving} onClick={() => setEditing(null)}>Cancelar</button>
+                </form>}
+                {isEditing && !isNote && <div className="learned-options" role="group" aria-label={fact.key === 'interests' ? 'Agregar intereses' : `Elige ${label.toLowerCase()}`}>
                   {fact.key === 'interests'
                     ? options.filter(option => !interests.includes(option)).map(option => (
                         <button type="button" key={option} className="option-chip" disabled={saving} onClick={() => void addInterest(fact, option)}>
@@ -125,7 +133,7 @@ export function MemoryPanel({ memory, profileName, completeness, onChanged, onEr
           <button type="button" className="forget-all" disabled={saving} onClick={() => {
             if (window.confirm('¿Olvidar todo lo que Compass aprendió en tus conversaciones? Tu perfil no cambia.')) void run(async () => { for (const fact of learnedFacts) await deleteMemory(fact.key) }, 'No fue posible olvidar lo aprendido.')
           }}>Olvidar todo lo aprendido</button>
-        </> : <p className="side-empty">Si mencionas tu meta, horario o intereses, Compass los recordará aquí para personalizar sus respuestas.</p>}
+        </> : <p className="side-empty">Puedes pedir «recuerda que trabajo por las tardes». Los recuerdos guardados aparecerán aquí. Máximo 10 notas de 200 caracteres.</p>}
       </div>
     </>
   )

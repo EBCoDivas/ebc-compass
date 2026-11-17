@@ -58,7 +58,7 @@ export async function seedMemories(repo: ConversationRepository, owner: string, 
 }
 
 export async function forgetMemory(repo: ConversationRepository, owner: string, key?: MemoryKey) {
-  for (const item of key ? [key] : MEMORY_KEYS) await repo.saveMemory(owner, { key: item, value: '', origin: 'user', suppressed: true }, false)
+  for (const item of key ? [key] : [...new Set([...MEMORY_KEYS, ...(await repo.memories(owner)).map(fact => fact.key)])]) await repo.saveMemory(owner, { key: item, value: '', origin: 'user', suppressed: true }, false)
 }
 
 export function memoryContext(memories: MemoryFact[], profile?: AssistantProfile): MemoryFact[] {

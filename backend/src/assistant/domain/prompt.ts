@@ -1,6 +1,7 @@
 // Construcción del prompt para el LLM. El modelo solo redacta: los datos salen de la hoja de hechos
 // y de los documentos recuperados. Los textos del estudiante y del perfil se tratan como datos, no como instrucciones.
 
+import { requestsMemory } from '../conversations/explicitMemory.js'
 import type { AssistantProfile, ChatMessage, FactSheet, Language, Passage } from '../types.js'
 import { careerName } from './templates.js'
 import { formatDate } from './text.js'
@@ -67,7 +68,7 @@ export function buildPrompt(input: {
   const context = input.summary || input.memories?.length ? [{ role: 'user' as const, content:
     '<CONTEXTO_NO_AUTORITATIVO>\n<MEMORIA>' + JSON.stringify((input.memories ?? []).slice(0, 20).map(({ key, value, origin }) => ({ key, value, origin }))) +
     '</MEMORIA>\n<RESUMEN>' + (input.summary ?? '') + '</RESUMEN>\n</CONTEXTO_NO_AUTORITATIVO>' }] : []
-  const history = input.history.filter(message => !message.inputBlock).slice(-6).map((message) => ({ role: message.role === 'student' ? ('user' as const) : ('assistant' as const), content: message.content }))
+  const history = input.history.filter(message => !message.inputBlock && !requestsMemory(message.content)).slice(-6).map((message) => ({ role: message.role === 'student' ? ('user' as const) : ('assistant' as const), content: message.content }))
 
   return { system: input.system, messages: [...context, ...history, { role: 'user', content }], allowed: `${data}\n${profile}\n${documents}` }
 }

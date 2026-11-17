@@ -9,7 +9,7 @@ Cada mejora va en su propia rama `feature/<nombre>` con Pull Request, pruebas y 
 - Fase 1 implementada en `feature/mejoras-previas`: validación automatizada local del setup y del historial completada. Pendientes pruebas en máquinas nuevas de cada sistema y revisión manual en navegador.
 - Fase 2 implementada para validación local; capa nativa de Bedrock declarada, pendiente de despliegue y comprobación en el lab.
 - Fase 3 implementada en local con contrato compartido, avance demo en Inicio y recomendaciones agrupadas con razones. Pendiente revisión manual en navegador.
-- Fase 4 implementada para validación local; requiere configurar los dos modelos de Bedrock por entorno. Fase 5 pendiente.
+- Fase 4 implementada para validación local; requiere configurar los dos modelos de Bedrock por entorno. Fase 5 implementada con la tabla actual: extracción mediante el modelo, hasta 10 notas de 200 caracteres, corrección y olvido. Evaluación de AgentCore Memory y prueba en AWS pendientes.
 
 ## Fase 1: base estable
 
@@ -124,7 +124,19 @@ Responsable: ______
 
 ## Fase 5: memoria a petición
 
-**Hoy:** la memoria a largo plazo solo guarda 8 categorías fijas (carrera, campus, semestre, intereses, meta, horario, idioma y modalidad), con valores de una lista cerrada y detectadas con reglas de texto. Si el alumno pide "recuerda que trabajo por las tardes", no se guarda nada. Dentro de una misma conversación sí lo toma en cuenta (mensajes recientes y resumen), pero no en la siguiente.
+### Implementación local
+
+- Solicitudes explícitas al inicio: «recuerda que…», «no olvides que…» y «remember that…».
+- Extracción con el modelo elegido; categoría controlada si encaja o nota en tercera persona. Máximo 10 notas por cuenta, de 200 caracteres.
+- Confirmación después de persistir. Sin modelo, ante fallo o rechazo, se informa que no se guardó.
+- Notas visibles, corregibles con revisión del modelo y borrables en el panel. Olvidar memoria conserva el historial.
+- Filtros de datos sensibles e instrucciones antes de extraer y guardar; capa nativa cuando está configurada. Defensa heurística para la demo.
+- Tabla actual en local y lab; evaluación de AgentCore Memory pendiente en AWS.
+- Validación: 56 pruebas backend, 26 frontend, typecheck y lint correctos. Guardado y corrección de una nota comprobados en Chromium con el modelo local. AWS pendiente.
+- Detalle: [memoria a petición](../explicit-memory.md).
+
+
+**Antes:** la memoria a largo plazo solo guarda 8 categorías fijas (carrera, campus, semestre, intereses, meta, horario, idioma y modalidad), con valores de una lista cerrada y detectadas con reglas de texto. Si el alumno pide "recuerda que trabajo por las tardes", no se guarda nada. Dentro de una misma conversación sí lo toma en cuenta (mensajes recientes y resumen), pero no en la siguiente.
 
 **Objetivo:** que Compass guarde lo que el alumno le pide recordar explícitamente y lo use en conversaciones futuras.
 
@@ -155,4 +167,4 @@ Responsable: ______
 - **Lunna y Terra (resuelto):** configurables por entorno, con Lunna predeterminado.
 - **Setup (resuelto en fase 1):** instalación asistida en macOS y Windows; instrucciones manuales en Linux.
 - **Guardrails (resuelto en fase 2):** reglas locales activas y capa Bedrock declarada desde esta fase; despliegue y prueba real en el lab pendientes.
-- **Memoria a petición:** cuántas notas y de qué longitud máxima se guardan por alumno, y si AgentCore Memory reemplaza la tabla actual en el lab o solo se usa para las notas.
+- **Memoria a petición (resuelto para esta fase):** 10 notas de 200 caracteres; tabla actual. AgentCore Memory pendiente de evaluación en el lab.

@@ -28,7 +28,7 @@ export function Assistant() {
     } catch { setPanelError('No se pudo cargar el historial o tus recuerdos.') }
   }
   useEffect(() => { void refreshPanels() }, [])
-  useEffect(() => { if (!pending) void listConversations().then(data => setConversations(data)).catch(() => undefined) }, [entries.length, pending])
+  useEffect(() => { if (!pending) void refreshPanels() }, [entries.length, pending])
   // En pantallas angostas el contexto flota sobre el chat; en escritorio es una columna.
   const narrowQuery = '(max-width: 900px)'
   const [contextOpen, setContextOpen] = useState(() => !window.matchMedia(narrowQuery).matches)
