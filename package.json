@@ -2,7 +2,7 @@
   "name": "ebc-compass",
   "private": true,
   "version": "0.1.0",
-  "description": "Punto de entrada único para los comandos de EBC Compass. Sin dependencias.",
+  "description": "Punto de entrada \u00fanico para los comandos de EBC Compass. Sin dependencias.",
   "type": "module",
   "scripts": {
     "env:create": "node scripts/env-create.mjs",
@@ -15,6 +15,8 @@
     "verify:flow": "npm --prefix backend run verify:flow",
     "verify:lambda": "npm --prefix backend run verify:lambda",
     "verify:llm": "npm --prefix backend run verify:llm",
+    "verify:prompt-cache": "npm --prefix backend run verify:prompt-cache",
+    "verify:conversations": "npm --prefix backend run verify:conversations",
     "verify:checkpointer": "npm --prefix backend run verify:checkpointer",
     "kb:upload": "npm --prefix local run kb:upload",
     "kb:status": "npm --prefix local run kb:status",
@@ -53,6 +55,7 @@
     "lab:user": "npm --prefix scripts/lab run -s user --",
     "lab:status": "npm --prefix scripts/lab run -s status --",
     "lab:destroy": "npm --prefix scripts/lab run -s destroy --",
-    "lab:typecheck": "npm --prefix scripts/lab run typecheck"
+    "lab:typecheck": "npm --prefix scripts/lab run typecheck",
+    "lab:personas": "npm --prefix scripts/lab run -s personas --"
   }
 }

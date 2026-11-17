@@ -8,3 +8,19 @@ export function createConversationsTable() {
     ttl: "ttl",
   });
 }
+
+// Personalización persistente por cuenta; no comparte el TTL del checkpoint.
+export function createProfilesTable() {
+  return new sst.aws.Dynamo("StudentProfiles", {
+    fields: { studentId: "string" },
+    primaryIndex: { hashKey: "studentId" },
+  });
+}
+
+// Historial completo y memoria por sub; independiente del checkpoint y sin TTL.
+export function createHistoryTable() {
+  return new sst.aws.Dynamo("Conversations", {
+    fields: { PK: "string", SK: "string" },
+    primaryIndex: { hashKey: "PK", rangeKey: "SK" },
+  });
+}
