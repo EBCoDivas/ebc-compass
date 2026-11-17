@@ -214,13 +214,13 @@ Se propone A con las reglas actuales (códigos, fechas, montos y porcentajes) y 
 
 **Alcance**
 - Sustituir el estado temporal de F2 por persistencia en backend. Registrar estudiante desde el token, conversación, mensaje del asistente, valoración positiva/negativa y fechas de creación/actualización.
-- Mantener una valoración actualizable por estudiante y mensaje, con escrituras idempotentes. Verificar pertenencia de la conversación y existencia del mensaje del asistente.
-- Recuperar la valoración al recargar el historial. Permitir cambiarla o retirarla y mostrar errores de guardado sin afirmar que se registró.
+- Guardar una única valoración por estudiante y mensaje; repetir el mismo pulgar es idempotente y cambiarlo o retirarlo devuelve 409 (`FEEDBACK_ALREADY_SET`). Verificar pertenencia de la conversación y existencia del mensaje del asistente.
+- Recuperar la valoración al recargar el historial. Bloquear los pulgares después de guardarla y mostrar errores de guardado sin afirmar que se registró.
 - Persistir las valoraciones en la tabla Conversations de DynamoDB local/lab, con las rutas autenticadas descritas en el avance de F8. Eliminar también las valoraciones al borrar la conversación asociada.
 - El uso posterior de estos datos queda pendiente: esta fase no incluye motivos, comentarios, panel de administración, usuario administrador, casos de evaluación, comparación de ejecuciones ni entrenamiento automático.
 
 **Aceptación y entrega**
-- La persona guarda, cambia o retira su 👍/👎 y ve el estado persistido al recargar.
+- La persona guarda una sola vez su 👍/👎 y ve el estado persistido al recargar.
 - No puede valorar mensajes ajenos o inexistentes. Verificar autenticación, pertenencia, idempotencia y fallos de persistencia.
 - Cerrar F8 con validación local, evidencia del lab cuando esté disponible, documentación y PR propio.
 
@@ -234,7 +234,7 @@ Se propone A con las reglas actuales (códigos, fechas, montos y porcentajes) y 
    *(F5, detalle:)* Después de F2 (el render incremental usa el Markdown) y de F4 si se quiere una demo con datos finales; puede avanzar en paralelo en el backend.
 6. **F5c — Persistencia de conversaciones y memoria a largo plazo (14–20 h).** Depende de **F3b** (el `studentId` es el `sub` del token) y de **F5** (la respuesta interrumpida con Detener también se guarda en el registro). La tabla y la API pueden empezar antes, en paralelo con F5. El frontend (lista de conversaciones, "Lo que recuerdo de ti") entra con F6.
 7. **F6 — Pulido UX/UI de las demás pantallas (12–16 h).** Después de F1.
-8. **F8 — Persistencia de valoraciones (4–6 h).** Depende de F3b (identidad) y F5c (mensajes persistentes). Guarda únicamente 👍/👎 por respuesta, recupera el estado al recargar y permite cambiarlo o retirarlo. Su uso posterior queda fuera de esta fase. Ver 4.9.
+8. **F8 — Persistencia de valoraciones (4–6 h).** Depende de F3b (identidad) y F5c (mensajes persistentes). Guarda únicamente 👍/👎 por respuesta, recupera el estado al recargar y bloquea cambios posteriores. Su uso posterior queda fuera de esta fase. Ver 4.9.
 
 *Camino crítico:* F1 → F2 → F5. F3 y F4 se pueden trabajar en paralelo con F2.
 
@@ -339,9 +339,9 @@ Se propone A con las reglas actuales (códigos, fechas, montos y porcentajes) y 
 ### Avance de F8: valoraciones persistentes
 
 - Se conserva el identificador F8; F7 se elimina como fase independiente. Cada entrega incluye su validación y documentación.
-- `PUT /api/assistant/conversations/:id/messages/:messageId/feedback`, autenticado: `{ rating: "positive" | "negative" | null }`; 204 al guardar/cambiar/retirar, 400 para entrada inválida, 401 sin identidad, 404 para conversación ajena o respuesta inexistente, 409 si hay una actualización concurrente y 503 si no está disponible el almacenamiento.
+- `PUT /api/assistant/conversations/:id/messages/:messageId/feedback`, autenticado: `{ rating: "positive" | "negative" | null }`; 204 al guardar o repetir la misma valoración, 400 para entrada inválida, 401 sin identidad, 404 para conversación ajena o respuesta inexistente, 409 (`FEEDBACK_ALREADY_SET`) al intentar cambiar o retirar una valoración guardada y 503 si no está disponible el almacenamiento.
 - La tabla Conversations guarda ítems `FEEDBACK#<conversationId>#<messageId>` por estudiante, sin motivos. El historial devuelve `feedback` en cada respuesta valorada; eliminar una conversación borra sus valoraciones.
-- La interfaz espera confirmación de guardado y permite reintentar un fallo; pulsar de nuevo el pulgar seleccionado retira la valoración.
+- La interfaz espera confirmación de guardado y permite reintentar un fallo; tras guardar una valoración los pulgares quedan bloqueados.
 - Validación local: 38 pruebas backend, 18 frontend y 5 de plataforma aprobadas; typecheck de backend/frontend/local/lab/plataforma, lint y `git diff --check` correctos. Las pruebas de persistencia usan el adaptador en memoria con el contrato de DynamoDB.
 - Ruta declarada para el lab; despliegue y comprobación en AWS y revisión del flujo en navegador pendientes.
 

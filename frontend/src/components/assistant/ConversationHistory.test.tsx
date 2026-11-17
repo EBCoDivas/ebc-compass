@@ -30,3 +30,23 @@ describe('fallos del asistente', () => {
     expect(html).not.toContain('Respuesta útil')
   })
 })
+
+describe('valoración de respuestas', () => {
+  const answer: ChatEntry = { id: 'a1', role: 'assistant', content: 'Hay dos becas para tu carrera.' }
+  const ratingButtons = (html: string) => html.match(/<button[^>]*aria-label="Respuesta (útil|poco útil)"[^>]*>/g) ?? []
+
+  it('permite valorar una respuesta que aún no tiene valoración', () => {
+    const buttons = ratingButtons(render(answer))
+    expect(buttons).toHaveLength(2)
+    buttons.forEach(button => expect(button).not.toContain('disabled'))
+  })
+
+  it('no deja volver a valorar una respuesta ya valorada', () => {
+    const html = render({ ...answer, feedback: 'positive' })
+    const buttons = ratingButtons(html)
+    expect(buttons).toHaveLength(2)
+    buttons.forEach(button => expect(button).toContain('disabled'))
+    expect(buttons.find(button => button.includes('aria-pressed="true"'))).toContain('Respuesta útil')
+    expect(html).toContain('tu valoración quedó guardada')
+  })
+})

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { saveFeedback } from '../../services/assistantService'
+import { AssistantError, saveFeedback } from '../../services/assistantService'
 import { Markdown } from './Markdown'
 import type { ChatEntry } from '../../types/assistant'
 
@@ -23,17 +23,23 @@ export function ConversationHistory({ entries, pending, onRetry, onPickSuggestio
   const [savingFeedback, setSavingFeedback] = useState<Record<string, boolean>>({})
   const [feedbackError, setFeedbackError] = useState<Record<string, string>>({})
   const feedbackLock = useRef(new Set<string>())
+  // Respuestas que el servidor reporta como ya valoradas (por ejemplo, desde otra pestaña).
+  const [alreadyRated, setAlreadyRated] = useState<Record<string, boolean>>({})
   const ratingFor = (entry: ChatEntry) => Object.hasOwn(feedback, entry.id) ? feedback[entry.id] : entry.feedback
+  // Una respuesta se valora una sola vez: después ya no se puede cambiar ni volver a enviar.
   async function rate(entry: ChatEntry, rating: 'positive' | 'negative') {
-    if (feedbackLock.current.has(entry.id)) return
+    if (feedbackLock.current.has(entry.id) || ratingFor(entry) || alreadyRated[entry.id]) return
     feedbackLock.current.add(entry.id)
     setSavingFeedback(current => ({ ...current, [entry.id]: true }))
     setFeedbackError(current => ({ ...current, [entry.id]: '' }))
-    const next = ratingFor(entry) === rating ? null : rating
+    const next = rating
     try {
       await saveFeedback(entry.id, next)
       setFeedback(current => ({ ...current, [entry.id]: next }))
-    } catch { setFeedbackError(current => ({ ...current, [entry.id]: 'No se pudo guardar tu valoración. Intenta otra vez.' })) }
+    } catch (error) {
+      if (error instanceof AssistantError && error.code === 'FEEDBACK_ALREADY_SET') setAlreadyRated(current => ({ ...current, [entry.id]: true }))
+      else setFeedbackError(current => ({ ...current, [entry.id]: 'No se pudo guardar tu valoración. Intenta otra vez.' }))
+    }
     finally { feedbackLock.current.delete(entry.id); setSavingFeedback(current => ({ ...current, [entry.id]: false })) }
   }
   const copyTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -122,20 +128,21 @@ export function ConversationHistory({ entries, pending, onRetry, onPickSuggestio
                   {copiedId === entry.id ? <path d="m5 12 4 4L19 6" /> : <><rect x="8" y="8" width="12" height="13" rx="2" /><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h3" /></>}
                 </svg>
               </button>
-              <div className="chat-feedback" role="group" aria-label="¿Te fue útil esta respuesta?">
-                <button type="button" className="chat-icon-button" aria-label="Respuesta útil" title="Respuesta útil" disabled={savingFeedback[entry.id] || pending} aria-pressed={ratingFor(entry) === 'positive'} onClick={() => void rate(entry, 'positive')}>
+              <div className={`chat-feedback${ratingFor(entry) && !savingFeedback[entry.id] ? ` rated ${ratingFor(entry)}` : ''}`} role="group" aria-label="¿Te fue útil esta respuesta?">
+                <button type="button" className="chat-icon-button feedback-up" aria-label="Respuesta útil" title="Respuesta útil" disabled={savingFeedback[entry.id] || pending || Boolean(ratingFor(entry)) || alreadyRated[entry.id]} aria-pressed={ratingFor(entry) === 'positive'} onClick={() => void rate(entry, 'positive')}>
                   <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M7 10v11H3V10h4Zm0 0 5-8a3 3 0 0 1 3 3v4h4a2 2 0 0 1 2 2l-2 8a2 2 0 0 1-2 2H7" />
                   </svg>
                 </button>
-                <button type="button" className="chat-icon-button" aria-label="Respuesta poco útil" title="Respuesta poco útil" disabled={savingFeedback[entry.id] || pending} aria-pressed={ratingFor(entry) === 'negative'} onClick={() => void rate(entry, 'negative')}>
+                <button type="button" className="chat-icon-button feedback-down" aria-label="Respuesta poco útil" title="Respuesta poco útil" disabled={savingFeedback[entry.id] || pending || Boolean(ratingFor(entry)) || alreadyRated[entry.id]} aria-pressed={ratingFor(entry) === 'negative'} onClick={() => void rate(entry, 'negative')}>
                   <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M17 14V3h4v11h-4Zm0 0-5 8a3 3 0 0 1-3-3v-4H5a2 2 0 0 1-2-2l2-8a2 2 0 0 1 2-2h10" />
                   </svg>
                 </button>
+                {ratingFor(entry) && !savingFeedback[entry.id] && <small className="chat-feedback-note" role="status">Gracias, tu valoración quedó guardada.</small>}
               </div>
               {savingFeedback[entry.id] && <small role="status">Guardando…</small>}
-              {ratingFor(entry) && !savingFeedback[entry.id] && <small className="chat-feedback-note">Valoración guardada.</small>}
+              {alreadyRated[entry.id] && <small className="chat-feedback-note">Ya habías valorado esta respuesta.</small>}
               {feedbackError[entry.id] && <small role="alert" className="form-error">{feedbackError[entry.id]}</small>}
               {captionFor(entry) && <small className="chat-caption" aria-label={`Tiempo de respuesta: ${captionFor(entry)}`}>{captionFor(entry)}</small>}
             </div>

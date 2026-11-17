@@ -1,5 +1,5 @@
 import type { AssistantReply, ChatMessage, Intent, Language, Source, LlmUsage } from '../types.js'
-import { Conflict, NotFound, type DocumentStore, type Value } from './store.js'
+import { Conflict, FeedbackLocked, NotFound, type DocumentStore, type Value } from './store.js'
 
 export interface Conversation {
   id: string; title: string; createdAt: string; updatedAt: string; preview: string; messageCount: number; version: number
@@ -66,11 +66,21 @@ export class ConversationRepository {
     if (!found) throw new NotFound('No encontramos esa respuesta.')
     const key = `FEEDBACK#${id}#${messageId}`
     const current = await this.store.get(owner, key)
-    if ((current?.rating ?? null) === rating) return
+    const saved = (current?.rating ?? null) as 'positive' | 'negative' | null
+    if (saved === rating) return
+    if (saved !== null) throw new FeedbackLocked('Ya valoraste esta respuesta.')
+    if (rating === null) return
     const stamp = new Date().toISOString()
-    await this.store.write(owner, [{ key, value: { rating, messageId, conversationId: id,
-      createdAt: current?.createdAt ?? stamp, updatedAt: stamp, version: Number(current?.version ?? -1) + 1 },
-      version: current?.version as number | undefined }])
+    try {
+      await this.store.write(owner, [{ key, value: { rating, messageId, conversationId: id,
+        createdAt: current?.createdAt ?? stamp, updatedAt: stamp, version: Number(current?.version ?? -1) + 1 },
+        version: current?.version as number | undefined }])
+    } catch (error) {
+      // Dos valoraciones simultáneas: gana la primera; repetir la misma es inofensivo.
+      if (!(error instanceof Conflict)) throw error
+      if ((await this.store.get(owner, key))?.rating === rating) return
+      throw new FeedbackLocked('Ya valoraste esta respuesta.')
+    }
     // If deletion ran concurrently, do not leave feedback for a deleted conversation.
     try { await this.require(owner, id) } catch (error) { await this.store.remove(owner, [key]); throw error }
   }

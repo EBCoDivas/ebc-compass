@@ -42,18 +42,26 @@ test('conversation and memory API enforce verified ownership, pagination, edits 
   assert.equal((await call('PUT', feedbackPath, undefined, { rating: 'positive' })).status, 401)
   assert.equal((await call('PUT', feedbackPath, bob, { rating: 'positive' })).status, 404)
   assert.equal((await call('PUT', feedbackPath, alice, { rating: 'invalid' })).status, 400)
-  for (const rating of ['positive', 'positive', 'negative', null]) {
-    assert.equal((await call('PUT', feedbackPath, alice, { rating })).status, 204)
-    const history = await call('GET', '/conversations/' + conversationId, alice).then(r => r.json()) as { messages: { role: string; feedback?: string }[] }
-    assert.equal(history.messages.find(m => m.role === 'assistant')?.feedback ?? null, rating)
-  }
+  const savedFeedback = async () => (await call('GET', '/conversations/' + conversationId, alice).then(r => r.json()) as { messages: { role: string; feedback?: string }[] })
+    .messages.find(m => m.role === 'assistant')?.feedback ?? null
   assert.equal((await call('PUT', `/conversations/${conversationId}/messages/${alice}/feedback`, alice, { rating: 'positive' })).status, 404)
 
+  // Si el almacenamiento falla, no queda valoración guardada y se puede reintentar.
   const originalWrite = assistant.conversations!.store.write.bind(assistant.conversations!.store)
   assistant.conversations!.store.write = async () => { throw new Error('storage unavailable') }
   assert.equal((await call('PUT', feedbackPath, alice, { rating: 'positive' })).status, 503)
   assistant.conversations!.store.write = originalWrite
+  assert.equal(await savedFeedback(), null)
+
+  // Una respuesta se valora una sola vez: repetir la misma valoración es inofensivo; cambiarla o quitarla no.
   assert.equal((await call('PUT', feedbackPath, alice, { rating: 'positive' })).status, 204)
+  assert.equal((await call('PUT', feedbackPath, alice, { rating: 'positive' })).status, 204)
+  for (const rating of ['negative', null]) {
+    const response = await call('PUT', feedbackPath, alice, { rating })
+    assert.equal(response.status, 409)
+    assert.equal((await response.json() as { code: string }).code, 'FEEDBACK_ALREADY_SET')
+  }
+  assert.equal(await savedFeedback(), 'positive')
   assert.equal((await call('GET', '/conversations/' + conversationId + '?cursor=Zm9v', alice)).status, 400)
   assert.equal((await call('PATCH', '/conversations/' + conversationId, alice, { title: 'Mi orientación' })).status, 204)
   const list = await (await call('GET', '/conversations', alice)).json() as { conversations: { title: string }[] }

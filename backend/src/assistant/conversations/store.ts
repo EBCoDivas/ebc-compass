@@ -11,6 +11,8 @@ export interface DocumentStore {
 }
 export class Conflict extends Error { readonly status = 409; readonly code = 'TURN_PENDING' }
 export class NotFound extends Error { readonly status = 404; readonly code = 'CONVERSATION_NOT_FOUND' }
+/** Una respuesta se valora una sola vez: no se puede cambiar ni quitar la valoración. */
+export class FeedbackLocked extends Error { readonly status = 409; readonly code = 'FEEDBACK_ALREADY_SET' }
 export class HistoryUnavailable extends Error { readonly status = 503; readonly code = 'HISTORY_UNAVAILABLE' }
 
 export function decodeCursor(cursor: string | undefined, prefix: string): string | undefined {
