@@ -28,6 +28,11 @@ EBC Compass is an academic and professional guidance platform for students at Es
 - Use Pull Requests to merge changes into `main`.
 - Include tests, evidence, and a clear description in Pull Requests.
 - Never commit `.env` files, passwords, tokens, or API keys.
+- Keep new history linear. Rebase feature branches onto the latest `origin/main` before opening a PR and again before integration if `main` has advanced; do not merge `main` into a feature branch.
+- Resolve rebase conflicts locally and rerun affected checks. Coordinate before rebasing a shared branch; publish rewritten feature commits with `--force-with-lease`, never plain `--force`.
+- Integrate reviewed PRs using `git merge --ff-only` when using Git. If integration must happen through GitHub, use **Rebase and merge**; do not use **Create a merge commit** or `gh pr merge --merge`. GitHub rebasing preserves linearity but rewrites commit IDs and is not an exact fast-forward.
+- Never force-push or rebase published `main`. If a fast-forward fails, update the feature branch and repeat checks instead of forcing integration. These rules apply to new changes; do not rewrite existing history.
+- Follow [the collaboration workflow](docs/collaboration-workflow.md) for commands, PR review and integration steps.
 
 ## Code Conventions
 
