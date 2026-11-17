@@ -46,7 +46,7 @@ if (await emulatorHealthy()) {
     encoding: 'utf8',
     env: { ...cleanBaseEnv(), ...emulatorEnv() },
   })
-  result.status === 0 ? ok('Tabla DynamoDB y bucket S3 existen') : bad('Faltan recursos en el emulador', 'npm run provision')
+  result.status === 0 ? ok('Tablas DynamoDB, cuentas Cognito y bucket S3 verificados') : bad('Faltan recursos en el emulador', 'npm run provision')
 } else {
   bad('AWS Emulator no responde', 'npm run emulator:up   (o npm run dev)')
 }

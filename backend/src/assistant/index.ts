@@ -9,23 +9,49 @@ import { BedrockLlmProvider } from './adapters/bedrockLlm.js'
 import { DynamoDBSaver } from './adapters/dynamoSaver.js'
 import { BedrockKnowledgeBaseRetriever, FallbackRetriever, KeywordRetriever } from './adapters/retrievers.js'
 import { buildAssistantGraph, type AssistantDeps } from './graph/assistantGraph.js'
+import { ConversationRepository } from './conversations/repository.js'
+import { DynamoDocumentStore, MemoryDocumentStore } from './conversations/store.js'
+import { DynamoProfileRepository } from '../profiles/repository.js'
+import type { AssistantProfile } from './types.js'
 
-export { runTurn, InvalidInputError, MAX_MESSAGE_LENGTH, type AssistantGraph } from './graph/assistantGraph.js'
+export { runTurnStreaming, runTurn, InvalidInputError, MAX_MESSAGE_LENGTH, type AssistantGraph } from './graph/assistantGraph.js'
 export { suggestionsFor } from './domain/templates.js'
 export type * from './types.js'
+export { ensureConversation, maintainConversation } from './conversations/lifecycle.js'
 
-export function createAssistant(options: { config?: AssistantConfig; checkpointer?: BaseCheckpointSaver } = {}) {
+export interface AssistantRuntime {
+  config: AssistantConfig
+  checkpointer: BaseCheckpointSaver
+  graph: ReturnType<typeof buildAssistantGraph>
+  conversations?: ConversationRepository
+  profileReader?: (owner: string) => Promise<AssistantProfile | undefined>
+}
+
+export function createAssistant(options: { config?: AssistantConfig; checkpointer?: BaseCheckpointSaver; conversations?: ConversationRepository;
+  profileReader?: (owner: string) => Promise<AssistantProfile | undefined> } = {}): AssistantRuntime {
   const config = options.config ?? loadAssistantConfig()
   const catalog = new InMemoryCatalog()
+  const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }), { marshallOptions: { removeUndefinedValues: true } })
+  const conversations = options.conversations ?? new ConversationRepository(config.store === 'memory'
+    ? new MemoryDocumentStore() : new DynamoDocumentStore(client, config.historyTable))
+  const profiles = config.store === 'memory' ? undefined : new DynamoProfileRepository(undefined, client)
+  const profileReader = options.profileReader ?? (profiles ? async (owner: string): Promise<AssistantProfile | undefined> => {
+    const profile = await profiles.get(owner)
+    if (!profile) return undefined
+    return { name: profile.name, campus: profile.campus, career: profile.career, currentSemester: profile.currentSemester,
+      completedCourses: profile.completedCourses, interests: profile.interests, goals: profile.goals, availability: profile.availability }
+  } : undefined)
   const deps: AssistantDeps = {
     catalog,
     recommendations: new ProfileRecommendations(catalog),
     dates: new CatalogDates(catalog),
+    conversations,
+    profileReader,
   }
 
   // Modo llm: LLM por Bedrock Converse y conocimiento por Retrieve (con respaldo por palabras clave).
   if (config.mode === 'llm') {
-    deps.llm = new BedrockLlmProvider({ modelId: config.bedrockModelId, region: config.region })
+    deps.llm = new BedrockLlmProvider({ modelId: config.bedrockModelId, region: config.region, cacheMode: config.promptCacheMode })
     deps.llmTimeoutMs = config.llmTimeoutMs
     deps.retriever = new FallbackRetriever(
       new BedrockKnowledgeBaseRetriever({ knowledgeBaseId: config.knowledgeBaseId, region: config.region }),
@@ -39,10 +65,10 @@ export function createAssistant(options: { config?: AssistantConfig; checkpointe
     (config.store === 'memory'
       ? new MemorySaver()
       : new DynamoDBSaver({
-          client: DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }), { marshallOptions: { removeUndefinedValues: true } }),
+          client,
           tableName: config.conversationsTable,
           ttlSeconds: config.conversationTtlSeconds,
         }))
 
-  return { config, checkpointer, graph: buildAssistantGraph(deps, checkpointer) }
+  return { config, checkpointer, conversations, profileReader, graph: buildAssistantGraph(deps, checkpointer) }
 }

@@ -1,0 +1,160 @@
+[
+  {
+    "id": "valerie",
+    "name": "Valerie Martínez",
+    "studentId": "e0bc0000-0000-4000-8000-000000000001",
+    "enrollment": "M0100010",
+    "career": "finance",
+    "program": "Finanzas y Banca",
+    "campus": "CDMX",
+    "campusName": "Ciudad de México",
+    "period": 2,
+    "periodType": "semestre",
+    "interests": [
+      "becas",
+      "finanzas"
+    ],
+    "completedCourses": [],
+    "hasProfile": true
+  },
+  {
+    "id": "diego",
+    "name": "Diego Ramírez",
+    "studentId": "e0bc0000-0000-4000-8000-000000000002",
+    "enrollment": "M0100011",
+    "career": "marketing",
+    "program": "Mercadotecnia",
+    "campus": "GDL",
+    "campusName": "Guadalajara",
+    "period": 5,
+    "periodType": "semestre",
+    "interests": [
+      "marketing",
+      "prácticas"
+    ],
+    "completedCourses": [],
+    "hasProfile": true
+  },
+  {
+    "id": "ana",
+    "name": "Ana Lucía Torres",
+    "studentId": "e0bc0000-0000-4000-8000-000000000003",
+    "enrollment": "M0100012",
+    "career": "accounting",
+    "program": "Contaduría",
+    "campus": "QRO",
+    "campusName": "Querétaro",
+    "period": 7,
+    "periodType": "semestre",
+    "interests": [
+      "impuestos",
+      "servicio social"
+    ],
+    "completedCourses": [],
+    "hasProfile": true
+  },
+  {
+    "id": "carlos",
+    "name": "Carlos Mendoza",
+    "studentId": "e0bc0000-0000-4000-8000-000000000004",
+    "enrollment": "M0100013",
+    "career": "international-business",
+    "program": "Comercio y Negocios Internacionales",
+    "campus": "CMS",
+    "campusName": "Ciudad de México Sur",
+    "period": 6,
+    "periodType": "semestre",
+    "interests": [
+      "relaciones internacionales"
+    ],
+    "completedCourses": [],
+    "hasProfile": true
+  },
+  {
+    "id": "sofia",
+    "name": "Sofía Herrera",
+    "studentId": "e0bc0000-0000-4000-8000-000000000005",
+    "enrollment": "M0100014",
+    "career": "law",
+    "program": "Derecho",
+    "campus": "TLC",
+    "campusName": "Toluca",
+    "period": 9,
+    "periodType": "semestre",
+    "interests": [
+      "titulación",
+      "prácticas"
+    ],
+    "completedCourses": [],
+    "hasProfile": true
+  },
+  {
+    "id": "mariana",
+    "name": "Mariana Ortiz",
+    "studentId": "e0bc0000-0000-4000-8000-000000000006",
+    "enrollment": "M0100015",
+    "career": "tourism",
+    "program": "Administración de Negocios Turísticos",
+    "campus": "CNC",
+    "campusName": "Cancún",
+    "period": 4,
+    "periodType": "semestre",
+    "interests": [
+      "turismo",
+      "empleo"
+    ],
+    "completedCourses": [],
+    "hasProfile": true
+  },
+  {
+    "id": "javier",
+    "name": "Javier Núñez",
+    "studentId": "e0bc0000-0000-4000-8000-000000000007",
+    "enrollment": "M0100016",
+    "career": "digital-transformation",
+    "program": "Programación y Transformación Digital",
+    "campus": "LEO",
+    "campusName": "León",
+    "period": 3,
+    "periodType": "periodo",
+    "interests": [
+      "tecnología",
+      "cursos"
+    ],
+    "completedCourses": [],
+    "hasProfile": true
+  },
+  {
+    "id": "laura",
+    "name": "Laura Estrada",
+    "studentId": "e0bc0000-0000-4000-8000-000000000008",
+    "enrollment": "M0100017",
+    "career": "financial-management",
+    "program": "Maestría en Dirección Financiera",
+    "campus": "CDMX",
+    "campusName": "Ciudad de México",
+    "period": 2,
+    "periodType": "trimestre",
+    "interests": [
+      "finanzas",
+      "becas"
+    ],
+    "completedCourses": [],
+    "hasProfile": true
+  },
+  {
+    "id": "sin-perfil",
+    "name": "Sin perfil",
+    "studentId": "e0bc0000-0000-4000-8000-000000000009",
+    "enrollment": "",
+    "career": "",
+    "program": "",
+    "campus": "",
+    "campusName": "",
+    "period": 0,
+    "periodType": "",
+    "interests": [],
+    "completedCourses": [],
+    "hasProfile": false
+  }
+]

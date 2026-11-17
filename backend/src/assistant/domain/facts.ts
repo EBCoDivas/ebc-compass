@@ -1,3 +1,4 @@
+import { levelForCareer, matchesAcademicScope } from '../../data/academic.js'
 // Construye la hoja de hechos (FactSheet): lo único que el asistente (o el LLM) puede afirmar.
 // Todo es determinista: mismos datos de entrada, misma hoja.
 
@@ -40,7 +41,7 @@ function toFactItem(item: AssistantOpportunity, profile: AssistantProfile | unde
   if (profile?.career) {
     const careerOk = item.careers.includes(profile.career)
     const semesterOk = !item.semesters || !profile.currentSemester || item.semesters.includes(profile.currentSemester)
-    matchesProfile = careerOk && semesterOk
+    matchesProfile = careerOk && semesterOk && matchesAcademicScope(item, profile)
   }
   const completed = (profile?.completedCourses ?? []).map((code) => code.toUpperCase())
   return {
@@ -76,7 +77,7 @@ export async function buildFactSheet(input: {
   const notes: FactNote[] = []
   let items: FactItem[] = []
 
-  const catalog = await deps.catalog.list()
+  const catalog = await deps.catalog.list({ campus: profile?.campus, level: levelForCareer(careerFilter) })
   const mentioned = catalog.filter((item) => entities.opportunityIds.includes(item.id))
   const asItems = (list: AssistantOpportunity[]) => list.map((item) => toFactItem(item, profile, today))
 

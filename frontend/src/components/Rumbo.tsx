@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import type { Opportunity } from '../services/opportunityService'
-import { assistantPath } from '../services/assistantService'
+import { AskAssistantLink } from './assistant/AskAssistantLink'
 import { daysLabel, daysUntil, urgencyFor } from '../utils/dates'
 import { typeMeta } from '../utils/opportunityTypes'
 
@@ -32,9 +32,9 @@ export function Rumbo({ items }: { items: Opportunity[] }) {
         <Link to="/calendario">Ver calendario</Link>
       </div>
       <ol className="rumbo-track">
-        <li className="rumbo-today" aria-label="Hoy">
-          <img src="/ebc-compass-mark.svg" alt="" width="36" height="36" />
-          <span>Hoy</span>
+        <li className="rumbo-today">
+          <span className="rumbo-dot" aria-hidden="true" />
+          <span className="rumbo-today-label">Hoy</span>
         </li>
         {items.map((item, index) => {
           const days = daysUntil(item.deadline!)
@@ -57,9 +57,9 @@ export function Rumbo({ items }: { items: Opportunity[] }) {
         <p>
           Tu siguiente paso es <strong>{next.title}</strong>.
         </p>
-        <Link className="button primary" to={assistantPath(`¿Qué necesito para ${next.title}?`)}>
+        <AskAssistantLink className="button primary" question={`¿Qué necesito para ${next.title}?`}>
           Preguntar qué necesito
-        </Link>
+        </AskAssistantLink>
       </div>
     </section>
   )

@@ -1,11 +1,11 @@
 # EBC Compass Platform
 
-This directory contains the AWS infrastructure definition for EBC Compass, built with SST v3 and TypeScript. The initial stage is `dev` in `us-east-1`.
+This directory contains the AWS infrastructure definition for EBC Compass, built with SST v4 and TypeScript. The initial stage is `dev` in `us-east-1`.
 
 ## Included infrastructure
 
 - Amazon Cognito User Pool with email as the sign-in username and a public web client.
-- API Gateway HTTP API with `GET /health`, `GET /opportunities`, and `ANY /api/{proxy+}` (the full Express backend as one Lambda: catalog, recommendations, alerts and the assistant), protected by a Cognito JWT authorizer.
+- Regional API Gateway REST API with `GET /health`, `GET /opportunities`, explicit backend routes and `ANY /api/{proxy+}`, protected by a Cognito User Pools authorizer. `POST /api/assistant/messages/stream` uses a separate streaming Lambda; SST manages its STREAM integration, invocation URI, CORS and deployment.
 - Node.js 22 health Lambda and API/Lambda CloudWatch logs retained for one week.
 - Private, HTTPS-only S3 document bucket. New objects use Amazon S3 managed-key encryption (SSE-S3) by default.
 - S3 Vectors bucket and a 1,024-dimensional `float32` cosine index.
@@ -19,7 +19,7 @@ Deploying all of this with almost no manual steps (model discovery, knowledge in
 
 ## Local development
 
-Requirements: Node.js 22, npm, and the SST v3 CLI installed through this package.
+Requirements: Node.js 22, npm, and the SST v4 CLI installed through this package.
 
 ```sh
 npm install
@@ -27,6 +27,8 @@ npm run install:providers
 npm run typecheck
 npm test
 ```
+
+SST is pinned to 4.17.2 and the AWS provider to 7.55.0. Existing SST 3 stages require `sst diff` and `sst refresh` before deploying; see the [lab migration instructions](../docs/deploy-lab.md#stages-existentes-migración-de-sst-3-a-sst-4).
 
 `install:providers` downloads the SST provider packages and generates local type definitions under the ignored `.sst/` directory. It does not deploy infrastructure.
 

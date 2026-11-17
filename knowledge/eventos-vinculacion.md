@@ -1,42 +1,28 @@
 ---
 id: eventos-vinculacion
-title: Eventos de vinculación (contenido simulado)
+title: Eventos de vinculación: agenda demo
 topic: events
 language: es
 simulated: true
 ---
-# Eventos de vinculación
+# Eventos de vinculación: agenda demo
 
-> Contenido simulado para la demo de EBC Compass.
+> Oferta simulada; no son vacantes ni convocatorias reales. Confirma disponibilidad con EBC.
 
-## Foro Fintech EBC
+## FiT EBC: encuentro de empleabilidad
+Demo simulada: agenda ficticia de vinculación con empresas. Fecha ficticia: 25/11/2026.
 
-- **Fecha:** 25/11/2026.
-- **Lugar:** Campus Ciudad de México.
-- **De qué trata:** conversación con especialistas del ecosistema financiero sobre pagos digitales, banca abierta e inclusión financiera.
-- **Recomendado para:** Finanzas y Banca.
+## Global EBC: sesión de relaciones internacionales
+Demo simulada: sesión ficticia para explorar movilidad. Fecha ficticia: 05/12/2026.
 
-## Networking empresarial
+## Catapulta: ideas de negocio
+Demo simulada: sesión ficticia para conversar sobre emprendimiento. Fecha ficticia: 06/12/2026.
 
-- **Fecha:** 05/12/2026.
-- **Lugar:** Campus Guadalajara.
-- **De qué trata:** encuentro con empresas para conocer vacantes de prácticas y primer empleo.
-- **Recomendado para:** Mercadotecnia y Administración de Empresas.
+## EXU: encuentro de comunidad
+Demo simulada: actividad ficticia de formación complementaria. Fecha ficticia: 08/12/2026.
 
-## Registro
+## Encuentro de turismo y hospitalidad
+Demo simulada: actividad ficticia de vinculación regional. Fecha ficticia: 10/12/2026.
 
-El registro es gratuito y se hace desde la sección de eventos del portal. Los lugares son limitados.
-
-## Taller de estrategia digital
-
-- **Fecha:** 08/12/2026.
-- **Lugar:** Campus Guadalajara.
-- **De qué trata:** sesión práctica con especialistas en comunicación digital.
-- **Recomendado para:** Mercadotecnia.
-
-## Feria de empleabilidad EBC
-
-- **Fecha:** 15/01/2027.
-- **Lugar:** Campus Ciudad de México.
-- **De qué trata:** conecta con reclutadores y conoce vacantes para estudiantes de todas las carreras.
-- **Registro:** gratuito desde la sección de eventos del portal.
+## Comunicación y entretenimiento en los negocios
+Demo simulada: conversación ficticia con proyectos creativos. Fecha ficticia: 11/12/2026.

@@ -6,6 +6,7 @@ export function Markdown({ children }: { children: string }) {
   return (
     <div className="md">
       <ReactMarkdown
+        skipHtml
         remarkPlugins={[remarkGfm]}
         disallowedElements={['img']}
         unwrapDisallowed
@@ -21,6 +22,7 @@ export function Markdown({ children }: { children: string }) {
           h1: ({ children: c }) => <h4>{c}</h4>,
           h2: ({ children: c }) => <h4>{c}</h4>,
           h3: ({ children: c }) => <h5>{c}</h5>,
+          h6: ({ children: c }) => <h5>{c}</h5>,
           table: ({ children: c }) => (
             <div className="md-table">
               <table>{c}</table>
@@ -28,7 +30,7 @@ export function Markdown({ children }: { children: string }) {
           ),
         }}
       >
-        {children}
+        {children.replace(/^([ \t]*)• /gm, '$1- ')}
       </ReactMarkdown>
     </div>
   )

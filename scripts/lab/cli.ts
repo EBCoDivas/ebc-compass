@@ -12,7 +12,7 @@
 
 import { spawnSync } from 'node:child_process'
 import { randomBytes, randomUUID } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { BedrockClient, ListFoundationModelsCommand, ListInferenceProfilesCommand } from '@aws-sdk/client-bedrock'
@@ -21,6 +21,8 @@ import { BedrockAgentRuntimeClient, RetrieveCommand } from '@aws-sdk/client-bedr
 import { BedrockRuntimeClient, ConverseCommand, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
 import {
   AdminCreateUserCommand,
+  AdminGetUserCommand,
+  AdminUpdateUserAttributesCommand,
   AdminDeleteUserCommand,
   AdminInitiateAuthCommand,
   AdminSetUserPasswordCommand,
@@ -121,7 +123,7 @@ async function identity(): Promise<{ account: string; arn: string }> {
 // ---------- 2) Modelo de Bedrock ----------
 
 /** Familias preferidas (rápidas y baratas primero). Se detecta cuál está realmente disponible en la cuenta. */
-const MODEL_PREFERENCE = [/anthropic\.claude.*haiku/i, /amazon\.nova.*lite/i, /amazon\.nova.*micro/i, /anthropic\.claude.*sonnet/i, /amazon\.nova.*pro/i]
+const MODEL_PREFERENCE = [/amazon\.nova.*lite/i, /amazon\.nova.*micro/i, /anthropic\.claude.*haiku/i, /anthropic\.claude.*sonnet/i, /amazon\.nova.*pro/i]
 
 async function candidateModels(): Promise<string[]> {
   const ids = new Set<string>()
@@ -295,6 +297,37 @@ async function ensureUser(o: Outputs, email: string, password: string): Promise<
   await cognito.send(new AdminSetUserPasswordCommand({ UserPoolId: o.cognitoUserPoolId, Username: email, Password: password, Permanent: true }))
 }
 
+async function personas(): Promise<void> {
+  requireConfirm('lab:personas')
+  const o = outputs()
+  const registryFile = join(here, '.state', 'personas.json')
+  const registry = existsSync(registryFile) ? JSON.parse(readFileSync(registryFile, 'utf8')) as Record<string, { username: string; password: string; ready?: boolean }> : {}
+  const seeds = JSON.parse(readFileSync(join(repoRoot, 'shared', 'personas.json'), 'utf8')) as { id: string; hasProfile: boolean; name: string; enrollment: string; campus: string; campusName: string; career: string; program: string; period: number; periodType: string }[]
+  mkdirSync(dirname(registryFile), { recursive: true })
+  const save = () => { writeFileSync(registryFile, JSON.stringify(registry, null, 2) + '\n', { mode: 0o600 }); chmodSync(registryFile, 0o600) }
+  for (const seed of seeds) {
+    const account = registry[seed.id] ?? { username: seed.id + '@demo.ebc.invalid', password: demoPassword() }
+    registry[seed.id] = account
+    save()
+    const attributes: Record<string, string> = { email: account.username, email_verified: 'true', 'custom:personaId': seed.id }
+    if (seed.hasProfile) Object.assign(attributes, { name: seed.name, 'custom:matricula': seed.enrollment, 'custom:campus': seed.campusName,
+      'custom:campusCode': seed.campus, 'custom:programa': seed.program, 'custom:career': seed.career,
+      'custom:semestre': String(seed.period), 'custom:periodo': seed.periodType })
+    let found = true
+    try { await cognito.send(new AdminGetUserCommand({ UserPoolId: o.cognitoUserPoolId, Username: account.username })) }
+    catch (error) { if ((error as Error).name !== 'UserNotFoundException') throw error; found = false }
+    const UserAttributes = Object.entries(attributes).map(([Name, Value]) => ({ Name, Value }))
+    if (!found) await cognito.send(new AdminCreateUserCommand({ UserPoolId: o.cognitoUserPoolId, Username: account.username, MessageAction: 'SUPPRESS', UserAttributes }))
+    else await cognito.send(new AdminUpdateUserAttributesCommand({ UserPoolId: o.cognitoUserPoolId, Username: account.username, UserAttributes }))
+    if (!found || !account.ready) {
+      await cognito.send(new AdminSetUserPasswordCommand({ UserPoolId: o.cognitoUserPoolId, Username: account.username, Password: account.password, Permanent: true }))
+      account.ready = true
+      save()
+    }
+  }
+  ok('Nueve cuentas demo preparadas. Credenciales privadas en scripts/lab/.state/personas.json')
+}
+
 async function user(): Promise<void> {
   requireConfirm('lab:user')
   const o = outputs()
@@ -367,6 +400,19 @@ async function smoke(): Promise<void> {
     check((await call('GET', `/api/assistant/conversations/${conversationId}?studentId=${studentId}`)).status === 404, 'La conversación borrada ya no existe')
     await call('DELETE', `/api/assistant/conversations/${english.data?.conversationId}?studentId=${studentId}`)
 
+    const streamResponse = await fetch(apiBase(o) + '/api/assistant/messages/stream', {
+      method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + token },
+      body: JSON.stringify({ studentId, message: '¿Qué becas hay disponibles?' }),
+    })
+    const streamText = await streamResponse.text()
+    check(streamResponse.ok && Boolean(streamResponse.headers.get('content-type')?.includes('text/event-stream')), 'Streaming devuelve SSE')
+    check(streamText.includes('event: token') && streamText.includes('event: done') && !streamText.includes('event: error'), 'Streaming produce fragmentos y respuesta final')
+    const frame = streamText.split(/\r?\n\r?\n/).find(value => value.startsWith('event: done'))
+    if (frame) {
+      const final = JSON.parse(frame.split('data: ')[1]) as { conversationId: string }
+      await call('DELETE', '/api/assistant/conversations/' + final.conversationId)
+    }
+
     const site = await fetch(o.siteUrl)
     const html = await site.text()
     check(site.status === 200 && html.includes('id="root"'), 'El sitio (CloudFront) responde', o.siteUrl)
@@ -406,8 +452,8 @@ async function deploy(): Promise<void> {
   for (const pkg of ['platform', 'backend']) {
     if (!existsSync(join(repoRoot, pkg, 'node_modules'))) run('npm', ['--prefix', pkg, 'install', '--no-audit', '--no-fund'])
   }
+  run('npx', ['sst', 'install'], { cwd: join(repoRoot, 'platform') })
   run('npx', ['sst', 'deploy', '--stage', stage], { cwd: join(repoRoot, 'platform'), env: { BEDROCK_MODEL_ID: modelId } })
-  outputs()
   writeState({ deployedAt: new Date().toISOString() })
 
   if (skipKnowledge) warn('Conocimiento omitido (--skip-knowledge). Ejecuta después: npm run lab:knowledge -- --confirm')
@@ -443,7 +489,7 @@ async function destroy(): Promise<void> {
   ok('Despliegue eliminado')
 }
 
-const commands: Record<string, () => Promise<void> | void> = { check, deploy, knowledge, smoke, user, status, destroy }
+const commands: Record<string, () => Promise<void> | void> = { check, deploy, knowledge, smoke, user, personas, status, destroy }
 const command = commands[process.argv[2] ?? '']
 if (!command) {
   console.error(`Uso: lab <${Object.keys(commands).join('|')}>`)

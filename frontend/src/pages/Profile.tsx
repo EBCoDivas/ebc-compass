@@ -1,19 +1,25 @@
+import { academicDataFromClaims } from '../services/personaService'
+import { authConfigured, getToken, signOut } from '../services/authService'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { loadProfile, profileCompleteness, saveProfile, saveProfileRemote } from '../services/profileService'
-import { assistantPath } from '../services/assistantService'
-import { emptyProfile, simulatedAcademicData } from '../types/profile'
+import { useNavigate } from 'react-router-dom'
+import { loadProfile, needsProfileSetup, profileCompleteness, saveProfileRemote } from '../services/profileService'
+import { getStudentId } from '../services/assistantService'
+import { AskAssistantLink } from '../components/assistant/AskAssistantLink'
+import { campusOptions, careerOptions, emptyProfile } from '../types/profile'
 import type { StudentProfile } from '../types/profile'
 
 export function Profile() {
   const navigate = useNavigate()
+  const academic = academicDataFromClaims(getToken())
   const [profile, setProfile] = useState<StudentProfile>(() => {
     const stored = loadProfile()
-    return { ...emptyProfile, ...stored, campus: stored?.campus || 'CMS', career: stored?.career || 'banking', currentSemester: stored?.currentSemester || 2 }
+    return { ...emptyProfile, ...stored, campus: stored?.campus || '', career: stored?.career || '', currentSemester: stored?.currentSemester || '' }
   })
   const [interest, setInterest] = useState('')
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
+  const onboarding = needsProfileSetup(profile)
   const completeness = profileCompleteness(profile)
   const interestOptions = ['Finanzas', 'Matemáticas', 'Banca digital', 'Emprendimiento', 'Marketing digital', 'Liderazgo', 'Tecnología', 'Sostenibilidad']
   const preferenceOptions = ['Becas', 'Diplomados', 'Cursos adicionales', 'Estudiar otra carrera', 'Actividades deportivas', 'Voluntariado', 'Eventos y networking']
@@ -44,41 +50,49 @@ export function Profile() {
     setInterest('')
   }
 
-  function handleSubmit(event: FormEvent) {
+  async function handleSubmit(event: FormEvent) {
     event.preventDefault()
+    if (saving) return
     if (!profile.name.trim() || !profile.campus || !profile.career || !profile.currentSemester) {
       setError('Completa tu nombre y verifica tus datos académicos para guardar tu perfil.')
       return
     }
-    const saved = { ...profile, id: profile.id || crypto.randomUUID(), updatedAt: new Date().toISOString() }
-    saveProfile(saved)
-    void saveProfileRemote(saved).catch(() => setError('Perfil guardado localmente. La sincronización con el backend no está disponible.'))
-    navigate('/')
+    const saved = { ...profile, id: getStudentId(), updatedAt: new Date().toISOString() }
+    setError('')
+    setSaving(true)
+    try {
+      await saveProfileRemote(saved, { completeOnboarding: true })
+      navigate('/')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'No se guardó tu perfil. Inténtalo de nuevo.')
+    } finally { setSaving(false) }
   }
 
   return (
     <main className="page profile-page">
       <div className="page-heading">
-        <h1>Mi perfil</h1>
-        <p>Cuéntanos sobre ti para recibir recomendaciones más relevantes.</p>
+        <h1>{onboarding ? 'Completa tu perfil' : 'Mi perfil'}</h1>
+        <p>{onboarding ? 'Antes de comenzar, revisa tus datos y personaliza tu experiencia. Los intereses y preferencias son opcionales.' : 'Cuéntanos sobre ti para recibir recomendaciones más relevantes.'}</p>
       </div>
-      <div className="completeness" aria-live="polite">
-        <div className="completeness-row"><strong>Completitud del perfil</strong><span>{completeness}%</span></div>
-        <div className="progress-track"><div className="progress-value" style={{ width: `${completeness}%` }} /></div>
-        {completeness < 100 && <small>Completa tu personalización para recibir mejores recomendaciones.</small>}
-      </div>
-      <form className="profile-form" onSubmit={handleSubmit}>
+      {completeness < 100 && (
+        <div className="completeness" aria-live="polite">
+          <div className="completeness-row"><strong>{onboarding ? 'Datos básicos' : 'Completitud del perfil'}</strong><span>{completeness}%</span></div>
+          <div className="progress-track"><div className="progress-value" style={{ width: `${completeness}%` }} /></div>
+          <small>Completa tu personalización para recibir mejores recomendaciones.</small>
+        </div>
+      )}
+      <form className="profile-form" onSubmit={handleSubmit} aria-busy={saving}>
+        <fieldset className="profile-fields" disabled={saving}>
         <section className="form-card">
           <h2>Datos personales y académicos</h2>
-          <div className="academic-summary" aria-label="Datos académicos validados">
-            <div><span>Matrícula</span><strong>{simulatedAcademicData.enrollment}</strong></div>
-            <div><span>Campus</span><strong>{simulatedAcademicData.campus}</strong></div>
-            <div><span>Nombre completo</span><strong>{simulatedAcademicData.fullName}</strong></div>
-            <div><span>Carrera</span><strong>{simulatedAcademicData.career}</strong></div>
-            <div><span>Semestre actual</span><strong>{simulatedAcademicData.semester}</strong></div>
-          </div>
-          <div className="institutional-note"><strong>Información institucional verificada</strong><span>Campus, carrera y semestre provienen de tu inscripción y no se pueden modificar aquí.</span></div>
-          <Link className="assistant-link" to={assistantPath('¿Cómo solicito la corrección de un dato académico incorrecto?')}><span className="assistant-icon" aria-hidden="true">💬</span><span><strong>¿Hay un dato académico incorrecto?</strong><small>Solicita una corrección en el asistente.</small></span><span className="assistant-arrow" aria-hidden="true">→</span></Link>
+          {academic ? <div className="academic-summary" aria-label="Datos académicos demo">
+            <div><span>Matrícula</span><strong>{academic?.enrollment}</strong></div>
+            <div><span>Campus</span><strong>{academic?.campus || profile?.campus || 'Sin campus'}</strong></div>
+            <div><span>Nombre completo</span><strong>{academic?.fullName}</strong></div>
+            <div><span>Carrera</span><strong>{academic?.career || profile?.career || 'Sin carrera'}</strong></div>
+            <div><span>Periodo actual</span><strong>{academic?.semester || profile?.currentSemester}</strong></div>
+          </div> : <div className="form-grid"><label>Campus<select required value={profile.campus} onChange={e => update('campus', e.target.value as StudentProfile['campus'])}><option value="">Selecciona campus</option>{campusOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><label>Carrera<select required value={profile.career} onChange={e => update('career', e.target.value as StudentProfile['career'])}><option value="">Selecciona carrera</option>{careerOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><label>Periodo<input type="number" min="1" max="20" required value={profile.currentSemester === 'na' ? '' : profile.currentSemester} onChange={e => update('currentSemester', e.target.value ? Number(e.target.value) : '')} /></label></div>}
+          {academic && <p className="field-help">¿Algo no coincide? <AskAssistantLink question="¿Cómo solicito la corrección de un dato académico incorrecto?">Pregunta a Compass cómo corregirlo</AskAssistantLink>.</p>}
         </section>
         <section className="form-card">
           <label>¿Cómo prefieres que te llamemos? <input required value={profile.name} onChange={(e) => update('name', e.target.value)} placeholder="Ej. Vale, Val o V. Martinez" /><span className="field-help">Usaremos este nombre para dirigirnos a ti en tu seguimiento.</span></label>
@@ -89,7 +103,7 @@ export function Profile() {
           <div className="choice-list">{interestOptions.map((option) => <button type="button" className={`choice ${profile.interests.includes(option) ? 'selected' : ''}`} key={option} onClick={() => toggleInterest(option)}>{option}</button>)}</div>
           <div className="interest-entry"><input value={interest} maxLength={50} onChange={(e) => setInterest(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addInterest() } }} placeholder="Ej. banca digital" /><button type="button" className="button secondary" onClick={addInterest}>Agregar</button></div>
           {typedInterestSuggestions.length > 0 && <div className="suggestions"><span>También puede interesarte:</span>{typedInterestSuggestions.map((suggestion) => <button type="button" key={suggestion} onClick={() => addSuggestedInterest(suggestion)}>{suggestion}</button>)}</div>}
-          <div className="tags" aria-label="Intereses agregados">{profile.interests.map((item) => <span className="tag" key={item}>{item}<button type="button" aria-label={`Quitar ${item}`} onClick={() => update('interests', profile.interests.filter((interestItem) => interestItem !== item))}>×</button></span>)}</div>
+          <div className="tags" aria-label="Intereses agregados">{profile.interests.filter((item) => !interestOptions.some((option) => option.toLowerCase() === item.toLowerCase())).map((item) => <span className="tag" key={item}>{item}<button type="button" aria-label={`Quitar ${item}`} onClick={() => update('interests', profile.interests.filter((interestItem) => interestItem !== item))}>×</button></span>)}</div>
         </section>
         <section className="form-card">
           <h2>¿Qué te gustaría encontrar en EBC Compass?</h2>
@@ -102,8 +116,14 @@ export function Profile() {
           <label>Metas profesionales <textarea rows={3} value={profile.goals} onChange={(e) => update('goals', e.target.value)} placeholder="Ej. Trabajar en banca digital" /></label>
         </section>
         {error && <p className="form-error" role="alert">{error}</p>}
-        <button className="button primary" type="submit">Guardar perfil</button>
+        <button className="button primary" type="submit" disabled={saving}>{saving ? 'Guardando…' : onboarding ? 'Guardar y comenzar' : 'Guardar perfil'}</button>
+        </fieldset>
       </form>
+      {authConfigured && getToken() && (
+        <div className="profile-signout">
+          <button type="button" className="signout-link" onClick={() => { signOut(); window.location.assign('/acceso') }}>Cerrar sesión</button>
+        </div>
+      )}
     </main>
   )
 }

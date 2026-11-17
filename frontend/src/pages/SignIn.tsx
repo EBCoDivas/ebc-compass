@@ -1,12 +1,53 @@
 import { useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
 import { authConfigured, signIn } from '../services/authService'
 
 export function SignIn() {
-  const navigate = useNavigate()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  async function submit(event: FormEvent) { event.preventDefault(); setError(''); try { await signIn(username, password); navigate('/') } catch { setError('No fue posible iniciar sesión. Verifica tus datos.') } }
-  return <main className="page"><div className="page-heading"><h1>Iniciar sesión</h1><p>Accede para consultar tus recomendaciones personalizadas.</p></div><form className="form-card" onSubmit={submit}>{!authConfigured && <p className="institutional-note" role="status"><strong>Autenticación no configurada</strong><span>Este entorno local funciona con datos simulados. Cognito se habilita con las variables VITE_COGNITO_USER_POOL_ID y VITE_COGNITO_CLIENT_ID.</span></p>}<label>Correo electrónico<input type="email" required value={username} onChange={(event) => setUsername(event.target.value)} autoComplete="username" /></label><label>Contraseña<input type="password" required value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" /></label>{error && <p className="form-error" role="alert">{error}</p>}<button className="button primary" type="submit" disabled={!authConfigured}>Iniciar sesión</button><Link to="/">Volver a Inicio</Link></form></main>
+  const [pending, setPending] = useState(false)
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    if (pending) return
+    setError('')
+    setPending(true)
+    try {
+      await signIn(username, password)
+      window.location.assign('/')
+    } catch {
+      setError('No fue posible iniciar sesión. Verifica tu correo y contraseña.')
+    } finally {
+      setPending(false)
+    }
+  }
+
+  return (
+    <main className="page signin-page">
+      <section className="signin-card" aria-labelledby="signin-title">
+        <img src="/ebc-compass-mark.svg" alt="" width="56" height="56" />
+        <h1 id="signin-title">Inicia sesión</h1>
+        <p>Ten claro qué sigue: entra con tu cuenta para ver tus fechas, becas y cursos recomendados.</p>
+        <form className="signin-form" onSubmit={submit} aria-busy={pending}>
+          {!authConfigured && (
+            <p className="institutional-note" role="status">
+              <strong>Acceso no disponible</strong>
+              <span>Contacta a la persona responsable de la demostración para habilitarlo.</span>
+            </p>
+          )}
+          <label>Correo electrónico
+            <input type="email" required value={username} onChange={event => setUsername(event.target.value)} autoComplete="username" disabled={pending} />
+          </label>
+          <label>Contraseña
+            <input type="password" required value={password} onChange={event => setPassword(event.target.value)} autoComplete="current-password" disabled={pending} />
+          </label>
+          {error && <p className="form-error" role="alert">{error}</p>}
+          <button className="button primary" type="submit" disabled={!authConfigured || pending}>
+            {pending ? 'Ingresando…' : 'Iniciar sesión'}
+          </button>
+        </form>
+        <p className="signin-note">Demostración con cuentas ficticias. No uses tu contraseña institucional.</p>
+      </section>
+    </main>
+  )
 }

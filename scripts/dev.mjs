@@ -118,9 +118,10 @@ const backendEnv = {
   ...loadEnvFile(join(root, 'backend', '.env')),
   ...emulatorEnv(),
   ASSISTANT_MODE: mode,
+  LOCAL_COGNITO_STATE: join(root, 'local', '.state', 'cognito.json'),
 }
 start('backend', 'npm', ['--prefix', 'backend', 'run', '-s', 'dev'], backendEnv)
-start('frontend', 'npm', ['--prefix', 'frontend', 'run', 'dev', '--', '--port', '5173', '--strictPort'], base)
+start('frontend', 'npm', ['--prefix', 'frontend', 'run', 'dev', '--', '--port', '5173', '--strictPort'], { ...base, VITE_LOCAL_AUTH: 'true' })
 
 const port = backendEnv.PORT ?? '3000'
 const ready = await Promise.all([

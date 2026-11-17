@@ -331,7 +331,6 @@ async function reset(): Promise<void> {
   rl.close()
   if (answer.trim() !== state.vectorStoreId) { console.log('Cancelado.'); return }
   const openai = client()
-  for (const entry of Object.values(state.files)) await openai.files.delete(entry.fileId).catch(() => undefined)
   await openai.vectorStores.delete(state.vectorStoreId).catch(() => undefined)
   rmSync(stateFile, { force: true })
   const envFile = join(here, '..', '.env')

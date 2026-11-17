@@ -1,16 +1,7 @@
-export type Campus =
-  | 'CMS'
-  | 'GDL'
-  | 'CNC'
-  | 'QRO'
-  | 'CHI'
-  | 'PCH'
+import academic from '../../../shared/academic.json'
 
-export type Career =
-  | 'banking'
-  | 'finance'
-  | 'marketing'
-  | 'business-administration'
+export type Campus = 'AGS' | 'CNC' | 'CHI' | 'CDMX' | 'CMS' | 'GDL' | 'HMO' | 'LEO' | 'MID' | 'PCH' | 'QRO' | 'SLP' | 'TLA' | 'TLC'
+export type Career = 'business-administration' | 'communication-entertainment' | 'tourism' | 'international-business' | 'accounting' | 'law' | 'finance' | 'marketing' | 'executive-administration' | 'executive-accounting' | 'executive-business' | 'digital-transformation' | 'senior-management' | 'financial-management' | 'tax-specialty' | 'banking'
 
 export interface StudentProfile {
   id: string
@@ -21,6 +12,7 @@ export interface StudentProfile {
   interests: string[]
   preferences: string[]
   updatedAt: string
+  onboardingCompletedAt?: string
   completedCourses: string[]
   goals: string
   gpa?: number
@@ -40,26 +32,8 @@ export const emptyProfile: StudentProfile = {
   goals: '',
 }
 
-export const simulatedAcademicData = {
-  enrollment: 'M0100010',
-  campus: 'Ciudad de México',
-  fullName: 'Valerie Martínez',
-  career: 'Banca y Finanzas',
-  semester: '2° semestre',
-}
-
-export const campusOptions: { value: Campus; label: string }[] = [
-  { value: 'CNC', label: 'Cancún' },
-  { value: 'CMS', label: 'Ciudad de México Sur' },
-  { value: 'CHI', label: 'Chiapas' },
-  { value: 'GDL', label: 'Guadalajara' },
-  { value: 'PCH', label: 'Pachuca' },
-  { value: 'QRO', label: 'Querétaro' },
-]
-
+export const campusOptions: { value: Campus; label: string }[] = academic.campuses as { value: Campus; label: string }[]
 export const careerOptions: { value: Career; label: string }[] = [
-  { value: 'banking', label: 'Banca y Finanzas' },
-  { value: 'finance', label: 'Finanzas' },
-  { value: 'marketing', label: 'Mercadotecnia' },
-  { value: 'business-administration', label: 'Administración de Empresas' },
+  ...academic.programs as { value: Career; label: string }[],
+  { value: 'banking', label: 'Banca (identificador anterior)' },
 ]

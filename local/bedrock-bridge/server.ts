@@ -1,3 +1,7 @@
+import { once } from 'node:events'
+import { bedrockEvent } from './eventStream.js'
+import { bedrockUsage } from './usage.js'
+import { openAiPrompt } from './prompt.js'
 // Puente local "Bedrock -> OpenAI".
 //
 // El backend habla solo con el SDK de AWS (Bedrock Runtime y Bedrock Agent Runtime). En local, el emulador de AWS
@@ -26,8 +30,8 @@ const openai = apiKey ? new OpenAI({ apiKey, timeout: 120_000, maxRetries: 1 }) 
 // ---------- Tipos mínimos del contrato de Bedrock ----------
 
 interface ConverseRequest {
-  messages?: { role: 'user' | 'assistant'; content?: { text?: string }[] }[]
-  system?: { text?: string }[]
+  messages?: { role: 'user' | 'assistant'; content?: { text?: string; cachePoint?: { type: string } }[] }[]
+  system?: { text?: string; cachePoint?: { type: string } }[]
   inferenceConfig?: { maxTokens?: number }
   additionalModelRequestFields?: { reasoning_effort?: string }
 }
@@ -114,24 +118,15 @@ function vectorStoreId(): string | undefined {
 
 async function converse(modelId: string, body: ConverseRequest) {
   const client = requireOpenAI()
-  const messages: OpenAI.Chat.ChatCompletionMessageParam[] = []
-
-  const system = (body.system ?? []).map((part) => part.text ?? '').filter(Boolean).join('\n\n')
-  if (system) messages.push({ role: 'system', content: system })
-
-  for (const message of body.messages ?? []) {
-    const text = (message.content ?? []).map((part) => part.text ?? '').filter(Boolean).join('\n')
-    if (!text) continue
-    messages.push({ role: message.role, content: text })
-  }
-  if (messages.length === 0) throw new HttpError(400, 'ValidationException', 'La conversación no tiene mensajes con texto.')
+  const prompt = openAiPrompt(body, model)
+  if (!prompt.messages.some(message => message.role === 'user')) throw new HttpError(400, 'ValidationException', 'La conversación no tiene mensajes con texto.')
 
   const effort = (body.additionalModelRequestFields?.reasoning_effort ?? reasoningEffort) as OpenAI.ReasoningEffort
   const started = Date.now()
 
   const completion = await client.chat.completions.create({
     model,
-    messages,
+    ...prompt,
     reasoning_effort: effort,
     ...(body.inferenceConfig?.maxTokens ? { max_completion_tokens: body.inferenceConfig.maxTokens } : {}),
   })
@@ -143,13 +138,49 @@ async function converse(modelId: string, body: ConverseRequest) {
   return {
     output: { message: { role: 'assistant', content: [{ text: choice?.message?.content ?? '' }] } },
     stopReason,
-    usage: {
-      inputTokens: completion.usage?.prompt_tokens ?? 0,
-      outputTokens: completion.usage?.completion_tokens ?? 0,
-      totalTokens: completion.usage?.total_tokens ?? 0,
-    },
+    ...(completion.usage ? { usage: bedrockUsage(completion.usage) } : {}),
     metrics: { latencyMs: Date.now() - started },
   }
+}
+
+async function converseStream(body: ConverseRequest, response: ServerResponse) {
+  const client = requireOpenAI()
+  const prompt = openAiPrompt(body, model)
+  if (!prompt.messages.some(message => message.role === 'user')) throw new HttpError(400, 'ValidationException', 'Falta un mensaje de usuario.')
+  const abort = new AbortController()
+  const close = () => { if (!response.writableEnded) abort.abort() }
+  response.on('close', close)
+  const started = Date.now()
+  try {
+    const chunks = await client.chat.completions.create({
+      model, ...prompt, stream: true, stream_options: { include_usage: true },
+      reasoning_effort: (body.additionalModelRequestFields?.reasoning_effort ?? reasoningEffort) as OpenAI.ReasoningEffort,
+      ...(body.inferenceConfig?.maxTokens ? { max_completion_tokens: body.inferenceConfig.maxTokens } : {}),
+    }, { signal: abort.signal })
+    response.writeHead(200, { 'content-type': 'application/vnd.amazon.eventstream', 'cache-control': 'no-store' })
+    const emit = async (type: string, value: unknown) => {
+      if (abort.signal.aborted) return
+      if (!response.write(bedrockEvent(type, value))) await once(response, 'drain', { signal: abort.signal })
+    }
+    await emit('messageStart', { role: 'assistant' })
+    let usage: ReturnType<typeof bedrockUsage> | undefined
+    let stopReason = 'end_turn'
+    for await (const chunk of chunks) {
+      const choice = chunk.choices[0]
+      if (choice?.delta.content) await emit('contentBlockDelta', { contentBlockIndex: 0, delta: { text: choice.delta.content } })
+      if (choice?.finish_reason === 'length') stopReason = 'max_tokens'
+      if (choice?.finish_reason === 'content_filter') stopReason = 'content_filtered'
+      if (chunk.usage) usage = bedrockUsage(chunk.usage)
+    }
+    await emit('contentBlockStop', { contentBlockIndex: 0 })
+    await emit('messageStop', { stopReason })
+    await emit('metadata', { ...(usage ? { usage } : {}), metrics: { latencyMs: Date.now() - started } })
+    response.end()
+  } catch (error) {
+    if (abort.signal.aborted) return
+    if (!response.headersSent) throw error
+    response.end(bedrockEvent('internalServerException', { message: 'La generación se interrumpió.' }, true))
+  } finally { response.off('close', close) }
 }
 
 // ---------- Retrieve ----------
@@ -232,10 +263,13 @@ const server = createServer(async (request, response) => {
 
   try {
     const converseMatch = url.pathname.match(/^\/model\/([^/]+)\/converse$/)
+    const streamMatch = url.pathname.match(/^\/model\/([^/]+)\/converse-stream$/)
     const retrieveMatch = url.pathname.match(/^\/knowledgebases\/([^/]+)\/retrieve$/)
 
     if (request.method === 'GET' && url.pathname === '/health') {
       send(response, 200, await health(url.searchParams.get('deep') === '1'))
+    } else if (request.method === 'POST' && streamMatch) {
+      await converseStream(await readJson<ConverseRequest>(request), response)
     } else if (request.method === 'POST' && converseMatch) {
       send(response, 200, await converse(decodeURIComponent(converseMatch[1]), await readJson<ConverseRequest>(request)))
     } else if (request.method === 'POST' && retrieveMatch) {

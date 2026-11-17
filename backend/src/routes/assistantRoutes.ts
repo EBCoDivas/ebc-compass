@@ -1,30 +1,24 @@
+import { identitySubject as verifiedSubject } from '../auth/identity.js'
 // Rutas del asistente conversacional. Contrato: docs/plans/plan-asistente-integracion.md (sección 6).
 // El perfil llega como resumen en cada petición (el frontend lo guarda en localStorage).
 
+import { verifiedAcademicProfile } from '../auth/academicProfile.js'
+import { conversationRoutes, historyError, pageOptions } from './conversationRoutes.js'
+import type { Writable } from 'node:stream'
+import { once } from 'node:events'
 import { randomUUID } from 'node:crypto'
 import { Router, type Request, type Response } from 'express'
-import { InvalidInputError, MAX_MESSAGE_LENGTH, runTurn, suggestionsFor, type AssistantProfile, type CareerId, type ChatMessage, type Language, createAssistant } from '../assistant/index.js'
+import { InvalidInputError, MAX_MESSAGE_LENGTH, ensureConversation, maintainConversation, runTurnStreaming, runTurn, suggestionsFor, type AssistantProfile, type CareerId, type ChatMessage, type Language, createAssistant } from '../assistant/index.js'
 
 type Assistant = ReturnType<typeof createAssistant>
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const CAREERS: CareerId[] = ['banking', 'finance', 'marketing', 'business-administration']
+const CAREERS: CareerId[] = ["business-administration", "communication-entertainment", "tourism", "international-business", "accounting", "law", "finance", "marketing", "executive-administration", "executive-accounting", "executive-business", "digital-transformation", "senior-management", "financial-management", "tax-specialty", "banking"]
 
 class BadRequest extends Error {}
 
 function fail(response: Response, status: number, code: string, message: string): void {
   response.status(status).json({ code, message })
-}
-
-/**
- * Detrás de API Gateway con authorizer JWT (Cognito), la identidad del estudiante es el `sub` ya verificado del token:
- * se usa en lugar del studentId que envíe el cliente, así nadie puede leer conversaciones ajenas. En local no hay token
- * y se usa el studentId anónimo que genera el frontend.
- */
-function verifiedSubject(request: Request): string | undefined {
-  const gateway = (request as unknown as { apiGateway?: { event?: { requestContext?: { authorizer?: { jwt?: { claims?: Record<string, unknown> } } } } } }).apiGateway
-  const sub = gateway?.event?.requestContext?.authorizer?.jwt?.claims?.sub
-  return typeof sub === 'string' && sub.length > 0 ? sub : undefined
 }
 
 function isUuid(value: unknown): value is string {
@@ -63,35 +57,58 @@ function parseLanguage(value: unknown): Language | undefined {
 }
 
 function present(message: ChatMessage) {
-  return { id: message.id, role: message.role, content: message.content, language: message.language, intent: message.intent, createdAt: message.createdAt }
+  return { id: message.id, role: message.role, content: message.content, language: message.language, intent: message.intent, createdAt: message.createdAt,
+    ...(message.failure ? { failure: message.failure, catalogFallback: message.catalogFallback } : {}), ...(message.interrupted ? { interrupted: true } : {}) }
+}
+
+export function parseTurn(request: Request) {
+  const body = (request.body ?? {}) as Record<string, unknown>
+  const message = typeof body.message === 'string' ? body.message.trim() : ''
+  if (message.length < 1 || message.length > MAX_MESSAGE_LENGTH) throw new BadRequest('El mensaje debe tener entre 1 y ' + MAX_MESSAGE_LENGTH + ' caracteres.')
+  const studentId = verifiedSubject(request)
+  if (!studentId) throw Object.assign(new Error('Inicia sesión.'), { status: 401, code: 'UNAUTHORIZED' })
+  if (!isUuid(studentId)) throw new BadRequest('studentId debe ser un UUID.')
+  if (body.conversationId !== undefined && !isUuid(body.conversationId)) throw new BadRequest('conversationId debe ser un UUID.')
+  if (body.requestId !== undefined && !isUuid(body.requestId)) throw new BadRequest('requestId debe ser un UUID.')
+  const conversationId = (body.conversationId as string | undefined) ?? randomUUID()
+  const trustedProfile = verifiedAcademicProfile(request)
+  const profile = parseProfile({ ...parseProfile(body.profile), ...trustedProfile })
+  return { studentId, conversationId, input: { threadId: studentId + '#' + conversationId, message, profile, trustedProfile,
+    requestId: (body.requestId as string | undefined) ?? randomUUID(), requireExisting: body.conversationId !== undefined, language: parseLanguage(body.language) } }
+}
+
+export async function writeSse(response: Writable, event: string, data: unknown) {
+  if (response.destroyed || response.writableEnded) return
+  if (!response.write('event: ' + event + '\ndata: ' + JSON.stringify(data) + '\n\n')) {
+    const abort = new AbortController()
+    const close = () => abort.abort()
+    response.once('close', close)
+    try { await once(response, 'drain', { signal: abort.signal }) } catch { /* Cliente desconectado. */ }
+    finally { response.off('close', close) }
+  }
 }
 
 export function assistantRoutes(assistant: Assistant): Router {
   const router = Router()
+  router.use((request, response, next) => {
+    if (!verifiedSubject(request)) { fail(response, 401, 'UNAUTHORIZED', 'Inicia sesión.'); return }
+    next()
+  })
+  router.use(conversationRoutes(assistant))
   const threadOf = (studentId: string, conversationId: string) => `${studentId}#${conversationId}`
 
   router.post('/messages', async (request, response) => {
     try {
-      const body = (request.body ?? {}) as Record<string, unknown>
-      const message = typeof body.message === 'string' ? body.message.trim() : ''
-      if (message.length < 1 || message.length > MAX_MESSAGE_LENGTH) throw new BadRequest(`El mensaje debe tener entre 1 y ${MAX_MESSAGE_LENGTH} caracteres.`)
-      const studentId = verifiedSubject(request) ?? body.studentId
-      if (!isUuid(studentId)) throw new BadRequest('studentId debe ser un UUID.')
-      if (body.conversationId !== undefined && !isUuid(body.conversationId)) throw new BadRequest('conversationId debe ser un UUID.')
-
-      // Si el conversationId no existe (p. ej. se reinició el emulador), la conversación simplemente empieza de nuevo.
-      const conversationId = (body.conversationId as string | undefined) ?? randomUUID()
+      const { conversationId, input } = parseTurn(request)
       const started = performance.now()
-      const reply = await runTurn(assistant.graph, {
-        threadId: threadOf(studentId, conversationId),
-        message,
-        profile: parseProfile(body.profile),
-        language: parseLanguage(body.language),
-      })
+      const reply = await runTurn(assistant.graph, input)
 
       response.json({
         conversationId,
         message: {
+          interrupted: reply.interrupted,
+          failure: reply.failure,
+          catalogFallback: reply.catalogFallback,
           id: reply.id,
           role: 'assistant',
           content: reply.content,
@@ -101,12 +118,61 @@ export function assistantRoutes(assistant: Assistant): Router {
           suggestions: reply.suggestions,
           sources: reply.sources,
         },
-        meta: { mode: reply.generatedBy, latencyMs: Math.round(performance.now() - started), degraded: reply.degraded },
+        meta: { mode: reply.generatedBy, latencyMs: Math.round(performance.now() - started), degraded: reply.degraded, historyStatus: reply.historyStatus, ...(reply.usage ? { usage: reply.usage } : {}) },
       })
+      await maintainConversation(assistant.graph, input.threadId)
     } catch (error) {
+      if ((error as { status?: number }).status) return historyError(response, error)
       if (error instanceof BadRequest || error instanceof InvalidInputError) return fail(response, 400, 'INVALID_INPUT', error.message)
       console.error(`assistant: error al procesar el mensaje (${(error as Error).name})`) // sin contenido del mensaje
       fail(response, 500, 'INTERNAL', 'No fue posible procesar tu mensaje. Inténtalo de nuevo.')
+    }
+  })
+
+  const streamingThreads = new Set<string>()
+  router.post('/messages/stream', async (request, response) => {
+    let threadId: string | undefined
+    let timer: ReturnType<typeof setInterval> | undefined
+    const abort = new AbortController()
+    const close = () => { if (!response.writableEnded) abort.abort() }
+    response.on('close', close)
+    try {
+      const { studentId, conversationId, input } = parseTurn(request)
+      await ensureConversation(assistant.graph, studentId, conversationId, !input.requireExisting)
+      if (streamingThreads.has(input.threadId)) { fail(response, 409, 'TURN_PENDING', 'Espera a que termine el turno anterior y vuelve a intentarlo.'); return }
+      threadId = input.threadId
+      streamingThreads.add(threadId)
+      const started = performance.now()
+      response.status(200).set({ 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'X-Accel-Buffering': 'no' })
+      response.flushHeaders()
+      await writeSse(response, 'meta', { conversationId })
+      timer = setInterval(() => { if (!response.destroyed) response.write(': heartbeat\n\n') }, 15000)
+      const reply = await runTurnStreaming(assistant.graph, input, abort.signal, async event => {
+        const { event: name, ...data } = event
+        await writeSse(response, name, { conversationId, ...data })
+      })
+      await writeSse(response, 'done', {
+        conversationId,
+        message: { id: reply.id, role: 'assistant', content: reply.content, language: reply.language, intent: reply.intent,
+          createdAt: reply.createdAt, sources: reply.sources, suggestions: reply.suggestions, interrupted: reply.interrupted,
+          failure: reply.failure, catalogFallback: reply.catalogFallback },
+        meta: { mode: reply.generatedBy, latencyMs: Math.round(performance.now() - started), degraded: reply.degraded, historyStatus: reply.historyStatus, ...(reply.usage ? { usage: reply.usage } : {}) },
+      })
+      response.end()
+      await maintainConversation(assistant.graph, input.threadId)
+    } catch (error) {
+      if (!response.headersSent) {
+        if ((error as { status?: number }).status) { historyError(response, error); return }
+        if (error instanceof BadRequest || error instanceof InvalidInputError) fail(response, 400, 'INVALID_INPUT', error.message)
+        else fail(response, 500, 'INTERNAL', 'No fue posible iniciar la respuesta.')
+      } else {
+        await writeSse(response, 'error', { code: 'STREAM_FAILED', message: 'La respuesta se interrumpió. Puedes reintentar.' })
+        response.end()
+      }
+    } finally {
+      if (timer) clearInterval(timer)
+      response.off('close', close)
+      if (threadId) streamingThreads.delete(threadId)
     }
   })
 
@@ -115,6 +181,13 @@ export function assistantRoutes(assistant: Assistant): Router {
     const studentId = verifiedSubject(request) ?? request.query.studentId
     if (!isUuid(id) || !isUuid(studentId)) return fail(response, 400, 'INVALID_INPUT', 'id y studentId deben ser UUID.')
     try {
+      if (assistant.conversations) {
+        await ensureConversation(assistant.graph, studentId, id)
+        const { limit, cursor } = pageOptions(request)
+        const page = await assistant.conversations.messages(studentId, id, limit, cursor)
+        const metadata = await assistant.conversations.require(studentId, id)
+        response.json({ conversationId: id, messages: page.messages, nextCursor: page.nextCursor, language: metadata.language, status: 'active', updatedAt: metadata.updatedAt, messageCount: metadata.messageCount }); return
+      }
       const config = { configurable: { thread_id: threadOf(studentId, id) } }
       if (!(await assistant.checkpointer.getTuple(config))) return fail(response, 404, 'CONVERSATION_NOT_FOUND', 'No encontramos esa conversación.')
       const state = await assistant.graph.getState(config)
@@ -127,6 +200,7 @@ export function assistantRoutes(assistant: Assistant): Router {
         updatedAt: messages.at(-1)?.createdAt ?? null,
       })
     } catch (error) {
+      if (assistant.conversations) { historyError(response, error); return }
       console.error(`assistant: error al leer la conversación (${(error as Error).name})`)
       fail(response, 500, 'INTERNAL', 'No fue posible leer la conversación.')
     }
@@ -137,9 +211,16 @@ export function assistantRoutes(assistant: Assistant): Router {
     const studentId = verifiedSubject(request) ?? request.query.studentId
     if (!isUuid(id) || !isUuid(studentId)) return fail(response, 400, 'INVALID_INPUT', 'id y studentId deben ser UUID.')
     try {
+      if (assistant.conversations) {
+        if (!(await assistant.conversations.get(studentId, id))) await ensureConversation(assistant.graph, studentId, id)
+        await assistant.conversations.remove(studentId, id, () => assistant.checkpointer.deleteThread(threadOf(studentId, id)))
+        response.status(204).end(); return
+      }
+      if (!(await assistant.checkpointer.getTuple({ configurable: { thread_id: threadOf(studentId, id) } }))) return fail(response, 404, 'CONVERSATION_NOT_FOUND', 'No encontramos esa conversación.')
       await assistant.checkpointer.deleteThread(threadOf(studentId, id))
       response.status(204).end()
     } catch (error) {
+      if (assistant.conversations) { historyError(response, error); return }
       console.error(`assistant: error al borrar la conversación (${(error as Error).name})`)
       fail(response, 500, 'INTERNAL', 'No fue posible borrar la conversación.')
     }

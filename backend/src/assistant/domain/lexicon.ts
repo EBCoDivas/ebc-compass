@@ -1,4 +1,4 @@
-import type { Intent } from '../types.js'
+import type { Intent, CareerId } from '../types.js'
 
 // Léxico bilingüe (ES/EN) ya normalizado (sin acentos). Peso 3 = palabra decisiva, 2 = fuerte, 1 = pista débil.
 // Las frases (varias palabras) se buscan sobre el texto normalizado completo.
@@ -103,9 +103,30 @@ export const FOCUS_REQUIREMENTS = [
 /** Intents que admiten seguimiento ("¿y los requisitos?") heredando el tema anterior. */
 export const FOLLOW_UP_INTENTS: Intent[] = ['scholarship-info', 'course-info', 'procedure-info', 'event-info', 'career-info']
 
-export const CAREER_WORDS: Record<string, 'banking' | 'finance' | 'marketing' | 'business-administration'> = {
+export const CAREER_WORDS: Record<string, CareerId> = {
+  contaduria: 'accounting', contabilidad: 'accounting', accounting: 'accounting', derecho: 'law', law: 'law',
+  turismo: 'tourism', tourism: 'tourism', programacion: 'digital-transformation',
   banca: 'banking', banking: 'banking', bancaria: 'banking', bancario: 'banking',
   finanzas: 'finance', finance: 'finance', financiera: 'finance', financieras: 'finance',
   marketing: 'marketing', mercadotecnia: 'marketing',
   administracion: 'business-administration', administration: 'business-administration', negocios: 'business-administration', business: 'business-administration',
+}
+
+export const CAREER_PHRASES: Record<string, CareerId> = {
+  'comercio y negocios internacionales': 'international-business',
+  'negocios internacionales': 'international-business',
+  'international business': 'international-business',
+  'negocios turisticos': 'tourism',
+  'turismo y hospitalidad': 'tourism',
+  'comunicacion y el entretenimiento': 'communication-entertainment',
+  'comunicacion y entretenimiento': 'communication-entertainment',
+  'direccion financiera': 'financial-management',
+  'alta direccion': 'senior-management',
+  'especialidad en impuestos': 'tax-specialty',
+  'programacion y transformacion digital': 'digital-transformation',
+  'transformacion digital': 'digital-transformation',
+  'administracion y comercializacion': 'executive-administration',
+  'contabilidad y finanzas': 'executive-accounting',
+  'ejecutiva en negocios': 'executive-business',
+  'finanzas y banca': 'finance',
 }

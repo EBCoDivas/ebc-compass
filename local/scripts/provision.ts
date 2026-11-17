@@ -11,6 +11,9 @@ import {
   UpdateTimeToLiveCommand,
   waitUntilTableExists,
 } from '@aws-sdk/client-dynamodb'
+import { loadEnvFile, root } from '../../scripts/lib/emulator-env.mjs'
+import { join } from 'node:path'
+import { provisionAuth } from './provision-auth.js'
 import { CreateBucketCommand, HeadBucketCommand, S3Client } from '@aws-sdk/client-s3'
 
 const check = process.argv.includes('--check')
@@ -85,6 +88,23 @@ async function ensureTable(): Promise<void> {
   }
 }
 
+async function ensureProfilesTable(): Promise<void> {
+  const name = process.env.PROFILES_TABLE ?? loadEnvFile(join(root, 'backend', '.env')).PROFILES_TABLE ?? 'StudentProfiles'
+  try {
+    await dynamo.send(new DescribeTableCommand({ TableName: name }))
+    console.log('• Tabla de perfiles: ya existe')
+  } catch (error) {
+    if (!isMissing(error)) throw error
+    if (check) throw new Error('Falta la tabla ' + name)
+    await dynamo.send(new CreateTableCommand({ TableName: name, BillingMode: 'PAY_PER_REQUEST',
+      AttributeDefinitions: [{ AttributeName: 'studentId', AttributeType: 'S' }],
+      KeySchema: [{ AttributeName: 'studentId', KeyType: 'HASH' }],
+    }))
+    await waitUntilTableExists({ client: dynamo, maxWaitTime: 60 }, { TableName: name })
+    console.log('✔ Tabla de perfiles: creada (sin TTL)')
+  }
+}
+
 async function ensureBucket(): Promise<void> {
   if (await bucketExists()) {
     console.log(`• Bucket ${bucketName}: ya existe`)
@@ -96,9 +116,31 @@ async function ensureBucket(): Promise<void> {
   }
 }
 
+async function ensureHistoryTable(): Promise<void> {
+  const name = process.env.CONVERSATION_HISTORY_TABLE ?? loadEnvFile(join(root, 'backend', '.env')).CONVERSATION_HISTORY_TABLE ?? 'Conversations'
+  try {
+    await dynamo.send(new DescribeTableCommand({ TableName: name }))
+    console.log('• Tabla de historial y memoria: ya existe')
+  } catch (error) {
+    if (!isMissing(error)) throw error
+    if (check) throw new Error('Falta la tabla ' + name)
+    await dynamo.send(new CreateTableCommand({ TableName: name, BillingMode: 'PAY_PER_REQUEST',
+      AttributeDefinitions: [{ AttributeName: 'PK', AttributeType: 'S' }, { AttributeName: 'SK', AttributeType: 'S' }],
+      KeySchema: [{ AttributeName: 'PK', KeyType: 'HASH' }, { AttributeName: 'SK', KeyType: 'RANGE' }],
+    }))
+    await waitUntilTableExists({ client: dynamo, maxWaitTime: 60 }, { TableName: name })
+    console.log('✔ Tabla de historial y memoria: creada (sin TTL)')
+  }
+  const ttl = await dynamo.send(new DescribeTimeToLiveCommand({ TableName: name }))
+  if (['ENABLED', 'ENABLING'].includes(ttl.TimeToLiveDescription?.TimeToLiveStatus ?? '')) throw new Error('La tabla de historial no debe tener TTL.')
+}
+
 try {
   await ensureTable()
+  await ensureProfilesTable()
+  await ensureHistoryTable()
   await ensureBucket()
+  await provisionAuth(check)
   console.log(check ? '✔ Recursos verificados' : '✔ Aprovisionamiento completo')
 } catch (error) {
   console.error(`✖ ${(error as Error).message}`)

@@ -1,33 +1,22 @@
 ---
 id: solicitud-beca
-title: Cómo solicitar una beca (contenido simulado)
+title: Solicitud de beca: proceso de demostración
 topic: procedures
 language: es
 simulated: true
 ---
-# Cómo solicitar una beca
+# Solicitud de beca: proceso de demostración
 
-> Contenido simulado para la demo de EBC Compass.
+> Flujo simulado: Compass no recibe expedientes ni tramita becas.
 
-El trámite **Solicitud de beca** tiene como fecha límite el **28/11/2026**. Si quieres postularte a la Beca Santander Excelencia (cierra el 30/11/2026), conviene hacerlo antes.
+## Documentos para solicitar una beca
+Consulta primero la convocatoria y pide orientación a Servicios Escolares. La documentación depende de la beca y modalidad; no se deben asumir requisitos universales ni subir documentos sensibles a Compass.
+Para practicar el flujo utiliza un historial y una solicitud ficticios. No se requiere una carta de recomendación en la demo.
 
-## Pasos
-
-1. Revisa los requisitos de la beca en el documento *Programas de beca EBC*.
-2. Reúne tus documentos en PDF: historial académico, carta de motivación y, si aplica, carta de recomendación.
-3. Entra al portal de becas con tu usuario institucional.
-4. Registra tu solicitud y sube los documentos.
-5. Descarga el acuse de recibo y consérvalo.
-
-## Documentos requeridos
-
-- Historial académico actualizado.
-- Carta de motivación (máximo una cuartilla).
-- Carta de recomendación (solo Beca Santander Excelencia).
-- Comprobante de inscripción vigente.
-
-## Tiempos y oficina
-
-- **Respuesta:** 10 días hábiles después del cierre de la convocatoria.
-- **Oficina:** Servicios Escolares, ventanilla de Becas.
-- **Modalidad:** en línea.
+## Pasos de ejemplo
+1. Identifica BEA o Beca de Respaldo Económico.
+2. Confirma con Servicios Escolares el procedimiento vigente y los documentos aplicables.
+3. Prepara únicamente archivos ficticios para esta demostración.
+4. Conserva un acuse de ejemplo; Compass no emite un resultado institucional.
+Fecha ilustrativa del catálogo: 28/11/2026. No es un plazo real de EBC.
+Orientación pública: https://www.ebc.mx/becas/
