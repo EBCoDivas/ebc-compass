@@ -7,7 +7,7 @@
 1. Abre **Docker Desktop** y espera a que arranque.
 2. `npm run dev` y espera "✔ Todo listo". Abre http://localhost:5173.
 3. `npm run doctor` debe terminar en "Todo en orden" (clave de OpenAI, puente, emulador, tabla, backend y frontend).
-4. `npm run kb:status`: el Vector Store debe estar `completed` y no expirado (dura 30 días sin uso; si expiró: `npm run kb:upload`).
+4. `npm run kb:status`: el Vector Store debe estar `completed` y no expirado (usa el ID compartido; no ejecutes creación ni borrado de stores para preparar la demo).
 5. Prueba una pregunta en el chat y borra la conversación para empezar limpio.
 6. Conexión a internet y clave de OpenAI válida (en `local/.env`).
 
@@ -17,15 +17,15 @@
 
 | # | Pantalla | Qué hacer y decir | Resultado esperado |
 |---|---|---|---|
-| 1 | **Perfil** | Crear el perfil: *María*, campus *Ciudad de México Sur*, carrera *Finanzas*, semestre *5*. "El perfil se guarda en el navegador; no usamos datos reales." | Completitud 100 % |
-| 2 | **Inicio** | Mostrar próximas fechas y recomendaciones del motor. "Cada recomendación tiene un enlace para preguntarle al asistente." | Foro Fintech, becas, etc. |
-| 3 | **Oportunidades** | Abrir *Beca Santander Excelencia* → **Preguntar al asistente** | Llega al chat con la pregunta ya escrita |
-| 4 | **Chat** | Enviar. "El LLM solo redacta: los datos salen del catálogo y de los documentos, y un guardrail rechaza cualquier dato inventado." | Requisitos (promedio 9.0), monto, fecha límite 30/11/2026, fuentes citadas y "Redactada con IA · X s" |
+| 1 | **Acceso y Perfil** | Entrar con una cuenta demo y confirmar su personalización. "El perfil se guarda por cuenta en DynamoDB; no usamos datos reales." | Guardar y comenzar lleva a Inicio |
+| 2 | **Inicio** | Mostrar próximas fechas y recomendaciones del motor. "Cada recomendación tiene un enlace para preguntarle al asistente." | FiT EBC, BEA/BRE y cursos simulados según la cuenta. |
+| 3 | **Oportunidades** | Abrir *Beca de Excelencia Académica (BEA)* → **Preguntar al asistente** | Llega al chat con la pregunta ya escrita |
+| 4 | **Chat** | Enviar. "El LLM solo redacta: los datos salen del catálogo y de los documentos, y un guardrail rechaza cualquier dato inventado." | Orientación a convocatoria y Comité, fecha demo 15/12/2026, fuentes y tiempo de respuesta; sin promedio mínimo ni apoyo garantizado. |
 | 5 | **Chat** | Seguimiento: *¿y la fecha límite?* | Fechas de las becas (conserva el tema) |
 | 6 | **Chat** | *¿Qué prerrequisitos tiene FIN-301?* | MAT-101 y CON-101; "ya completaste…" si el perfil los tiene |
-| 7 | **Chat (inglés)** | *Which certifications do you recommend?* | Responde en inglés: Bloomberg Market Concepts y Certificación AMIB |
+| 7 | **Chat (inglés)** | *Which certifications do you recommend?* | Responde en inglés con actividades de desarrollo del catálogo demo y fuentes. |
 | 8 | **Chat** | Pregunta sin sentido: *qwerty* | No entiende y ofrece 3 preguntas alternativas |
-| 9 | **Perfil** | *¿Hay un dato académico incorrecto?* → abre el chat con la pregunta | Pasos para corregir un dato (5 días hábiles) |
+| 9 | **Perfil** | *¿Hay un dato académico incorrecto?* → abre el chat con la pregunta | Orientación demo a Servicios Escolares; no modifica un expediente real. |
 | 10 | **Chat** | **Borrar conversación** | Vuelve al estado inicial; se elimina también en DynamoDB |
 | 11 | **Móvil** | Reducir la ventana (≈375 px) | Navegación inferior y chat utilizables |
 
@@ -33,7 +33,7 @@
 
 - **Frontend** React + Vite → **backend** Express con un **grafo de LangGraph** determinista (idioma → intent → hechos → conocimiento → redacción → guardrail).
 - **Conversaciones** en DynamoDB mediante un checkpointer propio (portado del de AWS), con TTL.
-- **Conocimiento**: 12 documentos simulados en un Vector Store de OpenAI hoy; en producción, la misma consulta (`Retrieve`) va a una Knowledge Base de Bedrock sobre **S3 Vectors** (`npm run kb:export` ya genera los archivos y metadatos para S3).
+- **Conocimiento**: 17 documentos simulados en un Vector Store de OpenAI hoy; en producción, la misma consulta (`Retrieve`) va a una Knowledge Base de Bedrock sobre **S3 Vectors** (`npm run kb:export` ya genera los archivos y metadatos para S3).
 - **LLM**: se llama a **Bedrock Converse**; en local un puente lo traduce a OpenAI.
 
 ## Si algo falla
@@ -49,4 +49,4 @@
 ## Después de la demo
 
 - `npm run stop` detiene el emulador (borra sus datos).
-- `npm run kb:reset` elimina el Vector Store y sus archivos de OpenAI.
+- Conserva el vector store compartido. No ejecutes kb:reset como limpieza de una demo del equipo.

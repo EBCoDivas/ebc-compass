@@ -6,7 +6,7 @@ EBC Compass es una plataforma colaborativa de orientación académica y profesio
 
 - Node.js 22 (la plataforma declara `>=22 <23`).
 - npm.
-- SST v3 se instala como dependencia del paquete `platform`.
+- SST v4 se instala como dependencia del paquete `platform`.
 - Para despliegues futuros: credenciales de AWS autorizadas, región `us-east-1` y acceso a los servicios requeridos. No son necesarias para las pruebas locales de la función de salud.
 
 ## Comandos básicos
@@ -40,6 +40,8 @@ npm run doctor       # diagnóstico del entorno
 ```
 
 Detalle y lista completa de comandos en [local/README.md](local/README.md). Para desplegar al lab de AWS (cuando esté disponible): `npm run lab:check` y `npm run lab:deploy -- --confirm`; guía en [docs/deploy-lab.md](docs/deploy-lab.md). Cada paquete (`frontend/`, `backend/`, `platform/`, `local/`) mantiene además sus propios scripts.
+
+Para acceder con las nueve personas demo en el lab, despliega la configuración actual y ejecuta `npm run lab:personas -- --confirm`. Consulta las credenciales privadas en `scripts/lab/.state/personas.json` y entra al sitio por `/acceso`. El flujo y la separación respecto a Cognito local están documentados en [Login y cuentas demo del lab](docs/deploy-lab.md#login-y-cuentas-demo-en-el-lab-f3b).
 
 ## Configuración local
 
