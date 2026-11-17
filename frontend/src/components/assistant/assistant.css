@@ -11,7 +11,8 @@
 .side-scrim { display: none; }
 /* Escritorio: el contexto es una columna fija, sin flecha ni colapso. */
 @media (min-width: 901px) {
-  .side-collapse > summary { cursor: default; }
+  .side-collapse > summary { display: none; }
+  .side-body > .side-tabs { margin-top: 0; }
   .side-chevron { display: none; }
 }
 .side-collapse > summary::-webkit-details-marker { display: none; }
@@ -33,21 +34,27 @@
 .memory-list li { align-items: center; display: flex; gap: .2rem; min-width: 0; }
 .conversation-choice { background: transparent; border: 1px solid transparent; border-radius: 8px; color: var(--ink); cursor: pointer; display: grid; flex: 1; gap: .1rem; min-width: 0; padding: .45rem .5rem; text-align: left; }
 .conversation-choice:hover { background: var(--blue-soft); border-color: var(--line); }
-.conversation-choice strong, .conversation-choice span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.conversation-choice strong { font-size: .78rem; }
+.conversation-choice span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conversation-choice strong { -webkit-box-orient: vertical; -webkit-line-clamp: 2; display: -webkit-box; font-size: .8rem; line-height: 1.3; overflow: hidden; }
 .conversation-choice span, .side-empty { color: var(--ink-soft); font-size: .72rem; }
-.conversation-action { background: transparent; border: 0; border-radius: 6px; color: var(--ink-soft); cursor: pointer; flex: none; min-height: 2rem; min-width: 2rem; }
-.conversation-action:hover { background: var(--blue-soft); color: var(--blue); }
-.memory-list { max-height: 10rem; }
-.memory-list li label { color: var(--ink-soft); flex: 0 0 4.2rem; font-size: .72rem; }
-.memory-list select { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; color: var(--ink); flex: 1; min-width: 0; padding: .35rem; }
+.memory-list { gap: .55rem; max-height: none; overflow: visible; }
+.memory-list > div, .memory-list li { align-items: baseline; display: grid; gap: .5rem; grid-template-columns: 4.6rem minmax(0, 1fr); margin: 0; }
+.memory-list dt, .memory-label { color: var(--ink-soft); font-size: .76rem; }
+.memory-list dd { color: var(--ink); font-size: .85rem; font-weight: 600; margin: 0; }
+.memory-chips { display: flex; flex-wrap: wrap; gap: .3rem; }
+.memory-chip { align-items: center; background: var(--cyan-soft); border-radius: 999px; color: var(--cyan-ink); display: inline-flex; font-size: .76rem; font-weight: 600; padding: .15rem .55rem; }
+.memory-chip button { background: none; border: 0; border-radius: 50%; color: inherit; cursor: pointer; font-size: .95rem; line-height: 1; margin-left: .15rem; min-height: 1.5rem; min-width: 1.5rem; }
+.memory-chip button:hover { background: #ffffff99; }
+.memory-edit { align-items: center; display: flex; gap: .2rem; min-width: 0; }
+.memory-edit select { border-color: var(--line); border-radius: 8px; font-size: .82rem; min-width: 0; padding: .35rem 2rem .35rem .5rem; background-position: right .45rem center; background-size: .95rem; }
+.side-new { display: none; }
 .side-empty { margin: .35rem 0 0; }
 
 /* Historial: una acción principal y opciones por conversación. */
 .side-tabs { display: flex; }
 .side-body > .side-tabs { border-bottom: 1px solid var(--line); gap: .25rem; margin-top: .75rem; }
 .side-tabs button { background: transparent; border: 0; border-bottom: 2px solid transparent; color: var(--ink-soft); cursor: pointer; flex: 1; font-size: .8rem; font-weight: 600; min-height: 44px; }
-.side-tabs button[aria-pressed="true"] { border-bottom-color: var(--blue); color: var(--blue); }
+.side-tabs button[aria-selected="true"] { border-bottom-color: var(--blue); color: var(--blue); }
 .history-panel { padding-top: 1rem; }
 .new-conversation { display: flex; align-items: center; justify-content: center; gap: .5rem; }
 .history-label { color: var(--ink-soft); font-family: Inter, sans-serif; font-size: .75rem; font-weight: 600; margin: 1.25rem .5rem .5rem; }
@@ -56,13 +63,6 @@
 .conversation-row.active { background: var(--blue-soft); border-color: var(--line); }
 .conversation-row-main { display: flex; align-items: center; min-width: 0; }
 .conversation-choice { padding: .65rem .6rem; }
-.conversation-row .conversation-action { min-height: 44px; min-width: 36px; }
-.conversation-options, .conversation-editor { border-top: 1px solid var(--line); padding: .6rem; }
-.conversation-options, .conversation-editor > div { display: flex; flex-wrap: wrap; gap: .5rem; }
-.conversation-options button, .conversation-editor button { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; color: var(--blue); cursor: pointer; min-height: 36px; padding: .35rem .6rem; font-size: .78rem; }
-.conversation-editor label { display: grid; gap: .4rem; font-size: .78rem; }
-.conversation-editor input { box-sizing: border-box; width: 100%; min-width: 0; margin-bottom: .6rem; }
-.conversation-editor p { font-size: .8rem; margin: 0 0 .6rem; }
 .assistant-side button:disabled { cursor: not-allowed; opacity: .55; }
 
 /* Tarjeta de chat */
@@ -187,9 +187,6 @@
 @media (prefers-reduced-motion: reduce) { .chat-dots::after { animation: none; content: '…'; } }
 
 
-.chat-feedback { display: inline-flex; }
-.chat-feedback button[aria-pressed="true"] { background: var(--blue-soft); color: var(--blue); outline: 1px solid var(--blue); }
-.chat-feedback-note { color: var(--ink-soft); font-size: .75rem; }
 .chat-form { flex-shrink: 0; }
 .chat-icon-button { align-items: center; display: inline-flex; justify-content: center; }
 .chat-icon-button svg { height: 1.25rem; width: 1.25rem; }
@@ -224,7 +221,9 @@
 .dock-panel[hidden] { display: none; }
 .dock-header { align-items: center; border-bottom: 1px solid var(--line); display: flex; flex: none; gap: .6rem; padding: .6rem .6rem .6rem 1rem; position: relative; }
 .dock-header::after { background: var(--grad); bottom: -1px; content: ''; height: 2px; left: 0; position: absolute; width: 64px; }
-.dock-header h2 { color: var(--navy); flex: 1; font-size: 1rem; margin: 0; }
+.dock-title { display: grid; flex: 1; min-width: 0; }
+.dock-header h2 { color: var(--navy); font-size: 1rem; line-height: 1.2; margin: 0; }
+.dock-title span { color: var(--ink-soft); font-size: .75rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dock-icon { align-items: center; background: none; border: 0; border-radius: 8px; color: var(--ink-soft); cursor: pointer; display: inline-flex; height: 2.5rem; justify-content: center; width: 2.5rem; }
 .dock-icon:hover:not(:disabled) { background: var(--mist); color: var(--navy); }
 .dock-icon:disabled { cursor: not-allowed; opacity: .45; }
@@ -242,8 +241,70 @@
 .dock-chat .chat-form textarea:not([aria-invalid="true"]) ~ .chat-help:not(.warn) { display: none; }
 @media (max-width: 900px) { .dock-launcher, .dock-panel { display: none !important; } }
 
-.conversation-options button, .conversation-editor button { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; color: var(--blue); cursor: pointer; font-size: .78rem; min-height: 36px; padding: .35rem .6rem; }
-.conversation-options { gap: .4rem; }
-.conversation-editor > div { gap: .4rem; }
-.conversation-editor label { display: block; font-size: .78rem; }
-.conversation-editor input { display: block; width: 100%; }
+
+/* Acciones de cada conversación: en escritorio aparecen al pasar el mouse, con el foco o en la conversación actual. */
+@media (hover: hover) and (min-width: 901px) {
+  .conversation-tools { opacity: 0; }
+  .conversation-row:hover .conversation-tools, .conversation-row:focus-within .conversation-tools, .conversation-row.active .conversation-tools { opacity: 1; }
+}
+/* Móvil: botón directo para empezar otra conversación en la barra superior. */
+@media (max-width: 900px) {
+  .side-new { align-items: center; background: none; border: 0; border-radius: 8px; color: var(--blue); cursor: pointer; display: inline-flex; height: 2.5rem; justify-content: center; position: absolute; right: 3.1rem; top: 50%; transform: translateY(-50%); width: 2.5rem; z-index: 21; }
+  .side-new:hover:not(:disabled) { background: var(--blue-soft); }
+  .side-new:disabled { opacity: .45; }
+  .side-new svg { height: 1.3rem; width: 1.3rem; }
+  .side-collapse > summary > span { padding-right: 2.75rem; }
+}
+
+/* Acciones de conversación: íconos con color según la intención (azul edita, coral elimina). */
+.conversation-tools { display: inline-flex; flex: none; gap: .1rem; padding-right: .2rem; }
+.row-icon { align-items: center; background: transparent; border: 0; border-radius: 8px; color: var(--ink-soft); cursor: pointer; display: inline-flex; flex: none; height: 2.25rem; justify-content: center; width: 2.25rem; }
+.row-icon svg { height: 1.05rem; width: 1.05rem; }
+.row-icon:disabled { cursor: not-allowed; opacity: .45; }
+.row-icon.rename:hover:not(:disabled) { background: var(--blue-soft); color: var(--blue); }
+.row-icon.delete:hover:not(:disabled) { background: var(--coral-soft); color: var(--coral-ink); }
+.row-icon.save { background: var(--blue); color: #fff; }
+.row-icon.save:hover:not(:disabled) { background: var(--blue-dark); }
+.row-icon:not(.save):not(.rename):not(.delete):hover:not(:disabled) { background: var(--mist); color: var(--navy); }
+
+/* Renombrar en el mismo lugar: el título se vuelve campo editable. */
+.conversation-row.editing { background: var(--surface); border-color: var(--blue); }
+.conversation-rename { align-items: center; display: flex; gap: .3rem; padding: .35rem; }
+.conversation-rename input { border-color: var(--line); border-radius: 8px; flex: 1; font-size: .82rem; min-width: 0; padding: .45rem .55rem; }
+
+/* Confirmar eliminación: texto claro, la acción destructiva en coral y "Cancelar" como opción segura. */
+.conversation-row.confirming { background: var(--coral-soft); border-color: #f3c1b8; padding: .6rem .65rem; }
+.conversation-confirm-text { color: var(--ink); font-size: .8rem; line-height: 1.4; margin: 0 0 .55rem; }
+.conversation-confirm-text strong { overflow-wrap: anywhere; }
+.conversation-confirm-actions { display: flex; flex-wrap: wrap; gap: .4rem; }
+.row-danger, .row-ghost { border-radius: 8px; cursor: pointer; font-size: .8rem; font-weight: 700; min-height: 2.25rem; padding: .35rem .8rem; }
+.row-danger { background: var(--coral-ink); border: 1px solid var(--coral-ink); color: #fff; }
+.row-danger:hover:not(:disabled) { background: #8a2818; }
+.row-ghost { background: var(--surface); border: 1px solid var(--line); color: var(--ink); }
+.row-ghost:hover:not(:disabled) { border-color: var(--ink-soft); }
+.row-danger:disabled, .row-ghost:disabled { cursor: not-allowed; opacity: .55; }
+
+/* Valoración: verde lima = útil, coral = poco útil. Al guardarse se vuelve una etiqueta fija con el color de la intención. */
+.chat-feedback { align-items: center; border-radius: 999px; display: inline-flex; gap: .1rem; }
+.chat-actions .chat-feedback .feedback-up:hover:not(:disabled) { background: var(--lime-soft); color: var(--lime-ink); }
+.chat-actions .chat-feedback .feedback-down:hover:not(:disabled) { background: var(--coral-soft); color: var(--coral-ink); }
+.chat-feedback.rated { padding: 0 .75rem 0 .1rem; }
+.chat-feedback.rated button[aria-pressed="false"] { display: none; }
+.chat-actions .chat-feedback.rated button[aria-pressed="true"] { background: transparent; cursor: default; min-width: 2.25rem; opacity: 1; }
+.chat-feedback.rated button[aria-pressed="true"] svg path { fill: currentColor; fill-opacity: .18; }
+.chat-feedback.rated.positive { background: var(--lime-soft); }
+.chat-actions .chat-feedback.rated.positive button[aria-pressed="true"], .chat-feedback.rated.positive .chat-feedback-note { color: var(--lime-ink); }
+.chat-feedback.rated.negative { background: var(--coral-soft); }
+.chat-actions .chat-feedback.rated.negative button[aria-pressed="true"], .chat-feedback.rated.negative .chat-feedback-note { color: var(--coral-ink); }
+.chat-feedback-note { color: var(--ink-soft); font-size: .76rem; font-weight: 600; }
+
+/* Acciones por fila: "•••" solo en pantallas táctiles o angostas; ahí el lápiz y el bote aparecen al abrirlo. */
+.row-more { display: none; }
+@media (hover: none), (max-width: 900px) {
+  .row-more { display: inline-flex; }
+  .row-more[aria-expanded="true"] { background: var(--mist); color: var(--navy); }
+  .conversation-row .conversation-tools { display: none; opacity: 1; }
+  .conversation-row.menu-open .conversation-tools { display: inline-flex; }
+  .conversation-row.menu-open .conversation-tools .row-icon.rename { color: var(--blue); }
+  .conversation-row.menu-open .conversation-tools .row-icon.delete { color: var(--coral-ink); }
+}

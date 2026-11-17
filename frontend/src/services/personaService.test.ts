@@ -23,6 +23,13 @@ describe('authenticated personas', () => {
     const { getToken } = await import('./session')
     expect(activePersona()?.id).toBe('valerie')
     expect(academicDataFromClaims(getToken())?.fullName).toBe('Valerie')
+    expect(academicDataFromClaims(getToken())?.semester).toBe('2.º semestre')
+  })
+  it('formats academic periods as ordinals', async () => {
+    const { periodLabel } = await import('./personaService')
+    expect(periodLabel(2)).toBe('2.º semestre')
+    expect(periodLabel('3', 'cuatrimestre')).toBe('3.º cuatrimestre')
+    expect(periodLabel('Propedéutico', 'periodo')).toBe('Propedéutico periodo')
   })
   it('isolates profiles and conversations and restores each authenticated user', async () => {
     const { storeToken } = await import('./session')

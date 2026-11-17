@@ -1,4 +1,4 @@
-import { academicDataFromClaims } from '../services/personaService'
+import { academicDataFromClaims, periodLabel } from '../services/personaService'
 import { getToken } from '../services/authService'
 import { personaStorageKey } from '../services/personaService'
 import { useEffect, useState } from 'react'
@@ -60,7 +60,7 @@ export function Home() {
 
   const career = academic?.career || profile?.career
   const campus = academic?.campus || profile?.campus
-  const semester = academic?.semester || profile?.currentSemester
+  const semester = academic?.semester || (profile?.currentSemester && profile.currentSemester !== 'na' ? periodLabel(profile.currentSemester) : '')
   const completeness = profile ? profileCompleteness(profile) : 0
 
   return (

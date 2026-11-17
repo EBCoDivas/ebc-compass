@@ -57,12 +57,6 @@ export async function listConversations(): Promise<ConversationSummary[]> {
   const data = await request<{ conversations: ConversationSummary[] }>('/conversations?limit=100')
   return data.conversations
 }
-export async function createConversation(): Promise<string> {
-  const id = crypto.randomUUID()
-  await request('/conversations', { method: 'POST', body: JSON.stringify({ conversationId: id }) })
-  saveConversationId(id)
-  return id
-}
 export function setActiveConversation(id: string | null): void { saveConversationId(id) }
 export async function renameConversation(id: string, title: string): Promise<void> {
   await request<void>(`/conversations/${id}`, { method: 'PATCH', body: JSON.stringify({ title }) })

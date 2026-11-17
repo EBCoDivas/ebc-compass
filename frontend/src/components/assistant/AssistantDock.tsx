@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { assistantPath } from '../../services/assistantService'
+import { assistantPath, getConversationId, listConversations } from '../../services/assistantService'
 import { ChatSurface } from './ChatSurface'
 import { useAssistantChat } from './useAssistantChat'
 import { AssistantDockContext, type AssistantDockApi } from './dockContext'
@@ -10,11 +10,37 @@ interface Prefill { question: string; nonce: number }
 
 function DockChat({ open, prefill, onExpand, onClose }: { open: boolean; prefill: Prefill; onExpand: (draft: string) => void; onClose: () => void }) {
   const chat = useAssistantChat()
-  const { setDraft, inputRef, pending, draft } = chat
+  const { setDraft, inputRef, pending, draft, entries, loading, openConversation } = chat
+  const [title, setTitle] = useState('')
+  const [starting, setStarting] = useState(false)
+  const entriesRef = useRef(entries.length)
+  entriesRef.current = entries.length
 
+  // Título de la conversación abierta, para saber dónde se agregará la pregunta.
   useEffect(() => {
-    if (prefill.question) setDraft(prefill.question)
-  }, [prefill, setDraft])
+    if (!open || pending || loading) return
+    let active = true
+    listConversations().then(list => { if (active) setTitle(list.find(item => item.id === getConversationId())?.title ?? '') }).catch(() => undefined)
+    return () => { active = false }
+  }, [open, pending, loading, entries.length])
+
+  const startNew = useCallback(async () => {
+    setStarting(true)
+    // Solo limpia el chat: la conversación se crea al enviar el primer mensaje, así no quedan conversaciones vacías en el historial.
+    try { await openConversation(null); setTitle('') } finally { setStarting(false) }
+  }, [openConversation])
+
+  // Una pregunta desde otra pantalla es un tema nuevo: si la conversación actual ya tiene mensajes, empieza otra.
+  const handledRef = useRef(0)
+  useEffect(() => {
+    if (!prefill.question || loading || handledRef.current === prefill.nonce) return
+    handledRef.current = prefill.nonce
+    void (async () => {
+      if (entriesRef.current > 0) { try { await startNew() } catch { /* se queda en la conversación actual */ } }
+      setDraft(prefill.question)
+      inputRef.current?.focus()
+    })()
+  }, [prefill, loading, setDraft, startNew, inputRef])
 
   useEffect(() => {
     if (open) inputRef.current?.focus()
@@ -31,7 +57,13 @@ function DockChat({ open, prefill, onExpand, onClose }: { open: boolean; prefill
     <>
       <header className="dock-header">
         <img src="/ebc-compass-mark.svg" alt="" width="28" height="28" />
-        <h2 id="dock-title">Compass</h2>
+        <div className="dock-title">
+          <h2 id="dock-title">Compass</h2>
+          <span>{title || 'Conversación nueva'}</span>
+        </div>
+        <button type="button" className="dock-icon" onClick={() => void startNew()} disabled={pending || loading || starting} aria-label="Nueva conversación" title="Nueva conversación">
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+        </button>
         <button type="button" className="dock-icon" onClick={() => onExpand(draft)} disabled={pending} aria-label="Abrir en pantalla completa" title={pending ? 'Espera a que termine la respuesta' : 'Abrir en pantalla completa'}>
           <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" /></svg>
         </button>

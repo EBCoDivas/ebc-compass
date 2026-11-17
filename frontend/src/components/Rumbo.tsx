@@ -32,9 +32,9 @@ export function Rumbo({ items }: { items: Opportunity[] }) {
         <Link to="/calendario">Ver calendario</Link>
       </div>
       <ol className="rumbo-track">
-        <li className="rumbo-today" aria-label="Hoy">
-          <img src="/ebc-compass-mark.svg" alt="" width="36" height="36" />
-          <span>Hoy</span>
+        <li className="rumbo-today">
+          <span className="rumbo-dot" aria-hidden="true" />
+          <span className="rumbo-today-label">Hoy</span>
         </li>
         {items.map((item, index) => {
           const days = daysUntil(item.deadline!)

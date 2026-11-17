@@ -28,5 +28,10 @@ export function academicDataFromClaims(token: string | null) {
   const text = (key: string) => typeof claims[key] === 'string' ? claims[key] as string : ''
   return { enrollment: text('custom:matricula'), fullName: text('name'),
     campus: text('custom:campus'), career: text('custom:programa'),
-    semester: claims['custom:semestre'] ? String(claims['custom:semestre']) + ' ' + (text('custom:periodo') || 'semestre') : '' }
+    semester: claims['custom:semestre'] ? periodLabel(String(claims['custom:semestre']), text('custom:periodo') || 'semestre') : '' }
+}
+
+/** "2" → "2.º semestre". Si el periodo no es un número, se deja tal cual. */
+export function periodLabel(value: string | number, period = 'semestre'): string {
+  return /^\d+$/.test(String(value)) ? `${value}.º ${period}` : `${value} ${period}`
 }
