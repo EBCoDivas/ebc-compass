@@ -16,7 +16,7 @@ export type Intent =
   | 'help'
   | 'unknown'
 
-export type CareerId = 'banking' | 'finance' | 'marketing' | 'business-administration'
+export type CareerId = 'business-administration' | 'communication-entertainment' | 'tourism' | 'international-business' | 'accounting' | 'law' | 'finance' | 'marketing' | 'executive-administration' | 'executive-accounting' | 'executive-business' | 'digital-transformation' | 'senior-management' | 'financial-management' | 'tax-specialty' | 'banking'
 
 /** Resumen del perfil que envía el frontend en cada petición. Todo es opcional. */
 export interface AssistantProfile {
@@ -26,6 +26,8 @@ export interface AssistantProfile {
   currentSemester?: number
   completedCourses?: string[]
   interests?: string[]
+  goals?: string
+  availability?: string
 }
 
 export type OpportunityType = 'course' | 'scholarship' | 'professional-development' | 'event' | 'procedure' | 'career-opportunity'
@@ -37,6 +39,9 @@ export interface AssistantOpportunity {
   description: string
   careers: string[]
   semesters?: number[]
+  campus?: string[]
+  level?: string[]
+  simulated?: boolean
   /** Fecha límite o fecha del evento, formato AAAA-MM-DD. */
   deadline?: string
   location?: string
@@ -116,7 +121,13 @@ export interface ChatMessage {
   language: Language
   intent?: Intent
   createdAt: string
+  interrupted?: boolean
+  failure?: AssistantFailure
+  catalogFallback?: CatalogFallback
 }
+
+export type AssistantFailure = 'MODEL_UNAVAILABLE' | 'VALIDATION_FAILED'
+export interface CatalogFallback { content: string; sources: Source[] }
 
 export interface AssistantReply {
   /** Id y fecha del mensaje del asistente guardado en el historial. */
@@ -128,8 +139,13 @@ export interface AssistantReply {
   suggestions: string[]
   sources: Source[]
   degraded: boolean
-  /** rules = plantilla determinista; llm = redactada por el modelo y validada por el guardrail. */
-  generatedBy: 'rules' | 'llm'
+  interrupted?: boolean
+  failure?: AssistantFailure
+  catalogFallback?: CatalogFallback
+  /** error = generación fallida o rechazada; no es una respuesta por reglas. */
+  generatedBy: 'rules' | 'llm' | 'error'
+  usage?: LlmUsage
+  historyStatus?: 'saved' | 'pending'
 }
 
 /** Respuesta antes de guardarse (todavía sin id ni fecha). */
@@ -138,7 +154,7 @@ export type DraftReply = Omit<AssistantReply, 'id' | 'createdAt'>
 // ---------- Puertos ----------
 
 export interface CatalogReader {
-  list(filter?: { type?: OpportunityType; career?: string; semester?: number }): Promise<AssistantOpportunity[]>
+  list(filter?: { type?: OpportunityType; career?: string; semester?: number; campus?: string; level?: string }): Promise<AssistantOpportunity[]>
   findByCode(code: string): Promise<AssistantOpportunity | undefined>
 }
 
@@ -157,5 +173,29 @@ export interface KnowledgeRetriever {
 
 /** Modelo de lenguaje (Fase 3: Bedrock Converse). */
 export interface LlmProvider {
-  generate(input: { system: string; messages: { role: 'user' | 'assistant'; content: string }[]; timeoutMs: number }): Promise<string>
+  generate(input: LlmInput): Promise<string>
+  stream?(input: LlmInput): AsyncIterable<string>
+}
+
+export type PromptCacheMode = 'off' | 'system' | 'system-history'
+export interface LlmUsage {
+  /** Bedrock: entrada que no se leyó ni escribió en caché. */
+  inputTokens: number
+  totalInputTokens: number
+  outputTokens: number
+  totalTokens: number
+  /** Ausente cuando el proveedor no informa la métrica; no significa cero. */
+  cacheReadInputTokens?: number
+  cacheWriteInputTokens?: number
+  latencyMs: number
+  firstTokenMs?: number
+  checkpointMode: PromptCacheMode
+}
+export interface LlmInput {
+  system: string
+  language?: Language
+  messages: { role: 'user' | 'assistant'; content: string }[]
+  timeoutMs: number
+  signal?: AbortSignal
+  onUsage?: (usage: LlmUsage) => void
 }

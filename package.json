@@ -2,7 +2,7 @@
   "name": "ebc-compass",
   "private": true,
   "version": "0.1.0",
-  "description": "Punto de entrada único para los comandos de EBC Compass. Sin dependencias.",
+  "description": "Punto de entrada \u00fanico para los comandos de EBC Compass. Sin dependencias.",
   "type": "module",
   "scripts": {
     "env:create": "node scripts/env-create.mjs",
@@ -15,6 +15,8 @@
     "verify:flow": "npm --prefix backend run verify:flow",
     "verify:lambda": "npm --prefix backend run verify:lambda",
     "verify:llm": "npm --prefix backend run verify:llm",
+    "verify:prompt-cache": "npm --prefix backend run verify:prompt-cache",
+    "verify:conversations": "npm --prefix backend run verify:conversations",
     "verify:checkpointer": "npm --prefix backend run verify:checkpointer",
     "kb:upload": "npm --prefix local run kb:upload",
     "kb:status": "npm --prefix local run kb:status",
@@ -46,13 +48,14 @@
     "sst:dev": "node scripts/sst-guard.mjs dev",
     "sst:deploy": "node scripts/sst-guard.mjs deploy",
     "sst:remove": "node scripts/sst-guard.mjs remove",
-    "lab:check": "npm --prefix lab run -s check --",
-    "lab:deploy": "npm --prefix lab run -s deploy --",
-    "lab:knowledge": "npm --prefix lab run -s knowledge --",
-    "lab:smoke": "npm --prefix lab run -s smoke --",
-    "lab:user": "npm --prefix lab run -s user --",
-    "lab:status": "npm --prefix lab run -s status --",
-    "lab:destroy": "npm --prefix lab run -s destroy --",
-    "lab:typecheck": "npm --prefix lab run typecheck"
+    "lab:check": "npm --prefix scripts/lab run -s check --",
+    "lab:deploy": "npm --prefix scripts/lab run -s deploy --",
+    "lab:knowledge": "npm --prefix scripts/lab run -s knowledge --",
+    "lab:smoke": "npm --prefix scripts/lab run -s smoke --",
+    "lab:user": "npm --prefix scripts/lab run -s user --",
+    "lab:status": "npm --prefix scripts/lab run -s status --",
+    "lab:destroy": "npm --prefix scripts/lab run -s destroy --",
+    "lab:typecheck": "npm --prefix scripts/lab run typecheck",
+    "lab:personas": "npm --prefix scripts/lab run -s personas --"
   }
 }

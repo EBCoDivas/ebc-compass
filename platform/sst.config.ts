@@ -9,7 +9,7 @@ export default $config({
       removal: "remove",
       home: "aws",
       providers: {
-        aws: { region },
+        aws: { version: "7.55.0", region },
         "aws-native": {
           package: "@pulumi/aws-native",
           version: "1.82.0",
@@ -24,7 +24,7 @@ export default $config({
       { createApi },
       { createAuth },
       { createKnowledgeBase },
-      { createConversationsTable },
+      { createConversationsTable, createProfilesTable, createHistoryTable },
       { createBackend },
       { createSite },
     ] = await Promise.all([
@@ -39,13 +39,26 @@ export default $config({
     const { userPool, webClient } = createAuth();
     const knowledge = createKnowledgeBase();
     const table = createConversationsTable();
+    const profilesTable = createProfilesTable();
+    const historyTable = createHistoryTable();
     const backend = createBackend({
       stage: $app.stage,
       table,
+      profilesTable,
+      historyTable,
       knowledgeBaseId: knowledge.knowledgeBase.knowledgeBaseId,
       knowledgeBaseArn: knowledge.knowledgeBase.knowledgeBaseArn,
     });
-    const { api } = createApi($app.stage, { userPool, webClient }, backend);
+    const streaming = createBackend({
+      streaming: true,
+      stage: $app.stage,
+      table,
+      profilesTable,
+      historyTable,
+      knowledgeBaseId: knowledge.knowledgeBase.knowledgeBaseId,
+      knowledgeBaseArn: knowledge.knowledgeBase.knowledgeBaseArn,
+    });
+    const { api } = createApi($app.stage, { userPool, webClient }, backend, streaming);
     const site = createSite({
       apiUrl: api.url,
       userPoolId: userPool.id,
@@ -57,6 +70,7 @@ export default $config({
       stage: $app.stage,
       siteUrl: site.url,
       conversationsTable: table.name,
+      conversationHistoryTable: historyTable.name,
       backendFunction: backend.name,
       apiUrl: api.url,
       cognitoUserPoolId: userPool.id,

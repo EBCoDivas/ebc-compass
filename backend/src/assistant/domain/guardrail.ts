@@ -1,5 +1,5 @@
 // Validación de la salida del LLM: solo se acepta si cumple el idioma y no introduce datos que no estén en
-// la hoja de hechos, el perfil o los documentos. Si falla, el asistente usa la respuesta por plantilla.
+// la hoja de hechos, el perfil o los documentos. Si falla, el asistente informa el rechazo.
 
 import type { Language } from '../types.js'
 import { detectLanguage } from './language.js'

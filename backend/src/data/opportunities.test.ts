@@ -13,3 +13,44 @@ test('semester-restricted opportunities expose valid semester ranges', () => {
     assert.equal(opportunity.semester?.every((semester) => semester >= 1 && semester <= 10) ?? true, true)
   }
 })
+
+test('recommendations respect each demo persona campus, level and period', async () => {
+  const { readFileSync } = await import('node:fs')
+  const { recommend } = await import('./recommendations.js')
+  const { levelForCareer, campuses, programs } = await import('./academic.js')
+  const academic = JSON.parse(readFileSync(new URL('../../../shared/academic.json', import.meta.url), 'utf8'))
+  assert.deepEqual(campuses, academic.campuses)
+  assert.deepEqual(programs, academic.programs)
+  assert.equal(campuses.length, 14)
+  assert.equal(programs.filter(program => program.level === 'licenciatura').length, 8)
+  assert.equal(opportunities.length, 35)
+  assert.equal(new Set(opportunities.map(item => item.id)).size, 35)
+  assert.ok(opportunities.every(item => item.simulated && item.description.includes('simulada')))
+  const personas = JSON.parse(readFileSync(new URL('../../../shared/personas.json', import.meta.url), 'utf8')) as {
+    id: string; campus: string; career: string; period: number; interests: string[]; hasProfile: boolean
+  }[]
+  for (const persona of personas.filter(p => p.hasProfile)) {
+    const results = recommend({ ...persona, semester: persona.period, today: new Date('2026-11-16T12:00:00Z') })
+    assert.ok(results.length > 0, persona.id)
+    assert.ok(results.some(({ opportunity }) => opportunity.type === 'course' && opportunity.career.length <= 2), persona.id + ' specific course')
+    for (const { opportunity } of results) {
+      assert.ok(opportunity.career.includes(persona.career), persona.id)
+      assert.ok(opportunity.campus.includes(persona.campus), persona.id)
+      assert.ok(opportunity.level.includes(levelForCareer(persona.career)!), persona.id)
+      assert.ok(!opportunity.semester || opportunity.semester.includes(persona.period), persona.id)
+    }
+  }
+})
+
+test('demo calendar and corpus manifest stay aligned with the catalog', async () => {
+  const { readFileSync, readdirSync } = await import('node:fs')
+  const root = new URL('../../../knowledge/', import.meta.url)
+  const calendar = readFileSync(new URL('calendario-academico.md', root), 'utf8')
+  for (const item of opportunities.filter(item => item.deadline)) {
+    const [year, month, day] = item.deadline!.split('-')
+    assert.ok(calendar.includes(day + '/' + month + '/' + year + ': ' + item.title + ' (simulado).'), item.id)
+  }
+  const manifest = JSON.parse(readFileSync(new URL('manifest.json', root), 'utf8')) as { files: { path: string }[] }
+  assert.deepEqual(manifest.files.map(file => file.path).sort(), readdirSync(root).filter(file => file.endsWith('.md')).sort())
+  for (const file of manifest.files) assert.match(readFileSync(new URL(file.path, root), 'utf8'), /^simulated: true$/m)
+})

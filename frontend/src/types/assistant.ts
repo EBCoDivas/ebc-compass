@@ -9,12 +9,28 @@ export interface AssistantSource {
 }
 
 export interface AssistantReplyMeta {
-  /** llm = redactada por el modelo; rules = respuesta por reglas y plantillas. */
-  mode: 'llm' | 'rules'
+  /** llm = modelo; rules = reglas explícitas; error = generación fallida o no verificable. */
+  mode: 'llm' | 'rules' | 'error'
   latencyMs: number
-  /** true si el modelo o la búsqueda de conocimiento fallaron y se respondió con reglas. */
+  /** true si hubo un fallo de generación, validación o recuperación de conocimiento. */
   degraded: boolean
+  historyStatus?: 'saved' | 'pending'
+  /** Métricas agregadas; no se presentan en el flujo del chat. */
+  usage?: {
+    inputTokens: number
+    totalInputTokens: number
+    outputTokens: number
+    totalTokens: number
+    cacheReadInputTokens?: number
+    cacheWriteInputTokens?: number
+    latencyMs: number
+    firstTokenMs?: number
+    checkpointMode: 'off' | 'system' | 'system-history'
+  }
 }
+
+export type AssistantFailure = 'MODEL_UNAVAILABLE' | 'VALIDATION_FAILED'
+export interface CatalogFallback { content: string; sources: AssistantSource[] }
 
 export interface AssistantReply {
   conversationId: string
@@ -24,6 +40,9 @@ export interface AssistantReply {
     content: string
     language: AssistantLanguage
     intent: string
+    interrupted?: boolean
+    failure?: AssistantFailure
+    catalogFallback?: CatalogFallback
     createdAt: string
     suggestions: string[]
     sources: AssistantSource[]
@@ -32,12 +51,18 @@ export interface AssistantReply {
 }
 
 export interface StoredMessage {
+  feedback?: 'positive' | 'negative'
   id: string
   role: 'student' | 'assistant'
   content: string
   language: AssistantLanguage
   intent?: string
+  interrupted?: boolean
+  failure?: AssistantFailure
+  catalogFallback?: CatalogFallback
   createdAt: string
+  sources?: AssistantSource[]
+  suggestions?: string[]
 }
 
 /** Resumen del perfil que se envía en cada mensaje (el backend no conoce el perfil guardado en el navegador). */
@@ -46,11 +71,13 @@ export interface AssistantProfile {
   campus?: string
   career?: string
   currentSemester?: number
+  completedCourses?: string[]
   interests?: string[]
 }
 
 /** Un mensaje tal como se muestra en pantalla. */
 export interface ChatEntry {
+  feedback?: 'positive' | 'negative'
   id: string
   role: 'student' | 'assistant'
   content: string
@@ -58,5 +85,21 @@ export interface ChatEntry {
   suggestions?: string[]
   meta?: AssistantReplyMeta
   /** Mensaje de error del asistente (no se guarda en el historial del servidor). */
+  isStreaming?: boolean
+  interrupted?: boolean
+  streamError?: string
+  failure?: AssistantFailure
+  catalogFallback?: CatalogFallback
+  retryQuestion?: string
+  requestId?: string
   isError?: boolean
+}
+
+export class AssistantError extends Error {
+  constructor(
+    message: string,
+    readonly code?: string,
+  ) {
+    super(message)
+  }
 }

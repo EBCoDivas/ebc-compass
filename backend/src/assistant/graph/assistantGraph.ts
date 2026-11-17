@@ -1,12 +1,12 @@
 // Grafo de LangGraph del asistente. Es determinista (no un agente que elige herramientas):
 //   validate -> detectLanguage -> analyze -> gatherFacts -> [retrieve] -> composeTemplate -> [generate -> guardrail] -> finalize
 // `retrieve` solo corre si hay un KnowledgeRetriever; `generate` y `guardrail` solo si hay un LlmProvider (modo llm).
-// composeTemplate siempre calcula la respuesta por reglas: es el respaldo si el LLM falla o el guardrail la rechaza.
+// composeTemplate calcula los resultados por reglas; ante un fallo solo se ofrecen bajo una acción explícita.
 // Cada nodo es un envoltorio fino de funciones puras de domain/. El estado se guarda por conversación
 // (thread_id) en el checkpointer; en la Fase 4 será DynamoDB y mientras tanto basta MemorySaver.
 
 import { randomUUID } from 'node:crypto'
-import { Annotation, END, START, StateGraph } from '@langchain/langgraph'
+import { Annotation, END, START, StateGraph, getWriter, type LangGraphRunnableConfig } from '@langchain/langgraph'
 import type { BaseCheckpointSaver } from '@langchain/langgraph-checkpoint'
 import { extractEntities } from '../domain/entities.js'
 import { buildFactSheet, type FactDeps } from '../domain/facts.js'
@@ -14,10 +14,14 @@ import { validateGeneration } from '../domain/guardrail.js'
 import { classifyIntent } from '../domain/intent.js'
 import { detectLanguage } from '../domain/language.js'
 import { buildPrompt, type Prompt } from '../domain/prompt.js'
+import { loadSystemPrompt } from '../domain/systemPrompt.js'
 import { renderReply } from '../domain/templates.js'
 import { normalize } from '../domain/text.js'
+import { beginTurn, persistTurn, registerConversations, releaseTurn } from '../conversations/lifecycle.js'
+import type { ConversationRepository, MemoryFact, Turn } from '../conversations/repository.js'
 import type {
   AssistantProfile,
+  AssistantFailure,
   AssistantReply,
   ChatMessage,
   Classification,
@@ -28,6 +32,7 @@ import type {
   KnowledgeRetriever,
   Language,
   LlmProvider,
+  LlmUsage,
   Passage,
   Source,
 } from '../types.js'
@@ -41,6 +46,9 @@ export interface AssistantDeps extends FactDeps {
   /** Si se omite, el asistente responde solo con plantillas (modo rules). */
   llm?: LlmProvider
   llmTimeoutMs?: number
+  systemPromptsDir?: string
+  conversations?: ConversationRepository
+  profileReader?: (owner: string) => Promise<AssistantProfile | undefined>
   now?: () => Date
 }
 
@@ -49,7 +57,7 @@ const TOPICS_BY_INTENT: Partial<Record<Intent, string[]>> = {
   'scholarship-info': ['scholarships', 'procedures', 'services'],
   'procedure-info': ['procedures', 'calendar', 'services'],
   'event-info': ['events'],
-  'career-info': ['career', 'events'],
+  'career-info': ['career', 'careers', 'events'],
   'course-info': ['rules', 'services'],
   'deadline-query': ['calendar'],
 }
@@ -64,6 +72,10 @@ const State = Annotation.Root({
     reducer: (current, added) => [...current, ...added].slice(-MAX_HISTORY),
     default: () => [],
   }),
+  pendingTurns: Annotation<Turn[]>({ reducer: replace<Turn[]>(), default: () => [] }),
+  history: Annotation<ChatMessage[] | undefined>({ reducer: replace<ChatMessage[] | undefined>(), default: () => undefined }),
+  compactedSummary: Annotation<string | undefined>({ reducer: replace<string | undefined>(), default: () => undefined }),
+  memories: Annotation<MemoryFact[]>({ reducer: replace<MemoryFact[]>(), default: () => [] }),
   summary: Annotation<string>({ reducer: replace<string>(), default: () => '' }),
   lastIntent: Annotation<Intent | undefined>({ reducer: replace<Intent | undefined>(), default: () => undefined }),
   conversationLanguage: Annotation<Language>({ reducer: replace<Language>(), default: () => 'es' }),
@@ -78,7 +90,9 @@ const State = Annotation.Root({
   facts: Annotation<FactSheet | undefined>({ reducer: replace<FactSheet | undefined>(), default: () => undefined }),
   passages: Annotation<Passage[]>({ reducer: replace<Passage[]>(), default: () => [] }),
   prompt: Annotation<Prompt | undefined>({ reducer: replace<Prompt | undefined>(), default: () => undefined }),
+  usage: Annotation<LlmUsage | undefined>({ reducer: replace<LlmUsage | undefined>(), default: () => undefined }),
   draft: Annotation<string | undefined>({ reducer: replace<string | undefined>(), default: () => undefined }),
+  interrupted: Annotation<boolean>({ reducer: replace<boolean>(), default: () => false }),
   degraded: Annotation<boolean>({ reducer: replace<boolean>(), default: () => false }),
   reply: Annotation<DraftReply | undefined>({ reducer: replace<DraftReply | undefined>(), default: () => undefined }),
   final: Annotation<AssistantReply | undefined>({ reducer: replace<AssistantReply | undefined>(), default: () => undefined }),
@@ -86,8 +100,19 @@ const State = Annotation.Root({
 
 type AssistantState = typeof State.State
 
+function failedReply(state: AssistantState, failure: AssistantFailure): DraftReply {
+  const template = renderReply(state.facts!, state.profile)
+  const sources = template.sources.filter(source => source.kind === 'opportunity')
+  const content = failure === 'MODEL_UNAVAILABLE'
+    ? (state.language === 'es' ? 'No pudimos generar la respuesta en este momento. Intenta nuevamente.' : 'We could not generate a response right now. Please try again.')
+    : (state.language === 'es' ? 'No pudimos verificar la respuesta generada. Intenta nuevamente.' : 'We could not verify the generated response. Please try again.')
+  return { ...state.reply!, content, sources: [], suggestions: [], generatedBy: 'error', degraded: true, failure,
+    ...(sources.length ? { catalogFallback: { content: template.content, sources } } : {}) }
+}
+
 export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseCheckpointSaver) {
   const now = deps.now ?? (() => new Date())
+  const systemPrompt = loadSystemPrompt(deps.systemPromptsDir)
 
   const graph = new StateGraph(State)
     .addNode('validate', (state: AssistantState) => {
@@ -102,13 +127,15 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
         passages: [],
         prompt: undefined,
         draft: undefined,
+        usage: undefined,
         degraded: false,
+        interrupted: false,
         reply: undefined,
         final: undefined,
       }
     })
     .addNode('detectLanguage', (state: AssistantState) => ({
-      language: detectLanguage(state.userMessage, state.requestedLanguage ?? state.conversationLanguage),
+      language: state.requestedLanguage ?? detectLanguage(state.userMessage, state.conversationLanguage),
     }))
     .addNode('analyze', async (state: AssistantState) => {
       const normalized = normalize(state.userMessage)
@@ -140,8 +167,9 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
         return { passages: [], degraded: true }
       }
     })
-    .addNode('composeTemplate', (state: AssistantState) => {
+    .addNode('composeTemplate', (state: AssistantState, config: LangGraphRunnableConfig) => {
       const rendered = renderReply(state.facts!, state.profile)
+      getWriter(config)?.({ event: 'meta', language: state.language, intent: state.facts!.intent, sources: rendered.sources })
       return {
         reply: {
           content: rendered.content,
@@ -154,42 +182,74 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
         } satisfies DraftReply,
       }
     })
-    .addNode('generate', async (state: AssistantState) => {
+    .addNode('generate', async (state: AssistantState, config: LangGraphRunnableConfig) => {
       const prompt = buildPrompt({
+        system: systemPrompt,
         facts: state.facts!,
         passages: state.passages,
         profile: state.profile,
-        history: state.messages,
+        history: (state.history ?? state.messages).filter(message => !message.failure),
+        summary: state.compactedSummary,
+        memories: state.memories,
         question: state.userMessage,
         language: state.language,
       })
+      let partial = ''
+      let usage: LlmUsage | undefined
+      const onUsage = (value: LlmUsage) => { usage = value }
+      const signal = config.context?.generationSignal as AbortSignal | undefined
+      const writer = getWriter(config)
       try {
-        const draft = await deps.llm!.generate({ system: prompt.system, messages: prompt.messages, timeoutMs: deps.llmTimeoutMs ?? 45_000 })
-        return { prompt, draft }
+        signal?.throwIfAborted()
+        if (writer && deps.llm!.stream) {
+          for await (const text of deps.llm!.stream({ system: prompt.system, language: state.language, messages: prompt.messages, timeoutMs: deps.llmTimeoutMs ?? 45_000, signal, onUsage })) {
+            partial += text
+            writer({ event: 'token', text })
+          }
+          signal?.throwIfAborted()
+          return { prompt, draft: partial, usage }
+        }
+        const draft = await deps.llm!.generate({ system: prompt.system, language: state.language, messages: prompt.messages, timeoutMs: deps.llmTimeoutMs ?? 45_000, signal, onUsage })
+        return { prompt, draft, usage }
       } catch {
-        // OpenAI/Bedrock no disponible o lento: se conserva la respuesta por plantilla.
-        return { prompt, draft: undefined, degraded: true }
+        if (signal?.aborted) return { prompt, draft: undefined, usage, interrupted: true, reply: { ...state.reply!, content: partial, interrupted: true, generatedBy: partial ? 'llm' as const : 'rules' as const } }
+        const reply = failedReply(state, 'MODEL_UNAVAILABLE')
+        writer?.({ event: 'replace', text: reply.content, reason: reply.content })
+        return { prompt, draft: undefined, degraded: true, reply, usage }
       }
     })
-    .addNode('guardrail', (state: AssistantState) => {
+    .addNode('guardrail', (state: AssistantState, config: LangGraphRunnableConfig) => {
+      if (state.interrupted) {
+        if (state.reply!.content && !validateGeneration(state.reply!.content, { language: state.language, allowed: state.prompt!.allowed }).ok) {
+          const reply = failedReply(state, 'VALIDATION_FAILED')
+          getWriter(config)?.({ event: 'replace', text: reply.content, reason: reply.content })
+          return { reply, degraded: true }
+        }
+        return {}
+      }
       if (state.draft === undefined) return {}
       const verdict = validateGeneration(state.draft, { language: state.language, allowed: state.prompt!.allowed })
-      if (!verdict.ok) return { draft: undefined, degraded: true }
+      if (!verdict.ok) {
+        const reply = failedReply(state, 'VALIDATION_FAILED')
+        getWriter(config)?.({ event: 'replace', text: reply.content, reason: reply.content })
+        return { draft: undefined, degraded: true, reply }
+      }
       const documents: Source[] = [...new Map(state.passages.map((p) => [p.source, { kind: 'document' as const, id: p.source, title: p.title ?? p.source }])).values()]
       const reply = state.reply!
       // RF-05.13: si no se entendió la pregunta, la respuesta del modelo siempre ofrece preguntas alternativas.
       const alternatives =
         reply.intent === 'unknown'
-          ? `\n\n${state.language === 'es' ? 'Puedes preguntarme, por ejemplo:' : 'You could ask me, for example:'}\n${reply.suggestions.map((text) => `• ${text}`).join('\n')}`
+          ? `\n\n${state.language === 'es' ? 'Puedes preguntarme, por ejemplo:' : 'You could ask me, for example:'}\n${reply.suggestions.map((text) => `- ${text}`).join('\n')}`
           : ''
       return { reply: { ...reply, content: state.draft + alternatives, sources: [...citedItems(reply.sources, state.draft), ...documents], degraded: state.degraded, generatedBy: 'llm' as const } }
     })
     .addNode('finalize', (state: AssistantState) => {
       // `degraded` se fija aquí: así refleja también un fallo del retriever, del LLM o del guardrail.
-      const reply: DraftReply = { ...state.reply!, degraded: state.degraded }
+      const reply: DraftReply = { ...state.reply!, ...(state.usage ? { usage: state.usage } : {}), degraded: state.degraded, ...(state.interrupted ? { interrupted: true } : {}) }
       const stamp = now().toISOString()
       const student: ChatMessage = { id: randomUUID(), role: 'student', content: state.userMessage, language: state.language, intent: reply.intent, createdAt: stamp }
-      const assistant: ChatMessage = { id: randomUUID(), role: 'assistant', content: reply.content, language: reply.language, intent: reply.intent, createdAt: stamp }
+      const assistant: ChatMessage = { id: randomUUID(), role: 'assistant', content: reply.content, language: reply.language, intent: reply.intent, createdAt: stamp,
+        ...(reply.failure ? { failure: reply.failure, catalogFallback: reply.catalogFallback } : {}), ...(state.interrupted ? { interrupted: true } : {}) }
       // Los saludos y la ayuda no cambian el tema; así los seguimientos ("¿y la fecha límite?") siguen funcionando.
       const keepsTopic = TOPIC_INTENTS.includes(reply.intent)
       return {
@@ -198,7 +258,7 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
         messages: [student, assistant],
         lastIntent: keepsTopic ? reply.intent : state.lastIntent,
         conversationLanguage: state.language,
-        summary: keepsTopic ? appendSummary(state.summary, reply.intent) : state.summary,
+        summary: deps.conversations ? state.compactedSummary ?? '' : keepsTopic ? appendSummary(state.summary, reply.intent) : state.summary,
       }
     })
     .addEdge(START, 'validate')
@@ -220,7 +280,9 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
     .addEdge('guardrail', 'finalize')
     .addEdge('finalize', END)
 
-  return graph.compile({ checkpointer })
+  const compiled = graph.compile({ checkpointer })
+  if (deps.conversations) registerConversations(compiled, { repository: deps.conversations, profile: deps.profileReader })
+  return compiled
 }
 
 /** Deja solo las oportunidades que el texto menciona por título; si no nombra ninguna, la respuesta se apoya en los documentos. */
@@ -254,13 +316,55 @@ export interface TurnInput {
   message: string
   profile?: AssistantProfile
   language?: Language
+  requestId?: string
+  requireExisting?: boolean
+  trustedProfile?: AssistantProfile
+  history?: ChatMessage[]
+  compactedSummary?: string
+  memories?: MemoryFact[]
+  restoredLanguage?: Language
+  restoredIntent?: Intent
 }
 
-/** Ejecuta un turno completo y devuelve la respuesta. */
+function graphInput(input: TurnInput) {
+  return { userMessage: input.message, profile: input.profile, requestedLanguage: input.language,
+    history: input.history, compactedSummary: input.compactedSummary, memories: input.memories ?? [],
+    ...(input.history ? { conversationLanguage: input.restoredLanguage, lastIntent: input.restoredIntent } : {}),
+  }
+}
+
+/** Ejecuta un turno y guarda el registro íntegro con una clave de reintento estable. */
 export async function runTurn(graph: AssistantGraph, input: TurnInput): Promise<AssistantReply> {
-  const result = await graph.invoke(
-    { userMessage: input.message, profile: input.profile, requestedLanguage: input.language },
-    { configurable: { thread_id: input.threadId } },
-  )
-  return result.final!
+  const prepared = await beginTurn(graph, input)
+  try {
+    if (prepared.replay) return prepared.replay
+    const result = await graph.invoke(graphInput(prepared.input), { configurable: { thread_id: input.threadId } })
+    return await persistTurn(graph, prepared.input, result.messages.at(-2)!, result.final!)
+  } finally { await releaseTurn(graph, input.threadId, prepared.token) }
+}
+
+export type TurnStreamEvent =
+  | { event: 'meta'; language: Language; intent: Intent; sources: Source[] }
+  | { event: 'token'; text: string }
+  | { event: 'replace'; text: string; reason: string }
+
+/** No aborta el grafo completo: permite que finalize guarde el turno parcial tras cancelar el proveedor. */
+export async function runTurnStreaming(graph: AssistantGraph, input: TurnInput, signal: AbortSignal, onEvent: (event: TurnStreamEvent) => Promise<void>): Promise<AssistantReply> {
+  const prepared = await beginTurn(graph, input)
+  try {
+    if (prepared.replay) return prepared.replay
+    const stream = await graph.stream(graphInput(prepared.input),
+      { configurable: { thread_id: input.threadId }, context: { generationSignal: signal }, streamMode: ['custom', 'updates'] })
+    let reply: AssistantReply | undefined
+    let student: ChatMessage | undefined
+    for await (const [mode, value] of stream) {
+      if (mode === 'custom') await onEvent(value as TurnStreamEvent)
+      if (mode === 'updates') {
+        const update = value as { finalize?: { final?: AssistantReply; messages?: ChatMessage[] } }
+        if (update.finalize?.final) { reply = update.finalize.final; student = update.finalize.messages?.[0] }
+      }
+    }
+    if (!reply || !student) throw new Error('El turno no produjo una respuesta final.')
+    return await persistTurn(graph, prepared.input, student, reply)
+  } finally { await releaseTurn(graph, input.threadId, prepared.token) }
 }

@@ -1,32 +1,22 @@
 ---
 id: bolsa-de-trabajo-practicas
-title: Bolsa de trabajo y prácticas profesionales (contenido simulado)
-topic: career
+title: Prácticas y empleo ficticios
+topic: careers
 language: es
 simulated: true
 ---
-# Bolsa de trabajo y prácticas profesionales
+# Prácticas y empleo ficticios
 
-> Contenido simulado para la demo de EBC Compass.
+> Oferta simulada; no son vacantes ni convocatorias reales. Confirma disponibilidad con EBC.
 
-## Prácticas profesionales
+## Prácticas de negocios y finanzas
+Demo simulada: vacante ficticia de un empleador de demostración. Fecha ficticia: 30/01/2027.
 
-- **Requisitos:** estar en 5.º semestre o superior y tener un promedio mínimo de 8.0.
-- **Duración:** de 4 a 6 meses, medio tiempo.
-- **Documentos:** currículum, carta de presentación y carta de aceptación de la empresa.
+## Prácticas de apoyo jurídico
+Demo simulada: vacante ficticia; no representa una oferta de una empresa real. Fecha ficticia: 22/01/2027.
 
-## Cómo postularte
+## Prácticas de turismo y hospitalidad
+Demo simulada: vacante ficticia para explorar el sector. Fecha ficticia: 20/01/2027.
 
-1. Actualiza tu currículum con ayuda de Servicios Escolares.
-2. Revisa las vacantes en la bolsa de trabajo del portal.
-3. Postúlate y, si te seleccionan, entrega tu carta de aceptación.
-
-## Consejo
-
-Los eventos de networking son una buena oportunidad para conocer empresas antes de postularte.
-
-## Vacantes y programas vigentes
-
-- **Prácticas profesionales en banca** (Banca y Finanzas, semestres 7 a 10): programa de prácticas para estudiantes de últimos semestres. Cierra el 30/01/2027.
-- **Becario de marketing digital** (Mercadotecnia, semestres 5 a 10): vacante de medio tiempo para apoyar campañas digitales. Cierra el 22/12/2026.
-- **Analista financiero junior** (Finanzas y Administración de Empresas, semestres 7 a 10): oportunidad inicial para estudiantes de finanzas. Cierra el 05/02/2027.
+## Proyecto de transformación digital
+Demo simulada: proyecto ficticio compatible con una modalidad ejecutiva. Fecha ficticia: 25/01/2027.

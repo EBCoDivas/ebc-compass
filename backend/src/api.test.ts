@@ -19,6 +19,12 @@ test('backend exposes the documented local API flow', async (t) => {
   assert.equal(catalog.status, 200)
   assert.equal(scholarships.every((item) => item.type === 'scholarship'), true)
 
+  const scoped = await fetch(baseUrl + '/api/opportunities?career=digital-transformation&campus=LEO&level=ejecutiva')
+  const scopedItems = await scoped.json() as { career: string[]; campus: string[]; level: string[] }[]
+  assert.equal(scoped.status, 200)
+  assert.ok(scopedItems.length > 0)
+  assert.ok(scopedItems.every(item => item.career.includes('digital-transformation') && item.campus.includes('LEO') && item.level.includes('ejecutiva')))
+
   const recommendations = await fetch(`${baseUrl}/api/recommendations?career=finance&semester=5&interests=finanzas`)
   const recommended = await recommendations.json() as Array<{ relevanceScore: number }>
   assert.equal(recommendations.status, 200)
@@ -32,5 +38,5 @@ test('backend exposes the documented local API flow', async (t) => {
   assert.equal(upcomingAlerts.every((item, index) => index === 0 || item.daysRemaining >= upcomingAlerts[index - 1].daysRemaining), true)
 
   const profile = await fetch(`${baseUrl}/api/profiles`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Valerie', campus: 'CMS', career: 'finance', currentSemester: 5 }) })
-  assert.equal(profile.status, 201)
+  assert.equal(profile.status, 401)
 })

@@ -5,8 +5,42 @@ import type { AssistantProfile, CareerId, FactItem, FactSheet, Intent, Language,
 import { formatDate } from './text.js'
 
 const CAREER_NAME: Record<Language, Record<CareerId, string>> = {
-  es: { banking: 'Banca', finance: 'Finanzas', marketing: 'Mercadotecnia', 'business-administration': 'Administración de Empresas' },
-  en: { banking: 'Banking', finance: 'Finance', marketing: 'Marketing', 'business-administration': 'Business Administration' },
+  "es": {
+    "business-administration": "Administración de Negocios",
+    "communication-entertainment": "Administración de Negocios de la Comunicación y el Entretenimiento",
+    "tourism": "Administración de Negocios Turísticos",
+    "international-business": "Comercio y Negocios Internacionales",
+    "accounting": "Contaduría",
+    "law": "Derecho",
+    "finance": "Finanzas y Banca",
+    "marketing": "Mercadotecnia",
+    "executive-administration": "Licenciatura Ejecutiva en Administración y Comercialización",
+    "executive-accounting": "Licenciatura Ejecutiva en Contabilidad y Finanzas",
+    "executive-business": "Licenciatura Ejecutiva en Negocios",
+    "digital-transformation": "Licenciatura Ejecutiva en Programación y Transformación Digital",
+    "senior-management": "Maestría en Alta Dirección",
+    "financial-management": "Maestría en Dirección Financiera",
+    "tax-specialty": "Especialidad en Impuestos",
+    "banking": "Banca"
+  },
+  "en": {
+    "business-administration": "Administración de Negocios",
+    "communication-entertainment": "Administración de Negocios de la Comunicación y el Entretenimiento",
+    "tourism": "Administración de Negocios Turísticos",
+    "international-business": "Comercio y Negocios Internacionales",
+    "accounting": "Accounting",
+    "law": "Law",
+    "finance": "Finance",
+    "marketing": "Marketing",
+    "executive-administration": "Licenciatura Ejecutiva en Administración y Comercialización",
+    "executive-accounting": "Licenciatura Ejecutiva en Contabilidad y Finanzas",
+    "executive-business": "Licenciatura Ejecutiva en Negocios",
+    "digital-transformation": "Licenciatura Ejecutiva en Programación y Transformación Digital",
+    "senior-management": "Maestría en Alta Dirección",
+    "financial-management": "Maestría en Dirección Financiera",
+    "tax-specialty": "Especialidad en Impuestos",
+    "banking": "Banking"
+  }
 }
 
 const FIELD_NAME: Record<Language, Record<string, string>> = {
@@ -44,7 +78,7 @@ function daysText(days: number | undefined, language: Language): string {
 function itemLine(item: FactItem, language: Language, facts: FactSheet): string {
   const es = language === 'es'
   const label = item.type === 'event' ? (es ? 'Fecha' : 'Date') : es ? 'Fecha límite' : 'Deadline'
-  const parts = [`• ${item.title}${item.code ? ` (${item.code})` : ''}`]
+  const parts = [`- ${item.title}${item.code ? ` (${item.code})` : ''}`]
   parts[0] += ` — ${item.description}`
   if (item.deadline) parts.push(`${label}: ${formatDate(item.deadline)} (${daysText(item.daysRemaining, language)}).`)
   if (item.location) parts.push(`${es ? 'Lugar' : 'Location'}: ${item.location}.`)
@@ -61,8 +95,8 @@ function itemLine(item: FactItem, language: Language, facts: FactSheet): string 
 function deadlineLine(item: FactItem, language: Language): string {
   const label = item.type === 'event' ? (language === 'es' ? 'Fecha' : 'Date') : language === 'es' ? 'Fecha límite' : 'Deadline'
   return item.deadline
-    ? `• ${item.title} — ${label}: ${formatDate(item.deadline)} (${daysText(item.daysRemaining, language)}).`
-    : `• ${item.title} — ${language === 'es' ? 'sin fecha registrada' : 'no date on record'}.`
+    ? `- ${item.title} — ${label}: ${formatDate(item.deadline)} (${daysText(item.daysRemaining, language)}).`
+    : `- ${item.title} — ${language === 'es' ? 'sin fecha registrada' : 'no date on record'}.`
 }
 
 function header(facts: FactSheet): string {
@@ -176,16 +210,16 @@ export function renderReply(facts: FactSheet, profile: AssistantProfile | undefi
       const name = profile?.name ? `, ${profile.name}` : ''
       lines.push(
         es
-          ? `¡Hola${name}! Soy el asistente de EBC Compass. Puedo ayudarte con becas, cursos, trámites, eventos, certificaciones, prácticas y fechas importantes. ¿En qué te ayudo?`
-          : `Hi${name}! I'm the EBC Compass assistant. I can help with scholarships, courses, procedures, events, certifications, internships and important dates. How can I help?`,
+          ? `¡Hola${name}! Soy Compass, el asistente con IA de EBC Compass. Puedo ayudarte con becas, cursos, trámites, eventos, certificaciones, prácticas y fechas importantes. ¿En qué te ayudo?`
+          : `Hi${name}! I'm Compass, the AI assistant of EBC Compass. I can help with scholarships, courses, procedures, events, certifications, internships and important dates. How can I help?`,
       )
       break
     }
     case 'help':
       lines.push(
         es
-          ? 'Puedo ayudarte con:\n• Becas: requisitos, montos y fechas límite.\n• Cursos: prerrequisitos y semestre.\n• Trámites: pasos, documentos y fechas.\n• Certificaciones, prácticas y empleo.\n• Eventos próximos y fechas importantes.\n• Recomendaciones según tu perfil.\nEscribe tu pregunta en español o en inglés.'
-          : 'I can help you with:\n• Scholarships: requirements, amounts and deadlines.\n• Courses: prerequisites and semester.\n• Procedures: steps, documents and dates.\n• Certifications, internships and jobs.\n• Upcoming events and important dates.\n• Recommendations based on your profile.\nAsk in Spanish or English.',
+          ? 'Puedo ayudarte con:\n- Becas: requisitos, montos y fechas límite.\n- Cursos: prerrequisitos y semestre.\n- Trámites: pasos, documentos y fechas.\n- Certificaciones, prácticas y empleo.\n- Eventos próximos y fechas importantes.\n- Recomendaciones según tu perfil.\n\nEscribe tu pregunta en español o en inglés.'
+          : 'I can help you with:\n- Scholarships: requirements, amounts and deadlines.\n- Courses: prerequisites and semester.\n- Procedures: steps, documents and dates.\n- Certifications, internships and jobs.\n- Upcoming events and important dates.\n- Recommendations based on your profile.\n\nAsk in Spanish or English.',
       )
       break
     case 'profile-help': {
@@ -207,7 +241,7 @@ export function renderReply(facts: FactSheet, profile: AssistantProfile | undefi
           ? 'No estoy seguro de haber entendido tu pregunta. Puedes preguntarme, por ejemplo:'
           : "I'm not sure I understood your question. You could ask me, for example:",
       )
-      lines.push(...suggestionsFor('unknown', facts.language).map((s) => `• ${s}`))
+      lines.push(...suggestionsFor('unknown', facts.language).map((s) => `- ${s}`))
       lines.push(RESOURCE[facts.language])
       break
     default: {
@@ -236,5 +270,5 @@ export function renderReply(facts: FactSheet, profile: AssistantProfile | undefi
     }
   }
 
-  return { content: lines.join('\n'), suggestions: suggestionsFor(facts.intent, facts.language), sources: sourcesFor(facts) }
+  return { content: lines.join('\n\n'), suggestions: suggestionsFor(facts.intent, facts.language), sources: sourcesFor(facts) }
 }

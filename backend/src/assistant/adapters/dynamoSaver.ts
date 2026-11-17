@@ -136,7 +136,8 @@ export class DynamoDBSaver extends BaseCheckpointSaver {
       const response = await this.client.send(
         new GetCommand({ TableName: this.tableName, Key: { PK: checkpointPk(threadId), SK: checkpointSk(ns, checkpointId) }, ConsistentRead: true }),
       )
-      return response.Item ? this.toTuple(response.Item as CheckpointItem, threadId) : undefined
+      const item = response.Item as CheckpointItem | undefined
+      return item && (item.ttl === undefined || item.ttl > Date.now() / 1000) ? this.toTuple(item, threadId) : undefined
     }
 
     // Último checkpoint: consulta descendente por SK dentro del namespace.
@@ -151,7 +152,7 @@ export class DynamoDBSaver extends BaseCheckpointSaver {
       }),
     )
     const item = response.Items?.[0] as CheckpointItem | undefined
-    return item ? this.toTuple(item, threadId) : undefined
+    return item && (item.ttl === undefined || item.ttl > Date.now() / 1000) ? this.toTuple(item, threadId) : undefined
   }
 
   async *list(config: RunnableConfig, options?: CheckpointListOptions): AsyncGenerator<CheckpointTuple> {
@@ -169,6 +170,7 @@ export class DynamoDBSaver extends BaseCheckpointSaver {
 
     let remaining = limit
     for (const item of items) {
+      if (item.ttl !== undefined && item.ttl <= Date.now() / 1000) continue
       if (beforeId && item.id >= beforeId) continue
       if (filter) {
         const metadata = (await this.serde.loadsTyped(item.metadata_type, item.metadata)) as Record<string, unknown>

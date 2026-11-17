@@ -12,7 +12,8 @@
     "user": "tsx --env-file-if-exists=.env cli.ts user",
     "status": "tsx --env-file-if-exists=.env cli.ts status",
     "destroy": "tsx --env-file-if-exists=.env cli.ts destroy",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "personas": "tsx --env-file-if-exists=.env cli.ts personas"
   },
   "dependencies": {
     "@aws-sdk/client-bedrock": "^3.1170.0",

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <title>EBC Compass</title>
+  <rect width="32" height="32" rx="7" fill="#0B1B2B"/>
+  <circle cx="16" cy="16" r="12" fill="none" stroke="#FFFFFF" stroke-opacity=".35" stroke-width="1.5"/>
+  <g transform="rotate(45 16 16)">
+    <path d="M16 3.5 21.5 16h-11Z" fill="#F7AC14"/>
+    <path d="M16 28.5 21.5 16h-11Z" fill="#14A3AF"/>
+  </g>
+  <circle cx="16" cy="16" r="1.8" fill="#FFFFFF"/>
+</svg>

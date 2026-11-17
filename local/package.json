@@ -11,6 +11,7 @@
     "bridge": "tsx --env-file=.env bedrock-bridge/server.ts",
     "spike": "bash scripts/spike-emulator.sh",
     "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test bedrock-bridge/*.test.ts",
     "kb:upload": "tsx --env-file=.env kb/cli.ts upload",
     "kb:status": "tsx --env-file=.env kb/cli.ts status",
     "kb:query": "tsx --env-file=.env kb/cli.ts query",
@@ -20,8 +21,10 @@
     "kb:reset": "tsx --env-file=.env kb/cli.ts reset"
   },
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.1170.0",
     "@aws-sdk/client-dynamodb": "^3.1170.0",
     "@aws-sdk/client-s3": "^3.1170.0",
+    "@smithy/core": "^3.41.0",
     "openai": "latest"
   },
   "devDependencies": {

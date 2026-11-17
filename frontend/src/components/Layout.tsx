@@ -1,5 +1,11 @@
-import { NavLink } from 'react-router-dom'
+import { getToken, signOut, authConfigured } from '../services/authService'
+import { tokenClaims } from '../services/session'
+import { NavLink, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { usePageTitle } from '../utils/pageTitle'
+import { AssistantDockProvider } from './assistant/AssistantDock'
+
+const titles: Record<string, string> = { '/': 'Inicio', '/catalogo': 'Oportunidades', '/calendario': 'Calendario', '/asistente': 'Compass', '/perfil': 'Mi perfil', '/acceso': 'Iniciar sesión' }
 
 function NavIcon({ type }: { type: 'home' | 'opportunities' | 'calendar' | 'chat' }) {
   const paths = {
@@ -11,26 +17,45 @@ function NavIcon({ type }: { type: 'home' | 'opportunities' | 'calendar' | 'chat
   return <svg aria-hidden="true" className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8"><path d={paths[type]} /></svg>
 }
 
+function initialsOf(name: string) {
+  return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]!.toUpperCase()).join('') || 'E'
+}
+
 export function Layout({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation()
+  usePageTitle(titles[pathname] ?? '')
+  const token = getToken()
+  const signedOut = authConfigured && !token
+  const claims = tokenClaims(token)
+  const fullName = String(claims?.name ?? claims?.email ?? 'Estudiante')
+  const dockEnabled = !signedOut && pathname !== '/asistente' && pathname !== '/acceso'
   return (
-    <>
+    <AssistantDockProvider enabled={dockEnabled}>
+      <a className="skip-link" href="#contenido">Saltar al contenido</a>
       <header className="site-header">
-        <NavLink className="brand" to="/"><img src="/ebc-logo.svg" alt="EBC - La Escuela de Negocios de México" /><span>Compass</span></NavLink>
-        <nav aria-label="Navegación principal">
+        <NavLink className="brand" to="/"><img src="/ebc-compass-mark.svg" alt="" width="40" height="40" /><span className="brand-word">EBC <em>Compass</em></span></NavLink>
+        {!signedOut && <nav aria-label="Navegación principal">
           <NavLink className="nav-link" to="/"><NavIcon type="home" />Inicio</NavLink>
           <NavLink className="nav-link" to="/catalogo"><NavIcon type="opportunities" />Oportunidades</NavLink>
           <NavLink className="nav-link" to="/calendario"><NavIcon type="calendar" />Calendario</NavLink>
           <NavLink className="nav-link" to="/asistente"><NavIcon type="chat" />Conversar</NavLink>
-        </nav>
+        </nav>}
+        {authConfigured && token && <div className="session-menu">
+          <NavLink className="profile-link" to="/perfil" aria-label={`Mi perfil, ${fullName}`} title="Mi perfil">
+            <span className="avatar" aria-hidden="true">{initialsOf(fullName)}</span>
+            <span className="profile-name" aria-hidden="true">{fullName.split(/\s+/)[0]}</span>
+          </NavLink>
+          <button type="button" className="signout-link" onClick={() => { signOut(); window.location.assign('/acceso') }}>Cerrar sesión</button>
+        </div>}
       </header>
-      {children}
-      <nav className="mobile-nav" aria-label="Navegación móvil">
+      <div id="contenido" tabIndex={-1}>{children}</div>
+      {!signedOut && <nav className="mobile-nav" aria-label="Navegación móvil">
         <NavLink className="mobile-nav-link" to="/"><NavIcon type="home" /><span>Inicio</span></NavLink>
         <NavLink className="mobile-nav-link" to="/catalogo"><NavIcon type="opportunities" /><span>Oportunidades</span></NavLink>
         <NavLink className="mobile-nav-link" to="/calendario"><NavIcon type="calendar" /><span>Calendario</span></NavLink>
         <NavLink className="mobile-nav-link" to="/asistente"><NavIcon type="chat" /><span>Conversar</span></NavLink>
-      </nav>
-      <footer>Escuela Bancaria y Comercial · EBC Compass</footer>
-    </>
+      </nav>}
+      <footer>EBC Compass, un proyecto para estudiantes de la Escuela Bancaria y Comercial.</footer>
+    </AssistantDockProvider>
   )
 }

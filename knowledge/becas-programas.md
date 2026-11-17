@@ -1,40 +1,23 @@
 ---
 id: becas-programas
-title: Programas de beca EBC (contenido simulado)
+title: Becas BEA y Respaldo Económico: guía demo
 topic: scholarships
 language: es
 simulated: true
 ---
-# Programas de beca EBC
+# Becas BEA y Respaldo Económico: guía demo
 
-> Contenido simulado para la demo de EBC Compass. No es información institucional real.
+> Demo con fechas ficticias. No es una convocatoria ni una garantía de apoyo.
 
-## Beca Fundación EBC
+## Beca de Excelencia Académica (BEA)
+EBC publica esta beca como apoyo al desempeño académico. La decisión corresponde al Comité de Becas durante el proceso de admisión; consulta los requisitos de la convocatoria vigente. En esta demo no se establece un promedio mínimo.
+Fecha ilustrativa para licenciatura: 15/12/2026. Para ejecutivas: 16/12/2026. Para posgrado: 18/12/2026.
 
-- **Para quién:** estudiantes de todas las carreras (Banca, Finanzas, Mercadotecnia y Administración de Empresas).
-- **Requisitos:** promedio mínimo de 8.5, estar inscrito entre 3.º y 8.º semestre y no tener adeudos.
-- **Apoyo:** cubre el 30% de la colegiatura del siguiente periodo.
-- **Documentos:** carta de motivación (máximo una cuartilla), historial académico y comprobante de inscripción.
-- **Fecha límite:** 15/12/2026.
+## Beca de Respaldo Económico (BRE)
+EBC publica este apoyo sujeto a evaluación económica. La información pública menciona descuentos entre 10% y 40%; el porcentaje individual no está garantizado.
+Fechas ilustrativas: 30/11/2026 para licenciatura y 17/12/2026 para ejecutivas.
 
-## Beca Santander Excelencia
-
-- **Para quién:** estudiantes de Finanzas y Banca.
-- **Requisitos:** promedio mínimo de 9.0 y estar en 4.º semestre o superior.
-- **Apoyo:** $25,000 MXN aplicados a la colegiatura del siguiente periodo.
-- **Documentos:** carta de recomendación de un docente, historial académico y carta de motivación.
-- **Fecha límite:** 30/11/2026.
-
-## Reglas generales
-
-- Solo se puede recibir una beca institucional por periodo.
-- El resultado se publica 10 días hábiles después del cierre de la convocatoria.
-- Para postularte, completa el trámite "Solicitud de beca" (consulta el documento *Cómo solicitar una beca*).
-
-## Beca al mérito académico
-
-- **Para quién:** estudiantes de todas las carreras con desempeño sobresaliente.
-- **Requisitos:** promedio mínimo de 9.5 y no tener adeudos.
-- **Apoyo:** reconocimiento institucional y 20% de descuento en la colegiatura del siguiente periodo.
-- **Documentos:** historial académico y carta de motivación.
-- **Fecha límite:** 10/12/2026.
+## Orientación
+Los estudiantes inscritos deben confirmar si existe una convocatoria aplicable a su situación; aparecer en la demo no implica elegibilidad.
+Fuente de nombres y orientación general: https://www.ebc.mx/becas/
+Todas las fechas anteriores son inventadas para probar Compass.

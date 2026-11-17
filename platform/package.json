@@ -11,12 +11,12 @@
     "deploy": "sst deploy --stage dev",
     "remove": "sst remove --stage dev",
     "typecheck": "tsc --noEmit",
-    "test": "node --test src/functions/*.test.mjs"
+    "test": "node --test src/functions/*.test.mjs tests/*.test.mjs"
   },
   "devDependencies": {
     "@types/node": "^22.19.0",
     "prettier": "^3.9.10",
-    "sst": "3.18.1",
+    "sst": "4.17.2",
     "typescript": "~5.9.3"
   }
 }

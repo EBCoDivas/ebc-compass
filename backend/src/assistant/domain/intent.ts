@@ -44,7 +44,7 @@ export function classifyIntent(normalized: string, context: ClassifyContext): Cl
     }
   }
 
-  // Las entidades reconocidas orientan el tema ("FIN-301" -> curso; "Beca Santander" -> beca).
+  // Las entidades reconocidas orientan el tema ("FIN-301" -> curso; "Beca BEA" -> beca).
   if (context.hasCourseCode) add('course-info', 3)
   for (const type of context.entityTypes) {
     if (type === 'course') add('course-info', 2)

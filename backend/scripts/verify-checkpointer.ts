@@ -69,6 +69,12 @@ const leftovers = await client.send(new QueryCommand({ TableName: tableName, Key
 const writesLeft = await client.send(new QueryCommand({ TableName: tableName, KeyConditionExpression: 'PK = :pk', ExpressionAttributeValues: { ':pk': `WRITES_${thread}##${c2.id}` } }))
 check((leftovers.Count ?? 0) === 0 && (writesLeft.Count ?? 0) === 0, 'deleteThread elimina también las escrituras pendientes')
 check((await saver.getTuple({ configurable: { thread_id: studentThread, checkpoint_ns: '' } })) === undefined, 'la conversación del asistente también se borra')
+// El registro completo tiene vida independiente del checkpoint: limpiar también el fixture de F5c.
+const [archiveOwner, archiveId] = studentThread.split('#')
+if (first.conversations) {
+  await first.conversations.remove(archiveOwner, archiveId, async () => {})
+  await first.conversations.store.remove(archiveOwner, ['CONV#' + archiveId])
+}
 
 console.log(failures === 0 ? '\nDynamoDBSaver verificado.' : `\n${failures} verificación(es) fallaron.`)
 process.exit(failures === 0 ? 0 : 1)
