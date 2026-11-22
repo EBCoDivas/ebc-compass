@@ -129,6 +129,13 @@ const ready = await Promise.all([
   waitForUrl('http://localhost:5173', 60_000),
   mode === 'llm' ? waitForUrl('http://127.0.0.1:8787/health', 60_000) : Promise.resolve(true),
 ])
+// 7. Base de conocimiento: el emulador la pierde al reiniciarse. Se vuelve a cargar en S3 Vectors (embeddings en caché).
+if (mode === 'llm' && ready[2] && localEnv.KNOWLEDGE_STORE !== 'openai') {
+  console.log('▶ Cargando la base de conocimiento en S3 Vectors')
+  const indexed = spawnSync('npm', ['--prefix', 'local', 'run', '-s', 'kb:index'], { cwd: root, stdio: 'inherit', env: base })
+  if (indexed.status !== 0) console.warn('⚠ No se cargó la base de conocimiento: Compass responderá con la búsqueda por palabras. Reintenta con: npm run kb:index')
+}
+
 if (ready.every(Boolean)) {
   console.log('\n✔ Todo listo')
   console.log('  Frontend:  http://localhost:5173')

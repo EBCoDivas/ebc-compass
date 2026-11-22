@@ -57,7 +57,7 @@ El código del backend **no cambia**: en local las llamadas de AWS se desvían a
 | Pieza | Local (`npm run dev`) | Lab (`lab:deploy`) |
 |---|---|---|
 | LLM del asistente | Puente → OpenAI (`gpt-6-luna`) | **Bedrock Converse** (modelo detectado) |
-| Conocimiento | Puente → Vector Store de OpenAI | **Bedrock Knowledge Base** sobre **S3 Vectors** (`Retrieve`) |
+| Conocimiento | Puente → S3 Vectors del emulador (embeddings de OpenAI con el contrato de Titan v2) | **Bedrock Knowledge Base** sobre **S3 Vectors** (`Retrieve`) |
 | Conversaciones | DynamoDB del AWS Emulator | **DynamoDB** real |
 | Backend | Express en `localhost:3000` | La misma app en **Lambda** (`serverless-http`) |
 | Identidad del estudiante | `sub` del JWT de Cognito del emulador, verificado por el backend | El **`sub` del token de Cognito** (verificado por API Gateway); el `studentId` que envíe el cliente se ignora, así nadie lee conversaciones ajenas |

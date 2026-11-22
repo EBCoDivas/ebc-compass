@@ -14,7 +14,7 @@
 ## Qué tener presente
 
 - Las recomendaciones se calculan con reglas; los datos académicos y las oportunidades son de demo. Todavía no hay integración con Banner ni Salesforce.
-- En local usamos emulador AWS + puente a OpenAI con el Vector Store compartido. Bedrock y sus guardrails nativos requieren configuración y validación en el lab; los últimos cambios no se han desplegado allí.
+- En local usamos emulador AWS + puente a OpenAI, con la base de conocimiento en S3 Vectors del emulador (igual que la Knowledge Base del lab). Bedrock y sus guardrails nativos requieren configuración y validación en el lab; los últimos cambios no se han desplegado allí.
 - El emulador guarda datos en memoria: detenerlo borra perfiles e historial. Las oportunidades guardadas viven en el navegador.
 
 ## Check-in rápido: correr en local
@@ -27,7 +27,7 @@ git pull --ff-only origin main
 npm run env:create
 ```
 
-En `local/.env`, completa `OPENAI_API_KEY` y el `OPENAI_VECTOR_STORE_ID` compartido del equipo. No hace falta volver a cargar el corpus.
+En `local/.env`, completa `OPENAI_API_KEY`. `npm run dev` carga la base de conocimiento en S3 Vectors del emulador en cada arranque.
 
 ```sh
 npm run setup

@@ -5,18 +5,23 @@ import { openAiPrompt } from './prompt.js'
 // Puente local "Bedrock -> OpenAI".
 //
 // El backend habla solo con el SDK de AWS (Bedrock Runtime y Bedrock Agent Runtime). En local, el emulador de AWS
-// no ejecuta un modelo de lenguaje y su Retrieve devuelve vacío, así que este servidor responde esas dos llamadas
-// con la API de OpenAI. En el lab se quitan los endpoints sobrescritos y el backend usa Bedrock real sin cambios.
+// no ejecuta modelos y su Retrieve devuelve vacío, así que este servidor responde esas llamadas con OpenAI
+// y con S3 Vectors del emulador. En el lab se quitan los endpoints sobrescritos y el backend usa Bedrock real sin cambios.
 //
 //   POST /model/{modelId}/converse            -> Chat Completions de OpenAI
-//   POST /knowledgebases/{kbId}/retrieve      -> búsqueda en el Vector Store de OpenAI
-//   GET  /health[?deep=1]                     -> estado (deep verifica la clave y el modelo contra OpenAI)
+//   POST /model/{titanEmbedId}/invoke         -> Embeddings de OpenAI con el contrato de Titan Text Embeddings v2
+//   POST /knowledgebases/{kbId}/retrieve      -> embedding de la pregunta + QueryVectors en S3 Vectors del emulador
+//                                                (KNOWLEDGE_STORE=openai usa el Vector Store de OpenAI anterior)
+//   GET  /health[?deep=1]                     -> estado (deep verifica la clave, el modelo y la base de conocimiento)
 //
 // Solo escucha en 127.0.0.1. No registra el contenido de los mensajes ni imprime la clave.
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
+import { ListVectorsCommand, QueryVectorsCommand, S3VectorsClient } from '@aws-sdk/client-s3vectors'
 import OpenAI from 'openai'
 import type { ComparisonFilter, CompoundFilter } from 'openai/resources/shared'
+import { DIMENSION, SOURCE_KEY, TEXT_KEY, VECTOR_BUCKET, VECTOR_INDEX, toS3VectorsFilter, type BedrockFilter } from '../kb/vectors.js'
+import { OPENAI_EMBEDDING_MODEL, parseTitanRequest, type TitanEmbeddingRequest } from './embeddings.js'
 
 
 const port = Number(process.env.BRIDGE_PORT ?? 8787)
@@ -24,8 +29,11 @@ const model = process.env.OPENAI_MODEL ?? 'gpt-6-luna'
 const reasoningEffort = process.env.OPENAI_REASONING_EFFORT ?? 'high'
 const apiKey = process.env.OPENAI_API_KEY ?? ''
 const knowledgeBucket = process.env.KNOWLEDGE_BUCKET ?? 'ebc-compass-knowledge-local'
+const knowledgeStore = process.env.KNOWLEDGE_STORE === 'openai' ? 'openai' : 's3vectors'
 
 const openai = apiKey ? new OpenAI({ apiKey, timeout: 120_000, maxRetries: 1 }) : undefined
+let vectors: S3VectorsClient | undefined
+const vectorClient = () => (vectors ??= new S3VectorsClient({}))
 
 // ---------- Tipos mínimos del contrato de Bedrock ----------
 
@@ -34,14 +42,6 @@ interface ConverseRequest {
   system?: { text?: string; cachePoint?: { type: string } }[]
   inferenceConfig?: { maxTokens?: number }
   additionalModelRequestFields?: { reasoning_effort?: string }
-}
-
-type BedrockFilter = {
-  equals?: { key: string; value: unknown }
-  notEquals?: { key: string; value: unknown }
-  in?: { key: string; value: unknown }
-  andAll?: BedrockFilter[]
-  orAll?: BedrockFilter[]
 }
 
 interface RetrieveRequest {
@@ -185,6 +185,24 @@ async function converseStream(modelId: string, body: ConverseRequest, response: 
   } finally { response.off('close', close) }
 }
 
+// ---------- Embeddings ----------
+
+async function embed(texts: string[], dimensions = DIMENSION): Promise<{ vectors: number[][]; tokens: number }> {
+  const result = await requireOpenAI().embeddings.create({ model: OPENAI_EMBEDDING_MODEL, input: texts, dimensions })
+  return { vectors: result.data.sort((a, b) => a.index - b.index).map((item) => item.embedding), tokens: result.usage.prompt_tokens }
+}
+
+async function invokeEmbedding(modelId: string, body: TitanEmbeddingRequest) {
+  let request: ReturnType<typeof parseTitanRequest>
+  try {
+    request = parseTitanRequest(modelId, body)
+  } catch (error) {
+    throw new HttpError(400, 'ValidationException', (error as Error).message)
+  }
+  const { vectors: [embedding], tokens } = await embed([request.text], request.dimensions)
+  return { embedding, inputTextTokenCount: tokens }
+}
+
 // ---------- Retrieve ----------
 
 type OpenAiFilter = ComparisonFilter | CompoundFilter
@@ -205,10 +223,44 @@ function toOpenAiFilter(filter: BedrockFilter | undefined): OpenAiFilter | undef
   throw new HttpError(400, 'ValidationException', 'El filtro de recuperación no está soportado por el puente local.')
 }
 
+/** Como Bedrock Knowledge Bases sobre S3 Vectors: embedding de la pregunta y búsqueda por similitud coseno. */
+async function retrieveFromVectors(query: string, body: RetrieveRequest) {
+  const config = body.retrievalConfiguration?.vectorSearchConfiguration
+  let filter: ReturnType<typeof toS3VectorsFilter>
+  try {
+    filter = toS3VectorsFilter(config?.filter)
+  } catch (error) {
+    throw new HttpError(400, 'ValidationException', (error as Error).message)
+  }
+  const { vectors: [queryVector] } = await embed([query])
+  let found
+  try {
+    found = await vectorClient().send(new QueryVectorsCommand({
+      vectorBucketName: VECTOR_BUCKET, indexName: VECTOR_INDEX, queryVector: { float32: queryVector },
+      topK: config?.numberOfResults ?? 5, returnMetadata: true, returnDistance: true, ...(filter ? { filter } : {}),
+    }))
+  } catch (error) {
+    const name = (error as { name?: string }).name ?? ''
+    if (name.includes('NotFound')) throw new HttpError(404, 'ResourceNotFoundException', 'La base de conocimiento local no está cargada. Ejecuta: npm run kb:index')
+    throw new HttpError(503, 'ServiceUnavailableException', 'No fue posible consultar S3 Vectors en el emulador.')
+  }
+  const retrievalResults = (found.vectors ?? []).map((vector) => {
+    const { [TEXT_KEY]: text, ...metadata } = (vector.metadata ?? {}) as Record<string, unknown>
+    return {
+      content: { type: 'TEXT', text: typeof text === 'string' ? text : '' },
+      location: { type: 'S3', s3Location: { uri: String(metadata[SOURCE_KEY] ?? '') } },
+      score: 1 - (vector.distance ?? 1),
+      metadata: { ...metadata, 'x-amz-bedrock-kb-chunk-id': vector.key },
+    }
+  })
+  return { retrievalResults }
+}
+
 async function retrieve(body: RetrieveRequest) {
-  const client = requireOpenAI()
   const query = body.retrievalQuery?.text?.trim()
   if (!query) throw new HttpError(400, 'ValidationException', 'retrievalQuery.text es obligatorio.')
+  if (knowledgeStore === 's3vectors') return retrieveFromVectors(query, body)
+  const client = requireOpenAI()
 
   const storeId = vectorStoreId()
   if (!storeId) {
@@ -234,6 +286,15 @@ async function retrieve(body: RetrieveRequest) {
 
 // ---------- Health ----------
 
+async function vectorIndexLoaded(): Promise<boolean> {
+  try {
+    const page = await vectorClient().send(new ListVectorsCommand({ vectorBucketName: VECTOR_BUCKET, indexName: VECTOR_INDEX, maxResults: 1 }))
+    return (page.vectors?.length ?? 0) > 0
+  } catch {
+    return false
+  }
+}
+
 async function health(deep: boolean) {
   const base = {
     status: 'ok',
@@ -245,11 +306,17 @@ async function health(deep: boolean) {
     model,
     reasoningEffort,
     apiKeyConfigured: Boolean(apiKey),
-    vectorStoreLoaded: Boolean(vectorStoreId()),
+    knowledgeStore,
+    embeddingModel: OPENAI_EMBEDDING_MODEL,
+    vectorStoreLoaded: knowledgeStore === 'openai' ? Boolean(vectorStoreId()) : await vectorIndexLoaded(),
   }
   if (!deep) return base
   if (!openai) return { ...base, upstream: 'error', detail: 'Falta OPENAI_API_KEY' }
   try {
+    if (knowledgeStore === 's3vectors') {
+      await Promise.all([openai.models.retrieve(model), openai.models.retrieve(OPENAI_EMBEDDING_MODEL)])
+      return { ...base, upstream: 'ok', detail: base.vectorStoreLoaded ? `${VECTOR_BUCKET}/${VECTOR_INDEX}` : 'Ejecuta npm run kb:index' }
+    }
     await openai.models.retrieve(model)
     const id = vectorStoreId()
     if (!id) return { ...base, vectorStoreLoaded: false, upstream: 'ok', detail: 'Configura OPENAI_VECTOR_STORE_ID' }
@@ -271,6 +338,7 @@ const server = createServer(async (request, response) => {
     const converseMatch = url.pathname.match(/^\/model\/([^/]+)\/converse$/)
     const streamMatch = url.pathname.match(/^\/model\/([^/]+)\/converse-stream$/)
     const retrieveMatch = url.pathname.match(/^\/knowledgebases\/([^/]+)\/retrieve$/)
+    const invokeMatch = url.pathname.match(/^\/model\/([^/]+)\/invoke$/)
 
     if (request.method === 'GET' && url.pathname === '/health') {
       send(response, 200, await health(url.searchParams.get('deep') === '1'))
@@ -278,6 +346,8 @@ const server = createServer(async (request, response) => {
       await converseStream(decodeURIComponent(streamMatch[1]), await readJson<ConverseRequest>(request), response)
     } else if (request.method === 'POST' && converseMatch) {
       send(response, 200, await converse(decodeURIComponent(converseMatch[1]), await readJson<ConverseRequest>(request)))
+    } else if (request.method === 'POST' && invokeMatch) {
+      send(response, 200, await invokeEmbedding(decodeURIComponent(invokeMatch[1]), await readJson<TitanEmbeddingRequest>(request)))
     } else if (request.method === 'POST' && retrieveMatch) {
       send(response, 200, await retrieve(await readJson<RetrieveRequest>(request)))
     } else {
@@ -295,4 +365,5 @@ const server = createServer(async (request, response) => {
 server.listen(port, '127.0.0.1', () => {
   console.log(`bedrock-bridge escuchando en http://127.0.0.1:${port}`)
   console.log(`  modelo: ${model} · razonamiento: ${reasoningEffort} · clave de OpenAI: ${apiKey ? 'configurada' : 'FALTA (local/.env)'}`)
+  console.log(`  conocimiento: ${knowledgeStore === 's3vectors' ? `S3 Vectors (${VECTOR_BUCKET}/${VECTOR_INDEX}) · embeddings ${OPENAI_EMBEDDING_MODEL}` : 'Vector Store de OpenAI'}`)
 })

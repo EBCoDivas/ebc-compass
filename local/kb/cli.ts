@@ -1,8 +1,11 @@
-// Gestión del corpus de conocimiento (knowledge/) en el Vector Store de OpenAI y exportación para S3.
+// Gestión del corpus de conocimiento (knowledge/).
 //
-//   npm run kb:upload     valida y sube solo lo que cambió (idempotente)
-//   npm run kb:status     estado del Vector Store
-//   npm run kb:query -- "pregunta" [--lang es|en] [--topic scholarships]
+//   npm run kb:index      carga el corpus en S3 Vectors del emulador, como la ingesta de la Knowledge Base del lab:
+//                         sube los documentos al bucket, los divide, genera embeddings con Titan v2 (a través del
+//                         puente) y escribe los vectores. Lo ejecuta `npm run dev` en cada arranque.
+//   npm run kb:upload     Vector Store de OpenAI (anterior): valida y sube solo lo que cambió (idempotente)
+//   npm run kb:status     estado del Vector Store de OpenAI
+//   npm run kb:query -- "pregunta" [--lang es|en] [--topic scholarships]   (usa el Retrieve del puente)
 //   npm run kb:verify     preguntas doradas (5 ES + 5 EN): el documento esperado debe salir en el top 3
 //   npm run kb:export     genera archivos + .metadata.json listos para S3 / Bedrock Knowledge Base
 //   npm run kb:sync-s3    sube ese export al bucket S3 del emulador (ensayo del flujo de producción)
@@ -17,6 +20,10 @@ import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import { fileURLToPath } from 'node:url'
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
+import { DeleteVectorsCommand, ListVectorsCommand, PutVectorsCommand, S3VectorsClient } from '@aws-sdk/client-s3vectors'
+import { NodeHttpHandler } from '@smithy/node-http-handler'
+import { chunkDocument, DIMENSION, EMBEDDING_MODEL_ID, ensureVectorIndex, SOURCE_KEY, TEXT_KEY, VECTOR_BUCKET, VECTOR_INDEX } from './vectors.js'
 import OpenAI, { toFile } from 'openai'
 import type { ComparisonFilter, CompoundFilter } from 'openai/resources/shared'
 
@@ -26,6 +33,7 @@ const knowledgeDir = join(repoRoot, 'knowledge')
 const stateDir = join(here, '..', '.state')
 const stateFile = join(stateDir, 'knowledge.json')
 const exportDir = join(stateDir, 'knowledge-s3')
+const embeddingCacheFile = join(stateDir, 'embeddings.json')
 
 const storeName = process.env.OPENAI_VECTOR_STORE_NAME ?? 'ebc-compass-knowledge'
 const bucket = process.env.KNOWLEDGE_BUCKET ?? 'ebc-compass-knowledge-local'
@@ -230,10 +238,28 @@ function buildFilter(language?: string, topic?: string): ComparisonFilter | Comp
   return filters.length === 1 ? filters[0] : { type: 'and', filters }
 }
 
-async function search(openai: OpenAI, storeId: string, query: string, options: { language?: string; topic?: string; limit?: number }) {
+const useVectors = process.env.KNOWLEDGE_STORE !== 'openai'
+interface Hit { filename: string; score: number; text: string }
+
+/** Busca igual que el backend: con el Retrieve del puente (S3 Vectors) o en el Vector Store de OpenAI. */
+async function search(query: string, options: { language?: string; topic?: string; limit?: number }): Promise<Hit[]> {
+  const limit = options.limit ?? 5
+  if (useVectors) {
+    const filters = [options.language && { equals: { key: 'language', value: options.language } }, options.topic && { equals: { key: 'topic', value: options.topic } }].filter(Boolean)
+    const filter = filters.length === 0 ? undefined : filters.length === 1 ? filters[0] : { andAll: filters }
+    const response = await fetch(`http://127.0.0.1:${process.env.BRIDGE_PORT ?? 8787}/knowledgebases/local-kb/retrieve`, {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ retrievalQuery: { text: query }, retrievalConfiguration: { vectorSearchConfiguration: { numberOfResults: limit, ...(filter ? { filter } : {}) } } }),
+    }).catch(() => { throw new Error('El puente no responde. Ejecuta npm run dev (o npm run bridge).') })
+    const body = await response.json() as { message?: string; retrievalResults?: { content: { text: string }; location: { s3Location: { uri: string } }; score: number }[] }
+    if (!response.ok) throw new Error(body.message ?? `El puente respondió ${response.status}`)
+    return (body.retrievalResults ?? []).map((r) => ({ filename: r.location.s3Location.uri.split('/').pop() ?? '', score: r.score, text: r.content.text }))
+  }
+  const storeId = readState().vectorStoreId
+  if (!storeId) throw new Error('Sin Vector Store. Configura OPENAI_VECTOR_STORE_ID en local/.env')
   const filters = buildFilter(options.language, options.topic)
-  const page = await openai.vectorStores.search(storeId, { query, max_num_results: options.limit ?? 5, ...(filters ? { filters } : {}) })
-  return page.data
+  const page = await client().vectorStores.search(storeId, { query, max_num_results: limit, ...(filters ? { filters } : {}) })
+  return page.data.map((r) => ({ filename: r.filename, score: r.score, text: r.content.map((part) => part.text).join(' ') }))
 }
 
 function flag(name: string): string | undefined {
@@ -242,38 +268,26 @@ function flag(name: string): string | undefined {
 }
 
 async function query(): Promise<void> {
-  const openai = client()
-  const state = readState()
   const text = process.argv.slice(3).filter((arg, i, all) => !arg.startsWith('--') && !all[i - 1]?.startsWith('--')).join(' ').trim()
   if (!text) {
     console.error('Uso: npm run kb:query -- "pregunta" [--lang es|en] [--topic scholarships]')
     process.exit(2)
   }
-  if (!state.vectorStoreId) {
-    console.error('✖ Sin Vector Store. Configura OPENAI_VECTOR_STORE_ID en local/.env')
-    process.exit(1)
-  }
-  const results = await search(openai, state.vectorStoreId, text, { language: flag('lang'), topic: flag('topic') })
+  const results = await search(text, { language: flag('lang'), topic: flag('topic') })
   if (results.length === 0) console.log('(sin resultados)')
   for (const result of results) {
-    const snippet = result.content.map((part) => part.text).join(' ').replace(/\s+/g, ' ').slice(0, 160)
+    const snippet = result.text.replace(/\s+/g, ' ').slice(0, 160)
     console.log(`${result.score.toFixed(2)}  ${result.filename}\n      ${snippet}…`)
   }
 }
 
 async function verify(): Promise<void> {
-  const openai = client()
-  const state = readState()
-  if (!state.vectorStoreId) {
-    console.error('✖ Sin Vector Store. Configura OPENAI_VECTOR_STORE_ID en local/.env')
-    process.exit(1)
-  }
   const golden = JSON.parse(readFileSync(join(knowledgeDir, 'golden-questions.json'), 'utf8')) as {
     questions: { question: string; language: string; expect: string }[]
   }
   let passed = 0
   for (const item of golden.questions) {
-    const results = await search(openai, state.vectorStoreId, item.question, { language: item.language, limit: 3 })
+    const results = await search(item.question, { language: item.language, limit: 3 })
     const files = [...new Set(results.map((r) => r.filename))]
     const ok = files.includes(item.expect)
     if (ok) passed += 1
@@ -318,6 +332,72 @@ async function syncS3(): Promise<void> {
   console.log(`✔ ${count} objetos subidos a s3://${bucket} (emulador)`)
 }
 
+// ---------- S3 Vectors (emulador) ----------
+
+type EmbeddingCache = Record<string, number[]>
+
+function readEmbeddingCache(): EmbeddingCache {
+  try {
+    return JSON.parse(readFileSync(embeddingCacheFile, 'utf8')) as EmbeddingCache
+  } catch {
+    return {}
+  }
+}
+
+/** Embedding con el contrato de Bedrock (Titan v2). En local lo atiende el puente; se guarda en caché por texto. */
+async function embedWithBedrock(text: string, cache: EmbeddingCache, bedrock: BedrockRuntimeClient): Promise<number[]> {
+  const key = createHash('sha256').update(`${EMBEDDING_MODEL_ID}:${DIMENSION}:${process.env.OPENAI_EMBEDDING_MODEL ?? ''}:${text}`).digest('hex')
+  if (cache[key]) return cache[key]
+  const response = await bedrock.send(new InvokeModelCommand({
+    modelId: EMBEDDING_MODEL_ID, contentType: 'application/json', accept: 'application/json',
+    body: JSON.stringify({ inputText: text, dimensions: DIMENSION, normalize: true }),
+  }))
+  const { embedding } = JSON.parse(new TextDecoder().decode(response.body)) as { embedding?: number[] }
+  if (!embedding || embedding.length !== DIMENSION) throw new Error(`El embedding no tiene ${DIMENSION} dimensiones.`)
+  cache[key] = embedding
+  return embedding
+}
+
+async function index(): Promise<void> {
+  await syncS3()
+  const docs = loadCorpus()
+  const vectors = new S3VectorsClient({})
+  await ensureVectorIndex(vectors)
+  const bridge = process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME ?? `http://127.0.0.1:${process.env.BRIDGE_PORT ?? 8787}`
+  const bedrock = new BedrockRuntimeClient({ endpoint: bridge, requestHandler: new NodeHttpHandler(), maxAttempts: 2 })
+  const cache = readEmbeddingCache()
+  const before = Object.keys(cache).length
+  const keys = new Set<string>()
+  for (const doc of docs) {
+    const chunks = chunkDocument(doc.path, doc.title, doc.body)
+    const batch = []
+    for (const chunk of chunks) {
+      keys.add(chunk.key)
+      batch.push({
+        key: chunk.key,
+        data: { float32: await embedWithBedrock(chunk.text, cache, bedrock) },
+        metadata: { id: doc.id, title: doc.title, topic: doc.topic, language: doc.language, simulated: true, [SOURCE_KEY]: `s3://${bucket}/${doc.path}`, [TEXT_KEY]: chunk.text },
+      })
+    }
+    await vectors.send(new PutVectorsCommand({ vectorBucketName: VECTOR_BUCKET, indexName: VECTOR_INDEX, vectors: batch }))
+  }
+  mkdirSync(stateDir, { recursive: true })
+  writeFileSync(embeddingCacheFile, JSON.stringify(cache))
+
+  // Quita fragmentos que ya no existen (documento borrado o con menos secciones).
+  const stale: string[] = []
+  let nextToken: string | undefined
+  do {
+    const page = await vectors.send(new ListVectorsCommand({ vectorBucketName: VECTOR_BUCKET, indexName: VECTOR_INDEX, nextToken }))
+    for (const vector of page.vectors ?? []) if (vector.key && !keys.has(vector.key)) stale.push(vector.key)
+    nextToken = page.nextToken
+  } while (nextToken)
+  if (stale.length > 0) await vectors.send(new DeleteVectorsCommand({ vectorBucketName: VECTOR_BUCKET, indexName: VECTOR_INDEX, keys: stale }))
+
+  const created = Object.keys(cache).length - before
+  console.log(`✔ ${keys.size} fragmentos de ${docs.length} documentos en S3 Vectors (${VECTOR_BUCKET}/${VECTOR_INDEX}) · ${created} embeddings nuevos, ${keys.size - created} desde caché${stale.length ? ` · ${stale.length} eliminados` : ''}`)
+}
+
 async function reset(): Promise<void> {
   const state = readState()
   if (!state.vectorStoreId) {
@@ -338,7 +418,7 @@ async function reset(): Promise<void> {
   console.log('✔ Vector Store eliminado. Los archivos globales se conservan. El equipo debe actualizar su ID.')
 }
 
-const commands: Record<string, () => Promise<void>> = { upload, status, query, verify, export: exportCommand, 'sync-s3': syncS3, reset }
+const commands: Record<string, () => Promise<void>> = { index, upload, status, query, verify, export: exportCommand, 'sync-s3': syncS3, reset }
 const command = commands[process.argv[2] ?? '']
 if (!command) {
   console.error(`Uso: kb <${Object.keys(commands).join('|')}>`)

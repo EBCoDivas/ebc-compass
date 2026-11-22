@@ -69,7 +69,7 @@ run('npm', ['--prefix', 'local', 'run', '-s', 'provision'], { env: { ...cleanBas
 
 const apiKey = loadEnvFile(join(root, 'local', '.env')).OPENAI_API_KEY
 if (!apiKey) warnings.push('Falta OPENAI_API_KEY en local/.env. Sin ella el asistente solo puede usar el modo "rules" (npm run dev:rules).')
-console.log('\nConfigura OPENAI_VECTOR_STORE_ID en local/.env para consultar el store compartido. kb:upload es una tarea de mantenimiento.')
+console.log('\nLa base de conocimiento se carga en S3 Vectors del emulador al ejecutar npm run dev (o con npm run kb:index).')
 
 console.log('\n✔ Entorno listo.')
 for (const warning of warnings) console.log(`⚠ ${warning}`)

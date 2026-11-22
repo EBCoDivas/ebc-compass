@@ -19,6 +19,7 @@
     "verify:prompt-cache": "npm --prefix backend run verify:prompt-cache",
     "verify:conversations": "npm --prefix backend run verify:conversations",
     "verify:checkpointer": "npm --prefix backend run verify:checkpointer",
+    "kb:index": "npm --prefix local run kb:index",
     "kb:upload": "npm --prefix local run kb:upload",
     "kb:status": "npm --prefix local run kb:status",
     "kb:query": "npm --prefix local run kb:query --",

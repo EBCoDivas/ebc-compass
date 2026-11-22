@@ -14,9 +14,9 @@ const bad = (text, fix) => {
   console.log(`✖ ${text}${fix ? `\n    → ${fix}` : ''}`)
 }
 
-async function probe(url) {
+async function probe(url, timeout) {
   try {
-    const { status, body } = await httpGet(url)
+    const { status, body } = await httpGet(url, { timeout })
     return { status, body }
   } catch {
     return undefined
@@ -54,18 +54,20 @@ if (await emulatorHealthy()) {
     encoding: 'utf8',
     env: { ...cleanBaseEnv(), ...emulatorEnv() },
   })
-  result.status === 0 ? ok('Tablas DynamoDB, cuentas Cognito y bucket S3 verificados') : bad('Faltan recursos en el emulador', 'npm run provision')
+  result.status === 0 ? ok('Tablas DynamoDB, cuentas Cognito, bucket S3 e índice de vectores verificados') : bad('Faltan recursos en el emulador', 'npm run provision')
 } else {
   bad('AWS Emulator no responde', 'npm run emulator:up   (o npm run dev)')
 }
 
 // Puente, backend, frontend (avisos: pueden no estar corriendo)
-const bridge = await probe('http://127.0.0.1:8787/health?deep=1')
+// La verificación profunda consulta OpenAI, que puede tardar varios segundos.
+const bridge = await probe('http://127.0.0.1:8787/health?deep=1', 20_000)
 if (!bridge) warn('El puente no está corriendo', 'npm run dev')
 else {
   const info = JSON.parse(bridge.body)
   info.upstream === 'ok' ? ok(`Puente y OpenAI responden (modelo ${info.model})`) : bad(`El puente no puede usar OpenAI: ${info.detail ?? 'error'}`, 'Revisa OPENAI_API_KEY y OPENAI_MODEL en local/.env')
-  info.vectorStoreLoaded ? ok('Base de conocimiento cargada') : warn('Base de conocimiento sin cargar', 'Configura OPENAI_VECTOR_STORE_ID y ejecuta npm run kb:status')
+  const store = info.knowledgeStore === 'openai' ? 'Vector Store de OpenAI' : 'S3 Vectors del emulador'
+  info.vectorStoreLoaded ? ok(`Base de conocimiento cargada (${store})`) : warn(`Base de conocimiento sin cargar (${store})`, info.knowledgeStore === 'openai' ? 'Configura OPENAI_VECTOR_STORE_ID y ejecuta npm run kb:status' : 'npm run kb:index')
 }
 ;(await probe('http://127.0.0.1:3000/api/health')) ? ok('Backend responde (:3000)') : warn('El backend no está corriendo', 'npm run dev')
 ;(await probe('http://localhost:5173')) ? ok('Frontend responde (:5173)') : warn('El frontend no está corriendo', 'npm run dev')

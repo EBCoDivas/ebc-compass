@@ -15,6 +15,8 @@ import { loadEnvFile, root } from '../../scripts/lib/emulator-env.mjs'
 import { join } from 'node:path'
 import { provisionAuth } from './provision-auth.js'
 import { CreateBucketCommand, HeadBucketCommand, S3Client } from '@aws-sdk/client-s3'
+import { S3VectorsClient } from '@aws-sdk/client-s3vectors'
+import { ensureVectorIndex, VECTOR_BUCKET, VECTOR_INDEX } from '../kb/vectors.js'
 
 const check = process.argv.includes('--check')
 const tableName = process.env.CONVERSATIONS_TABLE ?? 'ConversationCheckpoints'
@@ -116,6 +118,11 @@ async function ensureBucket(): Promise<void> {
   }
 }
 
+async function ensureVectors(): Promise<void> {
+  const existed = await ensureVectorIndex(new S3VectorsClient({}), check)
+  console.log(existed ? `• Índice de vectores ${VECTOR_BUCKET}/${VECTOR_INDEX}: ya existe` : `✔ Índice de vectores ${VECTOR_BUCKET}/${VECTOR_INDEX}: creado`)
+}
+
 async function ensureHistoryTable(): Promise<void> {
   const name = process.env.CONVERSATION_HISTORY_TABLE ?? loadEnvFile(join(root, 'backend', '.env')).CONVERSATION_HISTORY_TABLE ?? 'Conversations'
   try {
@@ -140,6 +147,7 @@ try {
   await ensureProfilesTable()
   await ensureHistoryTable()
   await ensureBucket()
+  await ensureVectors()
   await provisionAuth(check)
   console.log(check ? '✔ Recursos verificados' : '✔ Aprovisionamiento completo')
 } catch (error) {

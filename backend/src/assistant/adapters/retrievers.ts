@@ -1,5 +1,5 @@
 // Recuperación de conocimiento. Un solo adaptador para local y producción (Retrieve de Bedrock Knowledge Bases):
-// local lo atiende el puente con el Vector Store de OpenAI; en el lab, la Knowledge Base real sobre S3 Vectors.
+// local lo atiende el puente sobre S3 Vectors del emulador; en el lab, la Knowledge Base real sobre S3 Vectors.
 // KeywordRetriever es el respaldo (sin red) y FallbackRetriever los encadena.
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs'

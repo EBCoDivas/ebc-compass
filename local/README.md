@@ -1,6 +1,6 @@
 # Entorno local de EBC Compass
 
-Demo local del asistente: **AWS Emulator** (DynamoDB, S3…) + un **puente** que responde las llamadas de Bedrock con la API de OpenAI. Es independiente de `platform/` (SST); los nombres de recursos y variables son los mismos que en el lab de AWS, así que el backend no cambia entre local y lab.
+Demo local del asistente: **AWS Emulator** (DynamoDB, S3, S3 Vectors…) + un **puente** que responde las llamadas de Bedrock con la API de OpenAI. Es independiente de `platform/` (SST); los nombres de recursos y variables son los mismos que en el lab de AWS, así que el backend no cambia entre local y lab.
 
 > Los comandos se ejecutan desde la **raíz del repo**. Plan completo: [docs/plans/plan-asistente-integracion.md](../docs/plans/plan-asistente-integracion.md). Hallazgos del emulador: [docs/local-emulator-findings.md](../docs/local-emulator-findings.md).
 
@@ -15,7 +15,7 @@ Demo local del asistente: **AWS Emulator** (DynamoDB, S3…) + un **puente** que
 
 ```sh
 npm run env:create   # crea backend/.env, frontend/.env y local/.env desde sus .env.example
-# Abre local/.env y completa OPENAI_API_KEY y OPENAI_VECTOR_STORE_ID (tú la colocas; git la ignora)
+# Abre local/.env y completa OPENAI_API_KEY (tú la colocas; git la ignora)
 npm run setup        # instala dependencias, levanta el emulador y aprovisiona recursos
 npm run dev          # emulador + puente + backend + frontend
 ```
@@ -28,14 +28,16 @@ Sin clave de OpenAI: `npm run dev:rules` (el asistente responde solo con reglas 
 |---|---|
 | `npm run env:create` | Crea los `.env` que falten (nunca sobrescribe) y lista qué debes llenar |
 | `npm run setup` | Verifica prerrequisitos (ofrece instalar Docker y el AWS CLI si faltan; Node solo alerta), instala dependencias (`--skip-platform` omite SST), levanta el emulador y aprovisiona |
-| `npm run dev` / `dev:rules` | Levanta todo, con o sin LLM. Ctrl+C detiene backend, frontend y puente |
+| `npm run dev` / `dev:rules` | Levanta todo, con o sin LLM. Con LLM también carga la base de conocimiento en S3 Vectors. Ctrl+C detiene backend, frontend y puente |
 | `npm run stop` | Detiene el emulador (**borra sus datos: viven en memoria**) |
 | `npm run doctor` | Diagnóstico ✔/✖ con la acción correctiva |
-| `npm run provision` | Crea la tabla `ConversationCheckpoints` y el bucket en el emulador (idempotente) |
+| `npm run provision` | Crea las tablas, el bucket, el índice de S3 Vectors y las cuentas de Cognito en el emulador (idempotente) |
 | `npm run emulator:up` / `emulator:down` | Controla solo el emulador |
 | `npm run bridge` | Levanta solo el puente |
-| `npm run kb:upload` / `kb:status` / `kb:verify` | Carga el corpus de `knowledge/` al Vector Store de OpenAI (idempotente), muestra su estado y comprueba la recuperación (10 preguntas ES + 5 EN) |
+| `npm run kb:index` | Carga el corpus de `knowledge/` en S3 Vectors del emulador (requiere el puente en marcha). `npm run dev` lo ejecuta solo |
+| `npm run kb:verify` | Comprueba la recuperación con las preguntas de oro, a través del `Retrieve` del puente |
 | `npm run kb:query -- "texto" [--lang es]` | Consulta de prueba: pasajes recuperados con puntaje |
+| `npm run kb:upload` / `kb:status` | Vector Store de OpenAI (camino anterior, solo con `KNOWLEDGE_STORE=openai`) |
 | `npm run kb:export` / `kb:sync-s3` | Genera archivos + `.metadata.json` para S3/Bedrock KB y los sube al bucket del emulador |
 | `npm run kb:reset` | Borra el Vector Store y sus archivos de OpenAI |
 | `npm run verify:checkpointer` | Verifica el checkpointer de DynamoDB contra el emulador (12 comprobaciones) |
@@ -53,13 +55,13 @@ Cada paquete conserva sus propios scripts en su directorio (`backend/`, `fronten
 
 ```
 Backend ─ AWS_ENDPOINT_URL ──────────────────────► AWS Emulator (Docker, https://127.0.0.1:9297)
-        ─ AWS_ENDPOINT_URL_BEDROCK_RUNTIME ──┐
+        ─ AWS_ENDPOINT_URL_BEDROCK_RUNTIME ──┐                                     ▲ S3 Vectors
         ─ AWS_ENDPOINT_URL_BEDROCK_AGENT_RUNTIME ─► bedrock-bridge (http://127.0.0.1:8787) ─► API de OpenAI
 ```
 
 - El emulador genera **credenciales y certificado nuevos en cada arranque** en `~/.aws/emulator/9297/`. `npm run dev` y `npm run provision` los inyectan; los `.env` no llevan credenciales.
 - **Todo vive en memoria** y se borra al detener el emulador. `dev` y `setup` re-aprovisionan en cada arranque.
-- El puente implementa `Converse` (modelo de chat) y `Retrieve` (base de conocimiento) con la forma de la API de Bedrock. No registra el contenido de los mensajes ni la clave.
+- El puente implementa `Converse` (modelo de chat), `InvokeModel` de Titan Text Embeddings v2 (responde con embeddings de OpenAI) y `Retrieve` (base de conocimiento) con la forma de la API de Bedrock. No registra el contenido de los mensajes ni la clave.
 - Solo escuchan en `127.0.0.1`.
 
 ## Problemas frecuentes
@@ -74,9 +76,24 @@ Backend ─ AWS_ENDPOINT_URL ─────────────────
 | Puerto 3000/5173 ocupado | Cierra el proceso que lo usa (`lsof -i :3000`) y vuelve a ejecutar |
 
 
-## Vector store compartido
+## Base de conocimiento en S3 Vectors
 
-Cada integrante debe copiar el mismo `OPENAI_VECTOR_STORE_ID` en `local/.env`
+Local reproduce la Knowledge Base del lab: documentos en S3, un índice de S3 Vectors (`float32`, 1,024 dimensiones,
+coseno) y embeddings de Titan Text Embeddings v2. Como el emulador no ejecuta modelos, el puente responde Titan con
+`OPENAI_EMBEDDING_MODEL` (por omisión `text-embedding-3-small` a 1,024 dimensiones).
+
+- `npm run dev` ejecuta `kb:index` en cada arranque: el emulador pierde los vectores al reiniciarse.
+- `kb:index` sube los documentos al bucket, los divide por secciones, pide los embeddings **a través del puente con
+  el contrato de Bedrock** y escribe los vectores. Guarda los embeddings en `local/.state/embeddings.json`, así que
+  solo se paga la primera vez o cuando cambia un documento.
+- El `Retrieve` del puente genera el embedding de la pregunta y consulta S3 Vectors con los mismos filtros de
+  metadatos (`language`, `topic`) que usa el backend. El backend no cambia entre local y lab.
+- Los vectores locales no se llevan al lab: allá la Knowledge Base hace su propia ingesta con Titan.
+- Para volver al Vector Store de OpenAI, define `KNOWLEDGE_STORE=openai` en `local/.env` (sección siguiente).
+
+## Vector store compartido (anterior)
+
+Solo aplica con `KNOWLEDGE_STORE=openai`. Cada integrante debe copiar el mismo `OPENAI_VECTOR_STORE_ID` en `local/.env`
 y usar una clave con acceso al proyecto de OpenAI correspondiente.
 No se necesita cargar el corpus para consultar un store ya preparado.
 
