@@ -10,6 +10,12 @@ import type { StudentRouteItem } from '../../../shared/contracts/studentPlanning
 export type CalendarLayer = 'route' | 'saved' | 'more'
 export interface CalendarEntry { item: Opportunity; date: string; layer: CalendarLayer; required?: boolean }
 
+/** Lo guardado que el alumno decidió agregar: lo que ya está en su ruta no cuenta, porque ya está en el calendario. */
+export function savedOutsideRoute(saved: string[], routeIds: string[]): string[] {
+  const inRoute = new Set(routeIds)
+  return saved.filter(id => !inRoute.has(id))
+}
+
 export function calendarEntries(catalog: Opportunity[], route: Pick<StudentRouteItem, 'opportunityId' | 'dueDate' | 'required'>[], saved: string[]): CalendarEntry[] {
   const byId = new Map(catalog.map(item => [item.id, item]))
   const entries: CalendarEntry[] = []

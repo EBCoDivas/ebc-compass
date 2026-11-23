@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import type { Opportunity } from '../services/opportunityService'
-import { calendarEntries } from './calendarEntries'
+import { calendarEntries, savedOutsideRoute } from './calendarEntries'
 
 const item = (id: string, deadline?: string) => ({ id, title: id, deadline, type: 'course', description: '', career: [] }) as unknown as Opportunity
+
+describe('lo guardado frente a la ruta', () => {
+  it('lo que ya está en la ruta, obligatorio u opcional, no cuenta como guardado', () => {
+    expect(savedOutsideRoute(['beca', 'curso', 'pago'], ['beca', 'pago'])).toEqual(['curso'])
+    expect(savedOutsideRoute([], ['beca'])).toEqual([])
+    expect(savedOutsideRoute(['curso'], [])).toEqual(['curso'])
+  })
+})
 
 describe('capas del calendario', () => {
   const catalog = [item('payment', '2026-12-01'), item('course', '2026-12-04'), item('event', '2026-11-30'), item('no-date')]
