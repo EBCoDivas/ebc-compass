@@ -38,6 +38,7 @@ const vectorClient = () => (vectors ??= new S3VectorsClient({}))
 // ---------- Tipos mínimos del contrato de Bedrock ----------
 
 interface ConverseRequest {
+  toolConfig?: { tools?: { toolSpec?: { name: string; description?: string; inputSchema: { json: Record<string, unknown> } } }[] }
   messages?: { role: 'user' | 'assistant'; content?: { text?: string; cachePoint?: { type: string } }[] }[]
   system?: { text?: string; cachePoint?: { type: string } }[]
   inferenceConfig?: { maxTokens?: number }
@@ -124,20 +125,32 @@ async function converse(modelId: string, body: ConverseRequest) {
 
   const effort = (body.additionalModelRequestFields?.reasoning_effort ?? reasoningEffort) as OpenAI.ReasoningEffort
   const started = Date.now()
+  const tools = body.toolConfig?.tools?.flatMap(({ toolSpec }) => toolSpec ? [{
+    type: 'function' as const, function: { name: toolSpec.name, description: toolSpec.description, parameters: toolSpec.inputSchema.json },
+  }] : [])
 
   const completion = await client.chat.completions.create({
     model,
     ...prompt,
     reasoning_effort: effort,
+    ...(tools?.length ? { tools, tool_choice: 'auto' as const } : {}),
     ...(body.inferenceConfig?.maxTokens ? { max_completion_tokens: body.inferenceConfig.maxTokens } : {}),
   })
 
   const choice = completion.choices[0]
-  const stopReason = choice?.finish_reason === 'length' ? 'max_tokens' : choice?.finish_reason === 'content_filter' ? 'content_filtered' : 'end_turn'
+  const toolCalls = (choice?.message?.tool_calls ?? []).flatMap(call => {
+    if (call.type !== 'function') return []
+    try {
+      const input: unknown = JSON.parse(call.function.arguments)
+      if (!input || typeof input !== 'object' || Array.isArray(input)) return []
+      return [{ toolUse: { toolUseId: call.id, name: call.function.name, input } }]
+    } catch { return [] }
+  })
+  const stopReason = toolCalls.length ? 'tool_use' : choice?.finish_reason === 'length' ? 'max_tokens' : choice?.finish_reason === 'content_filter' ? 'content_filtered' : 'end_turn'
   void modelId // El identificador de Bedrock es lógico: siempre se usa OPENAI_MODEL.
 
   return {
-    output: { message: { role: 'assistant', content: [{ text: choice?.message?.content ?? '' }] } },
+    output: { message: { role: 'assistant', content: toolCalls.length ? toolCalls : [{ text: choice?.message?.content ?? '' }] } },
     stopReason,
     ...(completion.usage ? { usage: bedrockUsage(completion.usage) } : {}),
     metrics: { latencyMs: Date.now() - started },

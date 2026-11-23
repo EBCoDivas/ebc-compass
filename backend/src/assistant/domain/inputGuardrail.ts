@@ -1,6 +1,7 @@
 import { personalContextQuery } from './personalContext.js'
 import type { InputBlock, Language } from '../types.js'
 import { classifyIntent } from './intent.js'
+import { isStudentFollowUp, studentTopic } from './studentIntent.js'
 import { normalize } from './text.js'
 
 /** Reglas conservadoras y reproducibles para la demo; no reemplazan la evaluación nativa del lab. */
@@ -19,7 +20,7 @@ export function assessInput(text: string): InputBlock | undefined {
   const relevant = /\b(correo institucional|institutional email|student email|servicios escolares|school services|school hours|opportunities|oportunidad|oportunidades|account|cuenta|ebc|bea|fit|campus|modalidad|modalidades|programa|programas|academico|academicos|academic|degree|reinscribir|reinscripcion|reinscribirme|enroll|re-enroll|servicio social|social service|titulacion|cedula|finanzas|banca|fintech|contabilidad|derecho|marketing|emprendimiento|practicas|internship|certificacion)\b/.test(value)
   const conversational = /^(hola|hello|hi|gracias|thanks|thank you|adios|bye|si|yes|no|ok|vale|y la fecha|y los requisitos|cuando|when|por que|why|cuanto cuesta|how much|puedes explicarlo|tell me more|continua|continue|y en ingles|y en espanol|in english|in spanish|donde|where)(?: por favor| please)?$/.test(value)
   const preference = /^(yo )?(mi meta|mi objetivo|mis intereses|me interesa|solo puedo|mi disponibilidad|prefiero|mi idioma|recuerda que|no olvides que|my goal|my interests|i am interested|i am available|i can only|i prefer|remember that)\b/.test(value)
-  if (intent === 'unknown' && !personalContextQuery(text) && !relevant && !conversational && !preference) return block('out-of-scope')
+  if (intent === 'unknown' && !personalContextQuery(text) && !studentTopic(text) && !isStudentFollowUp(text) && !relevant && !conversational && !preference) return block('out-of-scope')
   return undefined
 }
 

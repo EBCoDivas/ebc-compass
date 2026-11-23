@@ -30,22 +30,20 @@ test('academic eligibility, missing documents and the last day to apply are dist
   assert.equal(evaluateScholarship(undefined, original, today), undefined)
 })
 
-test('the payment quote uses the catalog, a stable reference per student and the campus date', () => {
+test('the payment quote uses the catalog, a stable reference per student and the campus date, independent of the scholarship', () => {
   const beforeMidnight = planningDate(new Date('2026-12-02T05:59:59Z'))
   const afterMidnight = planningDate(new Date('2026-12-02T06:00:00Z'))
-  const draft = quoteEnrollmentPayment(subject, payment, beforeMidnight, false)!
+  const draft = quoteEnrollmentPayment(subject, payment, beforeMidnight)!
   assert.equal(draft.amount, 4800)
   assert.equal(draft.currency, 'MXN')
   assert.equal(draft.dueDate, '2026-12-01')
   assert.match(draft.reference, /^EBC-[A-F0-9]{16}$/)
-  assert.equal(draft.canGenerate, true)
-  assert.equal(quoteEnrollmentPayment(subject, payment, afterMidnight, false)?.canGenerate, false)
-  const afterScholarship = quoteEnrollmentPayment(subject, payment, today, true)!
-  assert.equal(afterScholarship.reference, draft.reference)
-  assert.equal(afterScholarship.amount, draft.amount)
-  assert.equal(afterScholarship.scholarshipInReview, true)
-  assert.notEqual(quoteEnrollmentPayment('other-student', payment, today, true)?.reference, draft.reference)
-  assert.notEqual(quoteEnrollmentPayment(subject, { ...payment, deadline: '2027-06-01' }, today, true)?.reference, draft.reference)
+  assert.equal(draft.canPay, true)
+  assert.equal('scholarshipInReview' in draft, false)
+  assert.equal(quoteEnrollmentPayment(subject, payment, afterMidnight)?.canPay, false)
+  assert.equal(quoteEnrollmentPayment(subject, payment, today)!.reference, draft.reference)
+  assert.notEqual(quoteEnrollmentPayment('other-student', payment, today)?.reference, draft.reference)
+  assert.notEqual(quoteEnrollmentPayment(subject, { ...payment, deadline: '2027-06-01' }, today)?.reference, draft.reference)
 })
 
 test('social service projections use the current pace, registered hours and the actual number of days left', () => {
@@ -112,7 +110,7 @@ test('the service achievement uses recorded hours and unlocks at half of the req
 test('achievements from an earlier stage stay visible, in order and without duplicates', () => {
   const journey = buildStudentJourney(anaClosing, subject, noActions, today)
   assert.deepEqual(journey.achievements, [
-    { id: 'payment-slip-generated', earned: true, earnedAt: '2023-07-24' },
+    { id: 'enrollment-paid', earned: true, earnedAt: '2023-07-24' },
     { id: 'scholarship-requested', earned: true, earnedAt: '2023-08-04' },
     { id: 'social-service-progress', earned: true },
   ])

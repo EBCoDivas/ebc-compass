@@ -8,6 +8,7 @@ export const studentActionKeys = {
 export interface ConfirmedStudentActions {
   scholarshipInReview: boolean
   enrollmentPaymentGenerated: boolean
+  enrollmentPaid?: boolean
 }
 
 export async function readConfirmedStudentActions(store: Pick<DocumentStore, 'get'>, subject: string): Promise<ConfirmedStudentActions> {

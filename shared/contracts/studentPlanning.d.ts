@@ -51,7 +51,7 @@ export interface StudentRouteItem extends StudentPending {
 }
 
 export interface StudentAchievement {
-  id: 'scholarship-requested' | 'payment-slip-generated' | 'social-service-progress'
+  id: 'scholarship-requested' | 'enrollment-paid' | 'payment-slip-generated' | 'social-service-progress'
   earned: boolean
   /** Solo en logros de una etapa anterior: fecha en que se desbloqueó (historial). */
   earnedAt?: string
@@ -71,8 +71,7 @@ export interface EnrollmentPaymentDetails {
 }
 
 export interface EnrollmentPaymentQuote extends EnrollmentPaymentDetails {
-  canGenerate: boolean
-  scholarshipInReview: boolean
+  canPay: boolean
 }
 
 export interface SocialServiceProjection {

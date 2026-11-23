@@ -20,9 +20,17 @@ const copy: Record<StudentAchievement['id'], Copy> = {
     title: 'Ficha de pago generada',
     earned: 'Ya tienes tu ficha para pagar la inscripción.',
     past: 'Generaste tu ficha de inscripción de nuevo ingreso.',
-    locked: 'Genera la ficha para pagar tu inscripción.',
-    question: '¿Cómo genero mi ficha de pago de inscripción?',
-    action: 'Generar con Compass',
+    locked: 'Revisa el importe de tu inscripción.',
+    question: '¿Cuánto cuesta mi inscripción?',
+    action: 'Consultar con Compass',
+  },
+  'enrollment-paid': {
+    title: 'Inscripción pagada',
+    earned: 'Tu pago de inscripción quedó registrado.',
+    past: 'Pagaste tu inscripción al comenzar la carrera.',
+    locked: 'Paga tu inscripción desde el chat.',
+    question: 'Quiero pagar mi inscripción',
+    action: 'Pagar con Compass',
   },
   'social-service-progress': {
     title: 'Servicio social avanzado',
@@ -53,6 +61,7 @@ const icons: Record<StudentAchievement['id'], string[]> = {
   'scholarship-requested': ['M2.5 9 12 4.5 21.5 9 12 13.5Z', 'M6.5 11.2v4.3c0 1.3 2.5 2.9 5.5 2.9s5.5-1.6 5.5-2.9v-4.3', 'M21.5 9v5.2'],
   // Recibo con borde cortado: la ficha de pago.
   'payment-slip-generated': ['M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21Z', 'M9 8h6', 'M9 11.5h6', 'M9 15h3.5'],
+  'enrollment-paid': ['M6 3h12v18l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4L6 21Z', 'm9 11 2 2 4-4'],
   // Mano que sostiene un corazón: el servicio a la comunidad.
   'social-service-progress': [
     'M12 12.4c-1.6-1.3-3.7-2.8-3.7-4.7 0-1.3 1-2.3 2.2-2.3.7 0 1.2.3 1.5.8.3-.5.8-.8 1.5-.8 1.2 0 2.2 1 2.2 2.3 0 1.9-2.1 3.4-3.7 4.7Z',
@@ -136,6 +145,7 @@ export function StudentAchievements({ planning }: { planning: StudentJourney }) 
                   <p className="achievement-hours">{socialService.completedHours} de {socialService.requiredHours} horas · {hours} %</p>
                 )}
                 {!item.earned && <AskAssistantLink className="achievement-action" question={text.question}>{text.action}</AskAssistantLink>}
+                {item.earned && !item.earnedAt && item.id === 'enrollment-paid' && <AskAssistantLink className="achievement-action" question="Muéstrame el comprobante del pago de mi inscripción">Ver comprobante</AskAssistantLink>}
               </div>
             </li>
           )

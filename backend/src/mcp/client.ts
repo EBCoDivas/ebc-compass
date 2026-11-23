@@ -96,7 +96,7 @@ async function readRpcEvent(response: Response, id: number): Promise<RpcReply | 
   } finally { await reader.cancel().catch(() => {}) }
 }
 
-export function gatewayMcpClient(student: StudentContext, endpoint: string, emulator?: string) {
+export function gatewayMcpClient(student: StudentContext, endpoint: string, emulator?: string, signal?: AbortSignal) {
   const url = new URL(endpoint)
   const loopback = emulator && /^https:\/\/127\.0\.0\.1:9297\/?$/.test(emulator)
   const gatewayRegion = /^[a-z0-9-]+\.gateway\.bedrock-agentcore\.([a-z0-9-]+)\.amazonaws\.com$/.exec(url.hostname)?.[1]
@@ -107,7 +107,7 @@ export function gatewayMcpClient(student: StudentContext, endpoint: string, emul
     connection.pathname = url.pathname
     connection.search = url.search
   }
-  const send = signedRequest('bedrock-agentcore', gatewayRegion)
+  const send = signedRequest('bedrock-agentcore', gatewayRegion, signal)
   let session: string | null = null
   let version = MCP_VERSION
   return client(async message => {
@@ -133,14 +133,14 @@ export function gatewayMcpClient(student: StudentContext, endpoint: string, emul
   })
 }
 
-export function createStudentMcpClient(student: StudentContext, local?: ToolHandler) {
+export function createStudentMcpClient(student: StudentContext, local?: ToolHandler, signal?: AbortSignal) {
   if (process.env.MCP_TRANSPORT === 'local') {
     if (process.env.APP_STAGE || !/^https:\/\/127\.0\.0\.1:9297\/?$/.test(process.env.AWS_ENDPOINT_URL ?? '')) throw new Error('MCP_LOCAL_ONLY')
     return localMcpClient(student, local ?? createToolRuntime())
   }
   const url = process.env.MCP_GATEWAY_URL
   if (!url) throw new Error('Falta MCP_GATEWAY_URL.')
-  return gatewayMcpClient(student, url, process.env.APP_STAGE ? undefined : process.env.AWS_ENDPOINT_URL)
+  return gatewayMcpClient(student, url, process.env.APP_STAGE ? undefined : process.env.AWS_ENDPOINT_URL, signal)
 }
 
 /** El navegador y los argumentos de herramientas nunca fijan el contexto. */

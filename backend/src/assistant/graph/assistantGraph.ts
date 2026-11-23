@@ -1,6 +1,4 @@
-// Grafo de LangGraph del asistente. Es determinista (no un agente que elige herramientas):
-//   validate -> detectLanguage -> checkInput -> analyze -> gatherFacts -> [retrieve] -> composeTemplate -> [generate -> guardrail] -> finalize
-// `retrieve` solo corre si hay un KnowledgeRetriever; `generate` y `guardrail` solo si hay un LlmProvider (modo llm).
+// El grafo verifica la entrada antes de seleccionar herramientas MCP. La generación usa los resultados como fuentes.
 // composeTemplate calcula los resultados por reglas; ante un fallo solo se ofrecen bajo una acción explícita.
 // Cada nodo es un envoltorio fino de funciones puras de domain/. El estado se guarda por conversación
 // (thread_id) en el checkpointer; en la Fase 4 será DynamoDB y mientras tanto basta MemorySaver.
@@ -22,6 +20,7 @@ import { renderReply } from '../domain/templates.js'
 import { normalize } from '../domain/text.js'
 import { beginTurn, persistTurn, registerConversations, releaseTurn } from '../conversations/lifecycle.js'
 import type { ConversationRepository, MemoryFact, Turn } from '../conversations/repository.js'
+import type { buildStudentTools, ToolTurn } from '../studentTools.js'
 import type {
   InputBlock,
   InputGuardrail,
@@ -47,6 +46,7 @@ const MAX_HISTORY = 20
 const TOPIC_INTENTS: Intent[] = ['scholarship-info', 'course-info', 'procedure-info', 'event-info', 'career-info', 'recommendation-request', 'deadline-query']
 
 export interface AssistantDeps extends FactDeps {
+  studentTools?: ReturnType<typeof buildStudentTools>
   inputGuardrail?: InputGuardrail
   retriever?: KnowledgeRetriever
   /** Si se omite, el asistente responde solo con plantillas (modo rules). */
@@ -98,6 +98,7 @@ const State = Annotation.Root({
   entities: Annotation<Entities | undefined>({ reducer: replace<Entities | undefined>(), default: () => undefined }),
   facts: Annotation<FactSheet | undefined>({ reducer: replace<FactSheet | undefined>(), default: () => undefined }),
   passages: Annotation<Passage[]>({ reducer: replace<Passage[]>(), default: () => [] }),
+  toolKnowledge: Annotation<boolean>({ reducer: replace<boolean>(), default: () => false }),
   prompt: Annotation<Prompt | undefined>({ reducer: replace<Prompt | undefined>(), default: () => undefined }),
   usage: Annotation<LlmUsage | undefined>({ reducer: replace<LlmUsage | undefined>(), default: () => undefined }),
   draft: Annotation<string | undefined>({ reducer: replace<string | undefined>(), default: () => undefined }),
@@ -135,6 +136,7 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
         entities: undefined,
         facts: undefined,
         passages: [],
+        toolKnowledge: false,
         prompt: undefined,
         draft: undefined,
         usage: undefined,
@@ -190,6 +192,24 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
         today: now(),
       }),
     }))
+    .addNode('studentTools', async (state: AssistantState, config: LangGraphRunnableConfig) => {
+      const turn = config.context?.toolTurn as ToolTurn | undefined
+      if (!deps.studentTools || !turn) return {}
+      const facts = state.facts!
+      const generationSignal = config.context?.generationSignal as AbortSignal | undefined
+      const timeout = AbortSignal.timeout(generationSignal ? 18_000 : 6500)
+      const signal = generationSignal ? AbortSignal.any([generationSignal, timeout]) : timeout
+      const result = await deps.studentTools({ turn, question: state.userMessage, language: state.language, intent: facts.intent,
+        focus: facts.focus, relevantIds: state.entities?.opportunityIds ?? [], now: now(),
+        previousQuestion: (state.history ?? state.messages).filter(message => message.role === 'student' && !message.inputBlock).at(-1)?.content,
+        provider: deps.models?.[state.model] ?? deps.llm, signal, plannerTimeoutMs: generationSignal ? 10_000 : 3000 })
+      if (!result) return {}
+      if (result.reply) getWriter(config)?.({ event: 'meta', language: state.language, intent: result.reply.intent, sources: result.reply.sources })
+      const items = result.items
+      const notes = items?.length ? facts.notes.filter(note => note !== 'no-results') : facts.notes
+      return { ...result, ...(items ? { facts: { ...facts, items, notes } } : {}),
+        ...(result.passages ? { toolKnowledge: true } : {}) }
+    })
     .addNode('retrieve', async (state: AssistantState) => {
       try {
         const passages = await deps.retriever!.retrieve(state.userMessage, { language: state.language, topics: TOPICS_BY_INTENT[state.facts!.intent], limit: 3 })
@@ -200,14 +220,18 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
     })
     .addNode('composeTemplate', (state: AssistantState, config: LangGraphRunnableConfig) => {
       const rendered = renderReply(state.facts!, state.profile)
-      getWriter(config)?.({ event: 'meta', language: state.language, intent: state.facts!.intent, sources: rendered.sources })
+      const documents: Source[] = state.passages.map(passage => ({ kind: 'document', id: passage.source, title: passage.title ?? passage.source }))
+      const usePassages = state.toolKnowledge && documents.length > 0 && !(deps.models?.[state.model] ?? deps.llm)
+        && (state.facts!.items.length === 0 || state.facts!.intent === 'unknown')
+      const sources = usePassages ? documents.slice(0, 1) : rendered.sources
+      getWriter(config)?.({ event: 'meta', language: state.language, intent: state.facts!.intent, sources })
       return {
         reply: {
-          content: rendered.content,
+          content: usePassages ? state.passages[0].text + (state.language === 'es' ? '\n\nConsulta con Servicios Escolares si necesitas confirmar cómo aplicar esta información a tu caso.' : '\n\nContact Student Services to confirm how this applies to your situation.') : rendered.content,
           language: state.language,
           intent: state.facts!.intent,
           suggestions: rendered.suggestions,
-          sources: rendered.sources,
+          sources,
           degraded: state.degraded,
           generatedBy: 'rules' as const,
         } satisfies DraftReply,
@@ -280,7 +304,8 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
       const stamp = now().toISOString()
       const student: ChatMessage = { id: randomUUID(), role: 'student', content: state.userMessage, language: state.language, intent: reply.intent, createdAt: stamp, ...(state.inputBlock ? { inputBlock: state.inputBlock } : {}) }
       const assistant: ChatMessage = { id: randomUUID(), role: 'assistant', content: reply.content, language: reply.language, intent: reply.intent, createdAt: stamp,
-        ...(state.inputBlock ? { inputBlock: state.inputBlock } : {}), ...(reply.failure ? { failure: reply.failure, catalogFallback: reply.catalogFallback } : {}), ...(state.interrupted ? { interrupted: true } : {}) }
+        ...(state.inputBlock ? { inputBlock: state.inputBlock } : {}), ...(reply.actionProposal ? { actionProposal: reply.actionProposal } : {}),
+        ...(reply.failure ? { failure: reply.failure, catalogFallback: reply.catalogFallback } : {}), ...(state.interrupted ? { interrupted: true } : {}) }
       // Los saludos y la ayuda no cambian el tema; así los seguimientos ("¿y la fecha límite?") siguen funcionando.
       const keepsTopic = TOPIC_INTENTS.includes(reply.intent)
       return {
@@ -299,10 +324,11 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
     .addEdge('personalContext', 'finalize')
     .addEdge('remember', 'finalize')
     .addEdge('analyze', 'gatherFacts')
+    .addEdge('gatherFacts', 'studentTools')
     .addConditionalEdges(
-      'gatherFacts',
-      (state: AssistantState) => (deps.retriever && needsKnowledge(state.facts!.intent) ? 'retrieve' : 'composeTemplate'),
-      { retrieve: 'retrieve', composeTemplate: 'composeTemplate' },
+      'studentTools',
+      (state: AssistantState) => state.reply ? 'finalize' : deps.retriever && !state.toolKnowledge && needsKnowledge(state.facts!.intent) ? 'retrieve' : 'composeTemplate',
+      { retrieve: 'retrieve', composeTemplate: 'composeTemplate', finalize: 'finalize' },
     )
     .addEdge('retrieve', 'composeTemplate')
     .addConditionalEdges(
@@ -346,6 +372,7 @@ function appendSummary(summary: string, intent: Intent): string {
 export type AssistantGraph = ReturnType<typeof buildAssistantGraph>
 
 export interface TurnInput {
+  toolTurn?: ToolTurn
   model?: 'lunna' | 'terra'
   threadId: string
   message: string
@@ -374,7 +401,7 @@ export async function runTurn(graph: AssistantGraph, input: TurnInput): Promise<
   const prepared = await beginTurn(graph, input)
   try {
     if (prepared.replay) return prepared.replay
-    const result = await graph.invoke(graphInput(prepared.input), { configurable: { thread_id: input.threadId } })
+    const result = await graph.invoke(graphInput(prepared.input), { configurable: { thread_id: input.threadId }, context: { toolTurn: input.toolTurn } })
     return await persistTurn(graph, prepared.input, result.messages.at(-2)!, { ...result.final!, model: input.model ?? 'lunna', latencyMs: Math.round(performance.now() - started) })
   } finally { await releaseTurn(graph, input.threadId, prepared.token) }
 }
@@ -391,7 +418,7 @@ export async function runTurnStreaming(graph: AssistantGraph, input: TurnInput, 
   try {
     if (prepared.replay) return prepared.replay
     const stream = await graph.stream(graphInput(prepared.input),
-      { configurable: { thread_id: input.threadId }, context: { generationSignal: signal }, streamMode: ['custom', 'updates'] })
+      { configurable: { thread_id: input.threadId }, context: { generationSignal: signal, toolTurn: input.toolTurn }, streamMode: ['custom', 'updates'] })
     let reply: AssistantReply | undefined
     let student: ChatMessage | undefined
     for await (const [mode, value] of stream) {

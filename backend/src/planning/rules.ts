@@ -28,7 +28,7 @@ export function evaluateScholarship(
 }
 
 export function quoteEnrollmentPayment(
-  subject: string, opportunity: Opportunity | undefined, today: string, scholarshipInReview: boolean,
+  subject: string, opportunity: Opportunity | undefined, today: string,
 ): EnrollmentPaymentQuote | undefined {
   if (!opportunity?.enrollmentFee || !opportunity.deadline) return undefined
 
@@ -39,8 +39,7 @@ export function quoteEnrollmentPayment(
     ...opportunity.enrollmentFee,
     reference: 'EBC-' + reference,
     dueDate: opportunity.deadline,
-    canGenerate: today <= opportunity.deadline,
-    scholarshipInReview,
+    canPay: today <= opportunity.deadline,
   }
 }
 

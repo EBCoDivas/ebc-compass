@@ -123,7 +123,7 @@ export class ConversationRepository {
     const { reply, student } = turn
     const assistant: ArchivedMessage = { id: reply.id, role: 'assistant', content: reply.content, language: reply.language, intent: reply.intent,
       createdAt: reply.createdAt, sources: reply.sources, suggestions: reply.suggestions, usage: reply.usage, mode: reply.generatedBy,
-      model: reply.model, inputBlock: reply.inputBlock, interrupted: reply.interrupted, failure: reply.failure, catalogFallback: reply.catalogFallback, latencyMs: reply.latencyMs, degraded: reply.degraded }
+      model: reply.model, inputBlock: reply.inputBlock, interrupted: reply.interrupted, failure: reply.failure, catalogFallback: reply.catalogFallback, latencyMs: reply.latencyMs, degraded: reply.degraded, actionProposal: reply.actionProposal }
     await this.store.write(owner, [
       { key: metaKey(id), value: value({ ...current, version: current.version + 1,
         title: !current.messageCount && !current.renamed ? student.content.slice(0, 80) : current.title,

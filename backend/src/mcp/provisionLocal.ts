@@ -8,6 +8,7 @@ import { CreateFunctionCommand, GetFunctionCommand, LambdaClient, UpdateFunction
 import { STUDENT_CONTEXT_HEADER, TARGET_NAME, toolList } from './contract.js'
 import { loadEnvFile } from '../../../scripts/lib/emulator-env.mjs'
 import { signedRequest } from './signedRequest.js'
+import { LOCAL_BANNER_ACTIONS_TABLE } from '../banner/actions.js'
 
 const root = fileURLToPath(new URL('../../../', import.meta.url))
 const bannerName = 'ebc-compass-banner-mock'
@@ -152,7 +153,13 @@ export async function provisionStudentMcp(check: boolean) {
   if (transport !== 'gateway' && transport !== 'local') throw new Error('MCP_TRANSPORT debe ser gateway o local.')
   const lambda = new LambdaClient({ endpoint, region, maxAttempts: 2 })
   const role = await gatewayRole(endpoint, check)
-  await ensureLambda(lambda, bannerName, role, 'banner/lambda.ts', check)
+  const emulatorVariables = {
+    AWS_ENDPOINT_URL: endpoint,
+    ...(process.env.AWS_SHARED_CREDENTIALS_FILE ? { AWS_SHARED_CREDENTIALS_FILE: process.env.AWS_SHARED_CREDENTIALS_FILE } : {}),
+    ...(process.env.NODE_EXTRA_CA_CERTS ? { NODE_EXTRA_CA_CERTS: process.env.NODE_EXTRA_CA_CERTS } : {}),
+    AWS_DISABLE_HOST_PREFIX_INJECTION: 'true',
+  }
+  await ensureLambda(lambda, bannerName, role, 'banner/lambda.ts', check, { ...emulatorVariables, BANNER_ACTIONS_TABLE: LOCAL_BANNER_ACTIONS_TABLE })
   if (transport === 'local') {
     if (!check) saveState('local')
     console.log('✔ Banner Lambda y MCP local sin Gateway')
@@ -162,10 +169,7 @@ export async function provisionStudentMcp(check: boolean) {
   if (!check) saveState('gateway')
   try {
     const toolsArn = await ensureLambda(lambda, toolsName, role, 'mcp/lambda.ts', check, {
-      AWS_ENDPOINT_URL: endpoint,
-      ...(process.env.AWS_SHARED_CREDENTIALS_FILE ? { AWS_SHARED_CREDENTIALS_FILE: process.env.AWS_SHARED_CREDENTIALS_FILE } : {}),
-      ...(process.env.NODE_EXTRA_CA_CERTS ? { NODE_EXTRA_CA_CERTS: process.env.NODE_EXTRA_CA_CERTS } : {}),
-      AWS_DISABLE_HOST_PREFIX_INJECTION: 'true',
+      ...emulatorVariables,
       BANNER_FUNCTION_NAME: bannerName,
       CONVERSATION_HISTORY_TABLE: process.env.CONVERSATION_HISTORY_TABLE ?? loadEnvFile(join(root, 'backend', '.env')).CONVERSATION_HISTORY_TABLE ?? 'Conversations',
       MCP_PACKAGED_KNOWLEDGE: 'true',

@@ -23,6 +23,8 @@ test("both Lambda functions package the shared Spanish prompt and enable system 
     assert.equal(args.environment.BEDROCK_INPUT_GUARDRAIL_VERSION, '1');
     assert.ok(args.permissions.some(p => p.actions.includes('bedrock:ApplyGuardrail') && p.resources.includes('guardrail-arn')));
     assert.equal(args.environment.ASSISTANT_PROMPT_CACHE, "system");
+    assert.equal(args.environment.BEDROCK_LUNNA_MODEL_ID, "amazon.nova-lite-v1:0");
+    assert.equal(args.environment.BEDROCK_TERRA_MODEL_ID, "amazon.nova-lite-v1:0");
     assert.equal(args.environment.ASSISTANT_PROMPTS_DIR, "/var/task/prompts");
     assert.equal(args.environment.BANNER_FUNCTION_NAME, "banner");
     assert.equal(args.environment.MCP_TRANSPORT, "gateway");

@@ -29,7 +29,7 @@ const pendingIds = new Set([
 /** Lo que Ana logró en su primer semestre (agosto de 2023): se conserva al llegar a 7.º. */
 const demoAchievementHistory = {
   ana: [
-    { id: 'payment-slip-generated', earnedAt: '2023-07-24' },
+    { id: 'enrollment-paid', earnedAt: '2023-07-24' },
     { id: 'scholarship-requested', earnedAt: '2023-08-04' },
   ],
 } as const

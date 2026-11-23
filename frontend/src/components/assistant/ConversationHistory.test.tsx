@@ -60,3 +60,26 @@ describe('solicitudes bloqueadas', () => {
     expect(html).not.toContain('Reintentar')
   })
 })
+
+describe('confirmación de trámites', () => {
+  it('pide subir la carta de motivos antes de poder enviar la solicitud de beca', () => {
+    const html = render({ id: 'scholarship', role: 'assistant', content: 'Revisa tu solicitud.',
+      actionProposal: { id: 'request', conversationId: 'conversation', kind: 'request-scholarship', requiresMotivationLetter: true, dueDate: '2026-11-26' } })
+    expect(html).toContain('Sube tu carta de motivos')
+    expect(html).toContain('PDF o Word, hasta 1.5 MB')
+    expect(html).toMatch(/<button[^>]*disabled[^>]*>Enviar solicitud<\/button>/)
+  })
+
+  it('muestra el importe y la tarjeta registrada antes de pagar, sin mezclar la beca ni hablar de simulación', () => {
+    const html = render({ id: 'payment', role: 'assistant', content: 'Revisa tu pago.',
+      actionProposal: { id: 'request', conversationId: 'conversation', kind: 'pay-enrollment',
+        payment: { amount: 4800, currency: 'MXN', dueDate: '2026-12-01' },
+        paymentMethod: { brand: 'Visa', last4: '4242', holder: 'ANA LUCÍA TORRES', expires: '08/29' } } })
+    expect(html).toContain('4,800')
+    expect(html).not.toMatch(/beca/i)
+    expect(html).toContain('Tarjeta Visa terminación 4242')
+    expect(html).toContain('Pagar $4,800.00')
+    expect(html).not.toMatch(/simulad/i)
+    expect(html).not.toContain('Comprobante')
+  })
+})

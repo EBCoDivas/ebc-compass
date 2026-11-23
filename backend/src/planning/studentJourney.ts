@@ -2,10 +2,10 @@ import type {
   StudentAchievement, StudentJourney, StudentPending, StudentPlanning, StudentRouteItem, StudentStage,
 } from '../../../shared/contracts/studentPlanning.js'
 import type { ConfirmedStudentActions } from './confirmedActions.js'
+import { enrollmentActionIds } from '../banner/actions.js'
 import { evaluateScholarship, planningDate, projectSocialService, quoteEnrollmentPayment } from './rules.js'
 
-const scholarshipId = 'scholarship-first-entry'
-const paymentId = 'procedure-first-enrollment-payment'
+const { scholarship: scholarshipId, payment: paymentId } = enrollmentActionIds
 const routeLimits: Record<StudentStage | 'general', number> = { entry: 4, middle: 3, closing: 3, general: 1 }
 const requiredIds = new Set([
   'event-induction', paymentId, 'procedure-midterm-review', 'procedure-closing-review',
@@ -27,9 +27,8 @@ function nextStep(
     return 'Revisa los requisitos y prepara tu solicitud.'
   }
   if (item.opportunityId === paymentId && enrollmentPayment) {
-    if (!enrollmentPayment.canGenerate) return 'Consulta con Servicios Escolares cómo continuar tu inscripción.'
-    if (actions.enrollmentPaymentGenerated) return 'Consulta la ficha que generaste y revisa su fecha límite.'
-    return 'Revisa el monto y solicita tu ficha de pago.'
+    if (!enrollmentPayment.canPay) return 'Consulta con Servicios Escolares cómo continuar tu inscripción.'
+    return 'Revisa el importe y prepara el pago de tu inscripción.'
   }
   return description
 }
@@ -38,15 +37,19 @@ export function buildStudentJourney(
   planning: StudentPlanning, subject: string, actions: ConfirmedStudentActions, today = planningDate(),
 ): StudentJourney {
   const catalog = new Map(planning.catalog.map(item => [item.id, item]))
+  const payment = quoteEnrollmentPayment(subject, catalog.get(paymentId), today)
   const calculations: StudentJourney['calculations'] = {
     scholarship: evaluateScholarship(catalog.get(scholarshipId), planning.firstEntry, today),
-    enrollmentPayment: quoteEnrollmentPayment(subject, catalog.get(paymentId), today, actions.scholarshipInReview),
+    enrollmentPayment: payment && { ...payment, canPay: payment.canPay && !actions.enrollmentPaid },
     socialService: planning.socialService && projectSocialService(planning.socialService, today),
   }
   const pending = planning.pending.map(item => {
     if (item.status === 'completed') return item
     if (item.opportunityId === scholarshipId && actions.scholarshipInReview) return { ...item, status: 'in-review' as const }
-    if (item.opportunityId === paymentId && actions.enrollmentPaymentGenerated) return { ...item, status: 'in-progress' as const }
+    if (item.opportunityId === paymentId) {
+      if (actions.enrollmentPaid) return { ...item, status: 'completed' as const }
+      if (actions.enrollmentPaymentGenerated) return { ...item, status: 'in-progress' as const }
+    }
     return item
   })
   const items = pending.flatMap((item): StudentRouteItem[] => {
@@ -69,9 +72,8 @@ export function buildStudentJourney(
   if (calculations.scholarship || actions.scholarshipInReview) {
     add({ id: 'scholarship-requested', earned: actions.scholarshipInReview })
   }
-  if (calculations.enrollmentPayment || actions.enrollmentPaymentGenerated) {
-    add({ id: 'payment-slip-generated', earned: actions.enrollmentPaymentGenerated })
-  }
+  if (actions.enrollmentPaymentGenerated) add({ id: 'payment-slip-generated', earned: true })
+  if (calculations.enrollmentPayment || actions.enrollmentPaid) add({ id: 'enrollment-paid', earned: Boolean(actions.enrollmentPaid) })
   if (planning.socialService) {
     const { completedHours, requiredHours } = planning.socialService
     add({ id: 'social-service-progress', earned: requiredHours > 0 && completedHours * 2 >= requiredHours })

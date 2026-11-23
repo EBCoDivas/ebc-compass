@@ -11,6 +11,15 @@ En **Cuentas de demostración**, elige **Usar esta cuenta**. Compass abrirá Ini
 | Diego Ramírez · 5.º semestre | Prácticas y oportunidades de Mercadotecnia. |
 | Sofía Herrera · 9.º semestre | Fechas cercanas de servicio social y titulación de Derecho. |
 
+## Probar las acciones de Ana (1.er semestre)
+
+Con la cuenta de Ana de 1.er semestre, abre **Conversar** y prueba las dos acciones, que son independientes y se pueden hacer en cualquier orden:
+
+- **Pagar la inscripción:** escribe «Quiero pagar mi inscripción». La tarjeta muestra el importe y la tarjeta registrada (Visa terminación 4242, número de prueba). Selecciona **Pagar** y recibirás el comprobante.
+- **Solicitar la beca:** escribe «Quiero solicitar la beca de primer ingreso». La tarjeta pide la carta de motivos: sube [carta-de-motivos-ana-torres.pdf](demo/carta-de-motivos-ana-torres.pdf) (o la versión [.docx](demo/carta-de-motivos-ana-torres.docx)) y selecciona **Enviar solicitud**.
+
+La carta se valida (PDF o Word, hasta 1.5 MB), pero Banner conserva solo su nombre, tamaño y huella, no el contenido. Cada acción desbloquea su logro en Inicio.
+
 ## Preparación del equipo
 
 - En local, `npm run env:create` (también incluido en `npm run setup`) agrega `JURY_DEMO_ENABLED=true` y genera `JURY_DEMO_PASSWORD` en `local/.env` si faltan. Conserva los valores explícitos. Usa `npm run dev:rules` para ensayar el acceso sin consumir créditos del chat. El aprovisionamiento crea las cuentas de `shared/personas.json` y aplica la contraseña compartida también a las existentes.

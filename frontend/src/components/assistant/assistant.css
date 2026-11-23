@@ -112,6 +112,47 @@
 .chat-sources ul { display: flex; flex-wrap: wrap; gap: .35rem; list-style: none; margin: 0; padding: 0; }
 .chat-sources li { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: .15rem .55rem; }
 .chat-sources li.document { border-style: dashed; }
+.student-action { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--blue); border-radius: 14px; box-shadow: var(--shadow); display: grid; gap: .8rem; margin-top: .6rem; max-width: 26rem; padding: 1rem 1rem 1.05rem; }
+.student-action.is-payment { border-left-color: var(--cyan); }
+.student-action.is-done { border-left-color: var(--lime); }
+.student-action h3, .student-action p, .student-action dl { margin: 0; }
+.student-action header { align-items: center; display: flex; gap: .6rem; }
+.student-action h3 { color: var(--navy); flex: 1; font-size: 1rem; line-height: 1.25; }
+.student-action-icon { align-items: center; background: var(--blue-soft); border-radius: 10px; color: var(--blue); display: inline-flex; flex: none; height: 2.2rem; justify-content: center; width: 2.2rem; }
+.is-payment .student-action-icon { background: var(--cyan-soft); color: var(--cyan-ink); }
+.is-done .student-action-icon { background: var(--lime-soft); color: var(--lime-ink); }
+.student-action-icon svg { height: 1.15rem; width: 1.15rem; }
+.student-action-pill { background: var(--mist); border-radius: 999px; color: var(--ink-soft); font-size: .72rem; font-weight: 700; padding: .2rem .6rem; white-space: nowrap; }
+.student-action-pill.done { background: var(--lime-soft); color: var(--lime-ink); }
+.student-action-amount { align-items: baseline; display: flex; justify-content: space-between; }
+.student-action-amount span { color: var(--ink-soft); font-size: .85rem; }
+.student-action-amount strong { color: var(--navy); font-family: var(--font-display); font-size: 1.7rem; letter-spacing: -.02em; }
+.student-action-amount small { color: var(--ink-soft); font-size: .8rem; font-weight: 600; letter-spacing: 0; }
+.student-action dl { display: grid; gap: .4rem; }
+.student-action dl div { align-items: baseline; display: flex; flex-wrap: wrap; gap: .1rem .8rem; justify-content: space-between; }
+.student-action dt { color: var(--ink-soft); font-size: .85rem; }
+.student-action dd { font-size: .9rem; font-weight: 600; margin: 0; overflow-wrap: anywhere; text-align: right; }
+.student-action-note { background: var(--gold-soft); border-radius: 8px; color: var(--gold-ink); font-size: .85rem; padding: .45rem .6rem; }
+.student-action .button { justify-self: stretch; min-height: 2.75rem; }
+.student-action-status { align-items: center; background: var(--lime-soft); border-radius: 10px; color: var(--lime-ink); display: flex; gap: .55rem; padding: .6rem .75rem; }
+.student-action-status svg { flex: none; height: 1.2rem; width: 1.2rem; }
+.student-action-status a { color: inherit; font-weight: 700; text-decoration: underline; white-space: nowrap; }
+.pay-card { background: linear-gradient(135deg, var(--navy), var(--blue)); border-radius: 12px; color: #fff; display: grid; gap: .9rem; padding: .85rem 1rem; position: relative; }
+.pay-card::after { background: rgba(255,255,255,.12); border-radius: 50%; content: ''; height: 5.5rem; position: absolute; right: -1.2rem; top: -1.6rem; width: 5.5rem; }
+.pay-card-brand { font-size: .95rem; font-style: italic; font-weight: 800; letter-spacing: .02em; }
+.pay-card-number { font-family: var(--font-display); font-size: 1.1rem; letter-spacing: .08em; }
+.pay-card-meta { display: flex; flex-wrap: wrap; font-size: .72rem; gap: .2rem 1rem; justify-content: space-between; opacity: .9; }
+.letter-upload { display: grid; gap: .4rem; }
+.letter-drop, .letter-file { align-items: center; border-radius: 10px; display: flex; gap: .65rem; padding: .75rem .85rem; }
+.letter-drop { background: var(--mist); border: 1.5px dashed var(--blue); color: var(--navy); cursor: pointer; }
+.letter-drop:hover, .letter-drop.dragging, .letter-upload input:focus-visible + .letter-drop { background: var(--blue-soft); border-style: solid; }
+.letter-upload input:focus-visible + .letter-drop { outline: 3px solid var(--blue); outline-offset: 2px; }
+.letter-file { background: var(--lime-soft); border: 1px solid var(--lime); }
+.letter-drop svg, .letter-file svg { flex: none; height: 1.5rem; width: 1.5rem; }
+.letter-drop span, .letter-file span { display: grid; flex: 1; min-width: 0; }
+.letter-drop small, .letter-file small { color: var(--ink-soft); font-size: .78rem; }
+.letter-file strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.letter-file button { background: none; border: 0; color: var(--blue); cursor: pointer; font-weight: 700; min-height: 2.25rem; padding: 0 .4rem; text-decoration: underline; }
 
 .chat-followups { display: flex; flex-wrap: wrap; gap: .5rem; margin: .4rem 0 0; }
 .chat-followups button { background: #fff; border: 1px solid var(--blue); border-radius: 22px; color: var(--blue); cursor: pointer; font-size: .85rem; min-height: 2.75rem; padding: .45rem .9rem; text-align: left; }

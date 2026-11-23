@@ -14,6 +14,10 @@ import { ConversationRepository } from './conversations/repository.js'
 import { DynamoDocumentStore, MemoryDocumentStore } from './conversations/store.js'
 import { DynamoProfileRepository } from '../profiles/repository.js'
 import type { AssistantProfile, LlmProvider, InputGuardrail } from './types.js'
+import { createStudentMcpClient } from '../mcp/client.js'
+import type { BannerClient } from '../banner/reader.js'
+import { StudentActions } from '../planning/studentActions.js'
+import { buildStudentTools, type StudentMcp } from './studentTools.js'
 
 export { runTurnStreaming, runTurn, InvalidInputError, MAX_MESSAGE_LENGTH, type AssistantGraph } from './graph/assistantGraph.js'
 export { suggestionsFor } from './domain/templates.js'
@@ -21,6 +25,7 @@ export type * from './types.js'
 export { ensureConversation, maintainConversation } from './conversations/lifecycle.js'
 
 export interface AssistantRuntime {
+  actions?: StudentActions
   memoryLlm?: LlmProvider
   inputGuardrail?: InputGuardrail
   config: AssistantConfig
@@ -31,7 +36,8 @@ export interface AssistantRuntime {
 }
 
 export function createAssistant(options: { config?: AssistantConfig; checkpointer?: BaseCheckpointSaver; conversations?: ConversationRepository;
-  profileReader?: (owner: string) => Promise<AssistantProfile | undefined> } = {}): AssistantRuntime & { conversations: ConversationRepository } {
+  profileReader?: (owner: string) => Promise<AssistantProfile | undefined>; banner?: BannerClient; studentMcp?: StudentMcp;
+  now?: () => Date } = {}): AssistantRuntime & { conversations: ConversationRepository } {
   const config = options.config ?? loadAssistantConfig()
   const catalog = new InMemoryCatalog()
   const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }), { marshallOptions: { removeUndefinedValues: true } })
@@ -44,6 +50,9 @@ export function createAssistant(options: { config?: AssistantConfig; checkpointe
     return { name: profile.name, campus: profile.campus, career: profile.career, currentSemester: profile.currentSemester,
       completedCourses: profile.completedCourses, interests: profile.interests, goals: profile.goals, availability: profile.availability }
   } : undefined)
+  const studentMcp: StudentMcp | undefined = options.studentMcp ?? (process.env.MCP_TRANSPORT
+    ? (student, signal) => createStudentMcpClient(student, undefined, signal) : undefined)
+  const actions = studentMcp && options.banner ? new StudentActions(conversations, options.banner, options.now) : undefined
   const deps: AssistantDeps = {
     catalog,
     inputGuardrail: config.inputGuardrail ? new BedrockInputGuardrail({ region: config.region, ...config.inputGuardrail }) : undefined,
@@ -51,6 +60,8 @@ export function createAssistant(options: { config?: AssistantConfig; checkpointe
     dates: new CatalogDates(catalog),
     conversations,
     profileReader,
+    now: options.now,
+    studentTools: studentMcp && actions ? buildStudentTools(studentMcp, actions) : undefined,
   }
 
   // Modo llm: LLM por Bedrock Converse y conocimiento por Retrieve (con respaldo por palabras clave).
@@ -82,5 +93,5 @@ export function createAssistant(options: { config?: AssistantConfig; checkpointe
           ttlSeconds: config.conversationTtlSeconds,
         }))
 
-  return { memoryLlm: deps.llm, inputGuardrail: deps.inputGuardrail, config, checkpointer, conversations, profileReader, graph: buildAssistantGraph(deps, checkpointer) }
+  return { actions, memoryLlm: deps.llm, inputGuardrail: deps.inputGuardrail, config, checkpointer, conversations, profileReader, graph: buildAssistantGraph(deps, checkpointer) }
 }

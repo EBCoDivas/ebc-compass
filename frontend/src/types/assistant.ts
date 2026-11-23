@@ -1,10 +1,12 @@
+import type { ActionProposal } from '../../../shared/contracts/studentActions'
+
 export interface InputBlock { category: 'prompt-injection' | 'other-person-data' | 'harmful-content' | 'out-of-scope' | 'guardrail-unavailable'; source: 'local' | 'bedrock' }
 // Tipos del contrato de la API del asistente (backend: /api/assistant).
 
 export type AssistantLanguage = 'es' | 'en'
 
 export interface AssistantSource {
-  kind: 'opportunity' | 'document'
+  kind: 'opportunity' | 'document' | 'record'
   id: string
   title: string
 }
@@ -36,6 +38,7 @@ export interface CatalogFallback { content: string; sources: AssistantSource[] }
 export interface AssistantReply {
   conversationId: string
   message: {
+    actionProposal?: ActionProposal
     inputBlock?: InputBlock
     id: string
     role: 'assistant'
@@ -53,6 +56,7 @@ export interface AssistantReply {
 }
 
 export interface StoredMessage {
+  actionProposal?: ActionProposal
   inputBlock?: InputBlock
   mode?: AssistantReplyMeta['mode']
   latencyMs?: number
@@ -84,6 +88,7 @@ export interface AssistantProfile {
 
 /** Un mensaje tal como se muestra en pantalla. */
 export interface ChatEntry {
+  actionProposal?: ActionProposal
   inputBlock?: InputBlock
   feedback?: 'positive' | 'negative'
   id: string

@@ -46,8 +46,8 @@ export function makeToolHandler(dependencies: ToolDependencies) {
         case 'get_requirements': {
           const item = planningOpportunities(student).find(opportunity => opportunity.id === args.opportunityId)
           if (!item) return { ok: false, code: 'NOT_FOUND' }
-          const { id, title, description, requirements, deadline, scholarshipCriteria, enrollmentFee, serviceHoursRequired } = item
-          return { ok: true, data: { id, title, description, requirements: requirements ?? [], deadline, scholarshipCriteria, enrollmentFee, serviceHoursRequired } }
+          const { id, type, title, description, requirements, deadline, scholarshipCriteria, enrollmentFee, serviceHoursRequired } = item
+          return { ok: true, data: { id, type, title, description, requirements: requirements ?? [], deadline, scholarshipCriteria, enrollmentFee, serviceHoursRequired } }
         }
         case 'list_opportunities': {
           if (args.type !== undefined && !opportunityTypes.some(type => args.type === type)) return invalid

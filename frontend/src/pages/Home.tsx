@@ -14,6 +14,7 @@ import { fetchAcademicProgress, type AcademicProgress } from '../services/academ
 import type { StudentJourney } from '../../../shared/contracts/studentPlanning'
 import { StudentPendingList } from '../components/StudentPendingList'
 import { useSavedOpportunities } from '../services/savedOpportunities'
+import { STUDENT_ACTION_CONFIRMED } from '../services/assistantService'
 
 /** Próximas fechas (hoy o después), de la más cercana a la más lejana. */
 function upcomingOf(list: Opportunity[], limit: number) {
@@ -34,6 +35,7 @@ export function Home() {
   const [all, setAll] = useState<Opportunity[]>([])
   const [alerts, setAlerts] = useState<Alert[] | null>(null)
   const [planning, setPlanning] = useState<StudentJourney | null>(null)
+  const [planningRevision, setPlanningRevision] = useState(0)
   const [planningStatus, setPlanningStatus] = useState<'loading' | 'ready' | 'error'>(() => sessionSubject() ? 'loading' : 'ready')
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   useEffect(() => {
@@ -44,6 +46,11 @@ export function Home() {
   }, [progressLoading, recommendationsLoading])
   const recommended = recommendations.map((item) => item.opportunity)
   const savedIds = useSavedOpportunities()
+  useEffect(() => {
+    const refresh = () => setPlanningRevision(value => value + 1)
+    window.addEventListener(STUDENT_ACTION_CONFIRMED, refresh)
+    return () => window.removeEventListener(STUDENT_ACTION_CONFIRMED, refresh)
+  }, [])
 
   useEffect(() => {
     const scope = { campus: profile?.campus || undefined, career: profile?.career || undefined,
@@ -59,7 +66,7 @@ export function Home() {
     })
     fetchAlerts(scope).then(value => { if (active) setAlerts(value) }).catch(() => { if (active) setAlerts(null) })
     return () => { active = false }
-  }, [profile?.campus, profile?.career, profile?.currentSemester])
+  }, [profile?.campus, profile?.career, profile?.currentSemester, planningRevision])
 
   useEffect(() => {
     let active = true

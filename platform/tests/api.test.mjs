@@ -38,6 +38,11 @@ test("SST deploy includes the authenticated native streaming route and buffered 
   assert.equal(stream.options.auth.cognito.authorizer, "cognito-authorizer");
   assert.ok(deployedRoutes.includes(stream));
   assert.equal(routes.find(({ path }) => path === "ANY /api/assistant/messages").handler, "buffered");
+  for (const method of ["GET", "POST"]) {
+    const action = deployedRoutes.find(({ path }) => path === method + " /api/assistant/conversations/{id}/actions/{proposalId}");
+    assert.equal(action.handler, "buffered");
+    assert.equal(action.options.auth.cognito.authorizer, "cognito-authorizer");
+  }
   assert.equal(routes.find(({ path }) => path === "GET /health").options.auth, undefined);
 });
 

@@ -58,6 +58,9 @@ export function createApi(
     // La función ya existe y se pasa por ARN: la ruta debe indicar su modo explícitamente.
     streaming: true,
   });
+  for (const method of ["GET", "POST"]) {
+    api.route(method + " /api/assistant/conversations/{id}/actions/{proposalId}", backend.arn, { auth: { cognito: { authorizer: authorizer.id } } });
+  }
   api.deploy();
   return { api, health, opportunities };
 }

@@ -6,6 +6,7 @@ import { personaStorageKey } from './personaService'
 import type { StudentProfile } from '../types/profile'
 import { getToken } from './authService'
 import type { AssistantLanguage, AssistantProfile, AssistantReply, StoredMessage } from '../types/assistant'
+import type { ActionProposal, ActionReceipt } from '../../../shared/contracts/studentActions'
 
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
 const STUDENT_ID_KEY = 'ebc_compass_student_id'
@@ -169,6 +170,39 @@ export async function fetchSuggestions(language: AssistantLanguage = 'es'): Prom
   } catch {
     return []
   }
+}
+
+const actionPath = ({ conversationId, id }: ActionProposal) => `/conversations/${conversationId}/actions/${id}`
+export const STUDENT_ACTION_CONFIRMED = 'compass:student-action-confirmed'
+
+export async function loadActionReceipt(proposal: ActionProposal, signal: AbortSignal) {
+  const { receipt } = await request<{ receipt: ActionReceipt | null }>(actionPath(proposal), { signal })
+  return receipt
+}
+
+export const MAX_LETTER_BYTES = 1_500_000
+const letterExtensions = ['.pdf', '.docx']
+
+/** Devuelve el motivo por el que el archivo no sirve como carta, o undefined si es válido. */
+export function letterProblem(file: File): string | undefined {
+  if (!letterExtensions.some(extension => file.name.toLowerCase().endsWith(extension))) return 'Sube tu carta en PDF o Word (.docx).'
+  if (file.size > MAX_LETTER_BYTES) return 'La carta pesa más de 1.5 MB. Comprímela o sube una versión más ligera.'
+  if (file.size < 100) return 'El archivo parece vacío. Elige tu carta de nuevo.'
+}
+
+async function toBase64(file: File) {
+  const bytes = new Uint8Array(await file.arrayBuffer())
+  let binary = ''
+  for (let offset = 0; offset < bytes.length; offset += 0x8000) binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000))
+  return btoa(binary)
+}
+
+export async function confirmAction(proposal: ActionProposal, motivationLetter?: File) {
+  const letter = motivationLetter && { name: motivationLetter.name, contentBase64: await toBase64(motivationLetter) }
+  const { receipt } = await request<{ receipt: ActionReceipt }>(actionPath(proposal), {
+    method: 'POST', body: JSON.stringify({ confirmed: true, ...(letter ? { motivationLetter: letter } : {}) }),
+  })
+  return receipt
 }
 
 

@@ -3,6 +3,7 @@ import { identitySubject as verifiedSubject } from '../auth/identity.js'
 // El perfil llega como resumen en cada petición (el frontend lo guarda en localStorage).
 
 import { verifiedAcademicProfile } from '../auth/academicProfile.js'
+import { resolvePlanningStudent } from '../auth/planningStudent.js'
 import { conversationRoutes, historyError, pageOptions } from './conversationRoutes.js'
 import type { Writable } from 'node:stream'
 import { once } from 'node:events'
@@ -56,7 +57,8 @@ function parseLanguage(value: unknown): Language | undefined {
 
 function present(message: ChatMessage) {
   return { id: message.id, role: message.role, inputBlock: message.inputBlock, content: message.content, language: message.language, intent: message.intent, createdAt: message.createdAt,
-    ...(message.failure ? { failure: message.failure, catalogFallback: message.catalogFallback } : {}), ...(message.interrupted ? { interrupted: true } : {}) }
+    ...(message.failure ? { failure: message.failure, catalogFallback: message.catalogFallback } : {}), ...(message.interrupted ? { interrupted: true } : {}),
+    ...(message.actionProposal ? { actionProposal: message.actionProposal } : {}) }
 }
 
 export function parseTurn(request: Request) {
@@ -75,6 +77,12 @@ export function parseTurn(request: Request) {
   const profile = parseProfile({ ...parseProfile(body.profile), ...trustedProfile })
   return { studentId, conversationId, input: { model, threadId: studentId + '#' + conversationId, message, profile, trustedProfile,
     requestId: (body.requestId as string | undefined) ?? randomUUID(), requireExisting: body.conversationId !== undefined, language: parseLanguage(body.language) } }
+}
+
+export async function parseStudentTurn(request: Request, assistant: AssistantRuntime) {
+  const turn = parseTurn(request)
+  const student = assistant.actions ? await resolvePlanningStudent(request).catch(() => undefined) : undefined
+  return { ...turn, input: { ...turn.input, ...(student ? { toolTurn: { student, conversationId: turn.conversationId, requestId: turn.input.requestId } } : {}) } }
 }
 
 export async function writeSse(response: Writable, event: string, data: unknown) {
@@ -97,9 +105,37 @@ export function assistantRoutes(assistant: AssistantRuntime): Router {
   router.use(conversationRoutes(assistant))
   const threadOf = (studentId: string, conversationId: string) => `${studentId}#${conversationId}`
 
+  const actionPath = '/conversations/:id/actions/:proposalId'
+  const handleAction = async (request: Request, response: Response) => {
+    const { id, proposalId } = request.params
+    if (!isUuid(id) || !isUuid(proposalId)) return fail(response, 400, 'INVALID_INPUT', 'Identificador de confirmación inválido.')
+    if (!assistant.actions) return fail(response, 404, 'ACTION_NOT_FOUND', 'Pide al asistente que prepare el trámite.')
+    const confirm = request.method === 'POST'
+    const body = request.body as Record<string, unknown> | undefined
+    const letter = body?.motivationLetter as Record<string, unknown> | undefined
+    if (confirm && (!body || body.confirmed !== true || Object.keys(body).some(key => key !== 'confirmed' && key !== 'motivationLetter')
+        || (letter !== undefined && (typeof letter !== 'object' || letter === null || Object.keys(letter).length !== 2 ||
+          typeof letter.name !== 'string' || typeof letter.contentBase64 !== 'string')))) {
+      return fail(response, 400, 'CONFIRMATION_REQUIRED', 'Revisa la tarjeta y confirma el trámite.')
+    }
+    try {
+      const student = await resolvePlanningStudent(request)
+      if (!student) return fail(response, 401, 'UNAUTHORIZED', 'Inicia sesión.')
+      const receipt = confirm
+        ? await assistant.actions.confirm(student, id, proposalId, letter as { name: string; contentBase64: string } | undefined)
+        : await assistant.actions.status(student, id, proposalId)
+      response.set('Cache-Control', 'no-store').json({ receipt })
+    } catch (error) {
+      if ((error as { status?: number }).status) return historyError(response, error)
+      fail(response, 503, 'ACTION_UNAVAILABLE', 'No pudimos consultar el trámite. Intenta de nuevo o contacta a Servicios Escolares.')
+    }
+  }
+  router.get(actionPath, handleAction)
+  router.post(actionPath, handleAction)
+
   router.post('/messages', async (request, response) => {
     try {
-      const { conversationId, input } = parseTurn(request)
+      const { conversationId, input } = await parseStudentTurn(request, assistant)
       const started = performance.now()
       const reply = await runTurn(assistant.graph, input)
 
@@ -118,6 +154,7 @@ export function assistantRoutes(assistant: AssistantRuntime): Router {
           createdAt: reply.createdAt,
           suggestions: reply.suggestions,
           sources: reply.sources,
+          actionProposal: reply.actionProposal,
         },
         meta: { mode: reply.generatedBy, latencyMs: reply.latencyMs ?? Math.round(performance.now() - started), degraded: reply.degraded, historyStatus: reply.historyStatus, ...(reply.usage ? { usage: reply.usage } : {}) },
       })
@@ -138,7 +175,7 @@ export function assistantRoutes(assistant: AssistantRuntime): Router {
     const close = () => { if (!response.writableEnded) abort.abort() }
     response.on('close', close)
     try {
-      const { studentId, conversationId, input } = parseTurn(request)
+      const { studentId, conversationId, input } = await parseStudentTurn(request, assistant)
       await ensureConversation(assistant.graph, studentId, conversationId, !input.requireExisting)
       if (streamingThreads.has(input.threadId)) { fail(response, 409, 'TURN_PENDING', 'Espera a que termine el turno anterior y vuelve a intentarlo.'); return }
       threadId = input.threadId
@@ -156,7 +193,7 @@ export function assistantRoutes(assistant: AssistantRuntime): Router {
         conversationId,
         message: { model: reply.model, inputBlock: reply.inputBlock, id: reply.id, role: 'assistant', content: reply.content, language: reply.language, intent: reply.intent,
           createdAt: reply.createdAt, sources: reply.sources, suggestions: reply.suggestions, interrupted: reply.interrupted,
-          failure: reply.failure, catalogFallback: reply.catalogFallback },
+          failure: reply.failure, catalogFallback: reply.catalogFallback, actionProposal: reply.actionProposal },
         meta: { mode: reply.generatedBy, latencyMs: reply.latencyMs ?? Math.round(performance.now() - started), degraded: reply.degraded, historyStatus: reply.historyStatus, ...(reply.usage ? { usage: reply.usage } : {}) },
       })
       response.end()

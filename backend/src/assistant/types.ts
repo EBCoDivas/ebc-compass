@@ -1,6 +1,7 @@
 // Tipos propios del asistente. No dependen de otras partes del backend: los adaptadores traducen
 // el catálogo y el perfil actuales a estas formas (si los datos cambian, solo cambia el adaptador).
 import type { OpportunityStage } from '../../../shared/contracts/studentPlanning.js'
+import type { ActionProposal } from '../../../shared/contracts/studentActions.js'
 
 export type ChatModel = 'lunna' | 'terra'
 
@@ -107,7 +108,7 @@ export interface FactSheet {
 }
 
 export interface Source {
-  kind: 'opportunity' | 'document'
+  kind: 'opportunity' | 'document' | 'record'
   id: string
   title: string
 }
@@ -120,6 +121,7 @@ export interface Passage {
 }
 
 export interface ChatMessage {
+  actionProposal?: ActionProposal
   model?: ChatModel
   inputBlock?: InputBlock
   id: string
@@ -137,6 +139,7 @@ export type AssistantFailure = 'MODEL_UNAVAILABLE' | 'VALIDATION_FAILED'
 export interface CatalogFallback { content: string; sources: Source[] }
 
 export interface AssistantReply {
+  actionProposal?: ActionProposal
   model?: ChatModel
   inputBlock?: InputBlock
   /** Id y fecha del mensaje del asistente guardado en el historial. */
@@ -186,7 +189,10 @@ export interface KnowledgeRetriever {
 export interface LlmProvider {
   generate(input: LlmInput): Promise<string>
   stream?(input: LlmInput): AsyncIterable<string>
+  selectTools?(input: LlmInput, tools: ModelTool[]): Promise<{ name: string; args: unknown }[]>
 }
+
+export interface ModelTool { name: string; description: string; inputSchema: object }
 
 export type PromptCacheMode = 'off' | 'system' | 'system-history'
 export interface LlmUsage {

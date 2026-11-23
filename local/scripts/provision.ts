@@ -15,6 +15,7 @@ import { loadEnvFile, root } from '../../scripts/lib/emulator-env.mjs'
 import { join } from 'node:path'
 import { provisionAuth } from './provision-auth.js'
 import { provisionStudentMcp } from '../../backend/src/mcp/provisionLocal.js'
+import { LOCAL_BANNER_ACTIONS_TABLE } from '../../backend/src/banner/actions.js'
 import { CreateBucketCommand, HeadBucketCommand, S3Client } from '@aws-sdk/client-s3'
 import { S3VectorsClient } from '@aws-sdk/client-s3vectors'
 import { ensureVectorIndex, VECTOR_BUCKET, VECTOR_INDEX } from '../kb/vectors.js'
@@ -124,11 +125,10 @@ async function ensureVectors(): Promise<void> {
   console.log(existed ? `• Índice de vectores ${VECTOR_BUCKET}/${VECTOR_INDEX}: ya existe` : `✔ Índice de vectores ${VECTOR_BUCKET}/${VECTOR_INDEX}: creado`)
 }
 
-async function ensureHistoryTable(): Promise<void> {
-  const name = process.env.CONVERSATION_HISTORY_TABLE ?? loadEnvFile(join(root, 'backend', '.env')).CONVERSATION_HISTORY_TABLE ?? 'Conversations'
+async function ensurePersistentTable(name: string): Promise<void> {
   try {
     await dynamo.send(new DescribeTableCommand({ TableName: name }))
-    console.log('• Tabla de historial y memoria: ya existe')
+    console.log('• Tabla ' + name + ': ya existe')
   } catch (error) {
     if (!isMissing(error)) throw error
     if (check) throw new Error('Falta la tabla ' + name)
@@ -137,16 +137,17 @@ async function ensureHistoryTable(): Promise<void> {
       KeySchema: [{ AttributeName: 'PK', KeyType: 'HASH' }, { AttributeName: 'SK', KeyType: 'RANGE' }],
     }))
     await waitUntilTableExists({ client: dynamo, maxWaitTime: 60 }, { TableName: name })
-    console.log('✔ Tabla de historial y memoria: creada (sin TTL)')
+    console.log('✔ Tabla ' + name + ': creada (sin TTL)')
   }
   const ttl = await dynamo.send(new DescribeTimeToLiveCommand({ TableName: name }))
-  if (['ENABLED', 'ENABLING'].includes(ttl.TimeToLiveDescription?.TimeToLiveStatus ?? '')) throw new Error('La tabla de historial no debe tener TTL.')
+  if (['ENABLED', 'ENABLING'].includes(ttl.TimeToLiveDescription?.TimeToLiveStatus ?? '')) throw new Error('La tabla ' + name + ' no debe tener TTL.')
 }
 
 try {
   await ensureTable()
   await ensureProfilesTable()
-  await ensureHistoryTable()
+  await ensurePersistentTable(process.env.CONVERSATION_HISTORY_TABLE ?? loadEnvFile(join(root, 'backend', '.env')).CONVERSATION_HISTORY_TABLE ?? 'Conversations')
+  await ensurePersistentTable(LOCAL_BANNER_ACTIONS_TABLE)
   await ensureBucket()
   await ensureVectors()
   await provisionAuth(check)

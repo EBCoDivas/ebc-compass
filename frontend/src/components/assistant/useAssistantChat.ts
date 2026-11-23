@@ -95,6 +95,7 @@ export function useAssistantChat() {
             id: reply.message.id, role: 'assistant', content: reply.message.content, sources: reply.message.sources,
             inputBlock: reply.message.inputBlock, suggestions: reply.message.suggestions, meta: reply.meta, interrupted: reply.message.interrupted,
             failure: reply.message.failure, catalogFallback: reply.message.catalogFallback, retryQuestion: message, requestId,
+            actionProposal: reply.message.actionProposal,
           } : entry))
           setAnnouncement(reply.message.failure ? reply.message.content : reply.message.interrupted ? 'Respuesta detenida.' : 'Respuesta lista.')
         }

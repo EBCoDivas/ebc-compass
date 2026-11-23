@@ -12,10 +12,12 @@ import { assistantRoutes } from './routes/assistantRoutes.js'
 import { createAssistant } from './assistant/index.js'
 
 export const app = express()
-const assistant = createAssistant()
 const banner = createBannerReader()
+const assistant = createAssistant({ banner })
 
 app.use(cors())
+// La confirmación de la beca incluye la carta de motivos en base64 (hasta 1.5 MB).
+app.use('/api/assistant/conversations/:id/actions', express.json({ limit: '3mb' }))
 app.use(express.json())
 
 app.get('/api/health', (_request, response) => {

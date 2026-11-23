@@ -3,10 +3,17 @@ import { STUDENT_CONTEXT_HEADER, TARGET_NAME, toolList } from "../../backend/src
 export function createStudentMcp(input: {
   stage: string; historyTable: { name: any; arn: any }; knowledgeBaseId: any; knowledgeBaseArn: any;
 }) {
+  const bannerActions = new sst.aws.Dynamo("BannerActions", {
+    fields: { PK: "string", SK: "string" },
+    primaryIndex: { hashKey: "PK", rangeKey: "SK" },
+  });
   const banner = new sst.aws.Function("BannerMock", {
     handler: "../backend/src/banner/lambda.handler",
     runtime: "nodejs22.x",
     timeout: "5 seconds",
+    environment: { APP_STAGE: input.stage, BANNER_ACTIONS_TABLE: bannerActions.name },
+    permissions: [{ actions: ["dynamodb:GetItem", "dynamodb:PutItem"], resources: [bannerActions.arn] }],
+    nodejs: { banner: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);" },
     logging: { format: "json", retention: "1 week" },
   });
   const tools = new sst.aws.Function("CompassMcpTools", {

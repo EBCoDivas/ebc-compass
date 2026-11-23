@@ -1,8 +1,18 @@
 import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda'
+import type { BannerActionState } from '../../../shared/contracts/studentActions.js'
+import { MemoryDocumentStore } from '../assistant/conversations/store.js'
+import { createBannerActionHandler, type BannerActionRequest, type BannerConfirmation, type BannerConfirmationResult, type BannerIdentity } from './actions.js'
 import { demoAcademicSnapshots, type BannerRecord } from './fixtures.js'
 
 export interface AcademicStudent { id: string; personaId?: string; enrollment?: string; career?: string; campus?: string; semester?: number }
-export interface BannerReader { readRecord(student: AcademicStudent): Promise<BannerRecord | null> }
+export interface BannerReader {
+  readRecord(student: AcademicStudent): Promise<BannerRecord | null>
+  readActions?(student: AcademicStudent): Promise<BannerActionState>
+}
+export interface BannerClient extends BannerReader {
+  readActions(student: AcademicStudent): Promise<BannerActionState>
+  confirmAction(student: AcademicStudent, confirmation: BannerConfirmation): Promise<BannerConfirmationResult>
+}
 
 export function matchesBannerStudent(record: BannerRecord, student: Omit<AcademicStudent, 'id'>): boolean {
   return record.personaId === student.personaId && record.career === student.career && record.campus === student.campus &&
@@ -17,30 +27,62 @@ export const fixedBanner: BannerReader = {
   },
 }
 
-export function createBannerReader(env = process.env, client?: Pick<LambdaClient, 'send'>): BannerReader {
+function actionIdentity(student: AcademicStudent): BannerIdentity | undefined {
+  const { id, enrollment, personaId, campus, career, semester } = student
+  if (enrollment && personaId && campus && career && semester === 1) return { subject: id, enrollment, personaId, campus, career, semester }
+}
+
+function withActions(reader: BannerReader, execute: (request: BannerActionRequest) => Promise<unknown>): BannerClient {
+  return {
+    ...reader,
+    async readActions(student) {
+      const identity = actionIdentity(student)
+      if (!identity) return {}
+      const reply = await execute({ version: 1, operation: 'getEnrollmentActions', identity }) as { actions?: BannerActionState }
+      if (!reply.actions || typeof reply.actions !== 'object') throw new Error('BANNER_UNAVAILABLE')
+      return reply.actions
+    },
+    async confirmAction(student, confirmation) {
+      const identity = actionIdentity(student)
+      if (!identity) return { ok: false, code: 'ACTION_UNAVAILABLE' }
+      const reply = await execute({ version: 1, operation: 'confirmEnrollmentAction', identity, ...confirmation }) as BannerConfirmationResult
+      if (reply.ok === true ? reply.receipt?.kind === confirmation.proposal.kind : reply.ok === false &&
+          ['ACTION_UNAVAILABLE', 'ACTION_CHANGED', 'MOTIVATION_LETTER_REQUIRED', 'INVALID_LETTER', 'ACTION_PENDING'].includes(reply.code)) return reply
+      throw new Error('BANNER_UNAVAILABLE')
+    },
+  }
+}
+
+export function createFixedBannerClient(store = new MemoryDocumentStore(), now?: () => Date): BannerClient {
+  return withActions(fixedBanner, createBannerActionHandler(store, now))
+}
+
+export function createBannerReader(env = process.env, client?: Pick<LambdaClient, 'send'>): BannerClient {
   const functionName = env.BANNER_FUNCTION_NAME?.trim()
   if (!functionName) {
     if (env.APP_STAGE || env.MCP_TRANSPORT) throw new Error('Falta BANNER_FUNCTION_NAME.')
-    return fixedBanner
+    return createFixedBannerClient()
   }
   const lambda = client ?? new LambdaClient({ maxAttempts: 1, requestHandler: { requestTimeout: 4000, throwOnRequestTimeout: true } })
-  return {
+  const invoke = async (request: BannerActionRequest | { version: 1; operation: 'getStudentRecord'; enrollment: string }) => {
+    try {
+      const result = await lambda.send(new InvokeCommand({ FunctionName: functionName, InvocationType: 'RequestResponse',
+        Payload: Buffer.from(JSON.stringify(request)) }))
+      if (result.FunctionError || !result.Payload || result.StatusCode !== 200) throw new Error()
+      return JSON.parse(Buffer.from(result.Payload).toString('utf8')) as unknown
+    } catch {
+      throw new Error('BANNER_UNAVAILABLE')
+    }
+  }
+  const localActions = !env.APP_STAGE && env.AWS_ENDPOINT_URL === 'https://127.0.0.1:9297' && !client
+  return withActions({
     async readRecord(student) {
       if (!student.enrollment || !student.personaId) return null
-      try {
-        const result = await lambda.send(new InvokeCommand({
-          FunctionName: functionName, InvocationType: 'RequestResponse',
-          Payload: Buffer.from(JSON.stringify({ version: 1, operation: 'getStudentRecord', enrollment: student.enrollment })),
-        }))
-        if (result.FunctionError || !result.Payload || result.StatusCode !== 200) throw new Error()
-        const { record } = JSON.parse(Buffer.from(result.Payload).toString('utf8')) as { record?: BannerRecord | null }
-        if (record === null) return null
-        if (!record || typeof record.asOf !== 'string' || !record.currentPeriod ||
-          !Number.isInteger(record.currentPeriod.number)) throw new Error()
-        return matchesBannerStudent(record, student) ? record : null
-      } catch {
-        throw new Error('BANNER_UNAVAILABLE')
-      }
+      const { record } = await invoke({ version: 1, operation: 'getStudentRecord', enrollment: student.enrollment }) as { record?: BannerRecord | null }
+      if (record === null) return null
+      if (!record || typeof record.asOf !== 'string' || !record.currentPeriod ||
+        !Number.isInteger(record.currentPeriod.number)) throw new Error('BANNER_UNAVAILABLE')
+      return matchesBannerStudent(record, student) ? record : null
     },
-  }
+  }, localActions ? async request => (await import('./lambda.js')).handler(request) : invoke)
 }

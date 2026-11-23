@@ -14,8 +14,8 @@ Compass acompaña al alumno según la etapa en que está: le dice solo lo que le
 
 **Acciones con confirmación (dos):**
 
-- **Solicitar la beca de primer ingreso.** Revisa requisitos, indica lo que falta y llena la solicitud. Queda "en revisión".
-- **Generar la ficha de pago de inscripción.** Monto, referencia y fecha límite calculados por reglas. Es una ficha simulada: Compass no cobra.
+- **Solicitar la beca de primer ingreso.** Revisa requisitos, indica lo que falta y Ana sube su carta de motivos (PDF o Word) en la tarjeta. Queda "en revisión".
+- **Pagar la inscripción.** Compass muestra el importe, la fecha límite y la tarjeta que ya tiene registrada en su expediente (un número de prueba). Ana confirma el pago y Banner emite un comprobante y registra la inscripción como pagada.
 
 **Logros:** se desbloquean con hitos reales del alumno, calculados con reglas.
 
@@ -91,7 +91,7 @@ Responsable: ______
 ### 2. Ruta y logros
 
 - "Lo que te toca ahora": obligatorios, pasos y estados, con un máximo de pendientes según la etapa.
-- Logros por hitos reales: beca solicitada, ficha de pago generada, servicio social avanzado.
+- Logros por hitos registrados: beca solicitada, inscripción pagada, servicio social avanzado.
 - Reglas de cálculo que usan los agentes: elegibilidad de la beca, monto y referencia de la ficha, y si las horas de servicio social alcanzan para la fecha de titulación.
 
 **Listo cuando:** cada cuenta ve su ruta y sus logros, y los cálculos tienen pruebas.
@@ -123,8 +123,8 @@ Responsable: ______
 ### 5. Chat con herramientas y acciones con confirmación
 
 - El agente del chat usa las herramientas del MCP y responde con fuentes.
-- Acciones: solicitar la beca de primer ingreso y generar la ficha de pago de inscripción (la ficha menciona la beca en revisión).
-- Se ejecutan solo después de confirmar en la tarjeta, con un ejecutor determinista: idempotente, auditado y con la identidad del token.
+- Acciones: solicitar la beca de primer ingreso y pagar la inscripción con la tarjeta registrada.
+- Se ejecutan en Banner (simulado) después de confirmar en la tarjeta. Banner revalida los datos, la tarjeta registrada y la carta subida y guarda un resultado idempotente con auditoría por cuenta y matrícula en DynamoDB.
 - Al confirmar, se actualizan la ruta y los logros.
 - "Siempre una salida": si Compass no puede resolver algo, da el siguiente paso concreto o canaliza con Servicios Escolares.
 
@@ -179,9 +179,9 @@ Planificador con especialistas, inscripción a cursos, evaluaciones con Bedrock 
 Protagonista: **Ana Lucía Torres**, Contaduría, campus Querétaro. Una sola persona con un salto en el tiempo.
 
 1. **El dolor.** Llegar a la universidad es abrumador: trámites, pagos, fechas, becas. El alumno no sabe qué hacer primero, y la información llega toda junta.
-2. **Ana entra a Compass en 1.er semestre.** No ve veinte cosas: ve pocos pendientes y su ruta. El agente proactivo le avisa, sin que pregunte, que la beca de primer ingreso cierra pronto y que cumple los requisitos.
-3. **Toca el aviso y se abre el chat** ya con el contexto. Compass le explica los requisitos, le dice qué le falta y prepara la solicitud. Ana confirma: la solicitud queda en revisión y desbloquea un logro.
-4. **Pregunta cómo pagar su inscripción.** Compass genera la ficha con monto, referencia y fecha límite, y le recuerda que su beca está en revisión. Ana confirma y desbloquea otro logro.
+2. **Ana entra a Compass en 1.er semestre.** En Inicio ve sus próximos pasos. Compass le avisa que la beca de primer ingreso cierra pronto. Su promedio cumple el mínimo y todavía le falta la carta de motivos.
+3. **Ana se postula a la beca desde el chat.** Abre el aviso y dice «Quiero solicitar la beca de primer ingreso». Compass consulta los requisitos y prepara la solicitud. Ana adjunta su [carta de motivos](../demo/carta-de-motivos-ana-torres.pdf) y pulsa **Enviar solicitud**. Banner registra la postulación **En revisión** y en Inicio se desbloquea **Beca solicitada**.
+4. **Ana paga la inscripción a su carrera.** En el mismo chat dice «Quiero pagar mi inscripción». Compass muestra el importe, la fecha límite y la tarjeta registrada para el pago simulado. Ana revisa los datos, pulsa **Pagar** y recibe su comprobante. Al volver a Inicio, se ven los dos resultados de la escena: la beca sigue **En revisión** y aparece el logro **Inscripción pagada**.
 5. **Salto en el tiempo: Ana en 7.º.** El mismo Inicio, otras prioridades: servicio social, prácticas y titulación. El agente proactivo detecta que, a su ritmo, no le alcanzan las horas de servicio social para titularse a tiempo, y le propone opciones por la tarde porque recuerda que trabaja en ese horario.
 6. **Detrás de cámaras (30 a 45 segundos).** La traza de lo que acaba de pasar: qué agente actuó, qué herramientas usó y un intento de inyección bloqueado. Para EBC, este panel también muestra qué confunde a los alumnos de cada etapa.
 7. **Cierre.** Dónde está el proyecto en madurez: repositorio y flujo de PR estándar, pruebas continuas con preguntas de oro y setup en un comando (Repetible), más observabilidad y guardrails (pasos hacia Confiable). Siguiente paso: conectar los datos reales de Banner a través del mismo MCP.

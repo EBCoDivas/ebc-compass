@@ -17,7 +17,7 @@ function bytes(value: string | ArrayBuffer | ArrayBufferView, encoding?: BufferE
   return Buffer.from(value.buffer, value.byteOffset, value.byteLength)
 }
 
-export function signedRequest(service: string, region = process.env.AWS_REGION ?? 'us-east-1') {
+export function signedRequest(service: string, region = process.env.AWS_REGION ?? 'us-east-1', signal?: AbortSignal) {
   const signer = new SignatureV4({ service, region, credentials: defaultProvider(), sha256: Sha256 })
   return async (url: URL, method: string, headers: Record<string, string>, body?: string, connection = url) => {
     const query: Record<string, string | string[]> = {}
@@ -26,6 +26,7 @@ export function signedRequest(service: string, region = process.env.AWS_REGION ?
       method, protocol: url.protocol, hostname: url.hostname, port: url.port ? Number(url.port) : undefined,
       path: url.pathname, query, headers: { ...headers, host: url.host }, body,
     })
-    return fetch(connection, { method, headers: signed.headers, body, redirect: 'error', signal: AbortSignal.timeout(9000) })
+    const timeout = AbortSignal.timeout(9000)
+    return fetch(connection, { method, headers: signed.headers, body, redirect: 'error', signal: signal ? AbortSignal.any([signal, timeout]) : timeout })
   }
 }

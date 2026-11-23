@@ -2,7 +2,8 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
-import { handler as bannerLambda } from '../banner/lambda.js'
+import { createBannerHandler, handler as bannerLambda } from '../banner/lambda.js'
+import { createBannerActionHandler } from '../banner/actions.js'
 import { createBannerReader } from '../banner/reader.js'
 import { ConversationRepository } from '../assistant/conversations/repository.js'
 import { MemoryDocumentStore } from '../assistant/conversations/store.js'
@@ -28,12 +29,13 @@ function setup(fail = false) {
   const store = new MemoryDocumentStore()
   const repo = new ConversationRepository(store)
   const lambda = new LambdaClient({})
+  const privateApi = createBannerHandler(createBannerActionHandler(new MemoryDocumentStore()))
   const requests: unknown[] = []
   lambda.middlewareStack.add(() => async args => {
     const input = args.input as { Payload: Uint8Array }
     const payload = JSON.parse(Buffer.from(input.Payload).toString('utf8'))
     requests.push(payload)
-    const result = fail ? { FunctionError: 'Unhandled' } : { Payload: Buffer.from(JSON.stringify(await bannerLambda(payload))) }
+    const result = fail ? { FunctionError: 'Unhandled' } : { Payload: Buffer.from(JSON.stringify(await privateApi(payload))) }
     return { response: {}, output: { $metadata: {}, StatusCode: 200, ...result } }
   }, { step: 'initialize' })
   const banner = createBannerReader({ BANNER_FUNCTION_NAME: 'banner-test' }, lambda)
@@ -69,7 +71,11 @@ test('all demo personas get scoped tools through MCP and the same academic contr
   }
   assert.notDeepEqual(distinct.get('ana'), distinct.get('ana-ingreso'))
   assert.ok(requests.length)
-  assert.ok(requests.every(item => Object.keys(asObject(item)!).sort().join(',') === 'enrollment,operation,version'))
+  assert.ok(requests.every(item => {
+    const request = asObject(item)!
+    return request.operation === 'getStudentRecord' ? Object.keys(request).sort().join(',') === 'enrollment,operation,version'
+      : request.operation === 'getEnrollmentActions' && Object.keys(request).sort().join(',') === 'identity,operation,version'
+  }))
 })
 
 test('the tool target requires gateway context and rejects model-supplied identities and wrong scope', async () => {

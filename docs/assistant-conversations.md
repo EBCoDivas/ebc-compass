@@ -49,8 +49,10 @@ conversación ajena. Los endpoints están bajo `/api/assistant`:
 | `POST /conversations` | Crea y devuelve `{ conversationId, title }`; acepta un UUID opcional para reintentar la creación |
 | `PATCH /conversations/:id` | `{ title }`, entre uno y ochenta caracteres; 204 |
 | `GET /conversations/:id?limit&cursor` | `{ messages, nextCursor?, messageCount, ... }`; mensajes en orden cronológico |
-| `DELETE /conversations/:id` | Elimina mensajes, resultados y checkpoint; conserva una marca técnica del ID sin contenido para impedir resurrecciones; 204 |
+| `DELETE /conversations/:id` | Elimina el historial y el checkpoint de la conversación. Los trámites confirmados conservan su comprobante y auditoría en la ruta académica. Devuelve 204 |
 | `POST /messages` y `/messages/stream` | Admiten `conversationId`, `requestId` e idioma; JSON y SSE comparten el comportamiento durable |
+| `GET /conversations/:id/actions/:proposalId` | `{ receipt }` para una propuesta archivada de la cuenta; `receipt` es `null` hasta confirmar |
+| `POST /conversations/:id/actions/:proposalId` | `{ confirmed: true, motivationLetter?: { name, contentBase64 } }`; envía la propuesta archivada a Banner y devuelve `{ receipt }` para la beca o el pago. La beca exige la carta de motivos (PDF o .docx, hasta 1.5 MB): Banner revisa el tipo y el tamaño y guarda su nombre, tamaño y huella SHA-256, no el contenido |
 | `GET /memory` | `{ facts, allowedValues }`, sin marcas de olvido |
 | `PUT /memory/:key` | `{ value }` del conjunto permitido; 204; campos del perfil se corrigen desde el perfil |
 | `DELETE /memory/:key` | Olvida esa categoría; 204 |

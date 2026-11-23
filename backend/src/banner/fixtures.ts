@@ -1,4 +1,5 @@
 import type { AcademicProgress } from '../../../shared/contracts/academicProgress.js'
+import type { PaymentMethod } from '../../../shared/contracts/studentActions.js'
 import type { StudentPlanning } from '../../../shared/contracts/studentPlanning.js'
 
 export interface BannerRecord {
@@ -12,6 +13,8 @@ export interface BannerRecord {
   credits?: AcademicProgress['credits']
   gpa?: AcademicProgress['gpa']
   firstEntry?: StudentPlanning['firstEntry']
+  /** Tarjeta registrada en el expediente. Es un número de prueba de la red de pagos, no una tarjeta real. */
+  paymentMethod?: PaymentMethod
   serviceHours?: Pick<NonNullable<StudentPlanning['socialService']>, 'completedHours' | 'weeklyHours' | 'asOf'>
 }
 
@@ -24,7 +27,8 @@ const records: BannerRecord[] = [
     serviceHours: { completedHours: 260, weeklyHours: 6, asOf: '2026-11-22' } },
   { enrollment: 'M0100018', personaId: 'ana-ingreso', career: 'accounting', campus: 'QRO', asOf,
     currentPeriod: { number: 1, type: 'semestre' }, courses: { completed: 0, total: 54 }, credits: { earned: 0, total: 324 },
-    firstEntry: { highSchoolGpa: 9.2, admissionLetter: true, motivationLetter: false } },
+    firstEntry: { highSchoolGpa: 9.2, admissionLetter: true, motivationLetter: false },
+    paymentMethod: { brand: 'Visa', last4: '4242', holder: 'ANA LUCÍA TORRES', expires: '08/29' } },
   { enrollment: 'M0100014', personaId: 'sofia', career: 'law', campus: 'TLC', asOf,
     currentPeriod: { number: 9, type: 'semestre' }, courses: { completed: 48, total: 54 }, credits: { earned: 288, total: 324 }, gpa: { value: 9.2, scale: 10 },
     serviceHours: { completedHours: 468, weeklyHours: 12, asOf: '2026-11-22' } },

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { AssistantError, saveFeedback } from '../../services/assistantService'
 import { Markdown } from './Markdown'
 import type { ChatEntry } from '../../types/assistant'
+import { StudentActionCard } from './StudentActionCard'
 
 interface Props {
   entries: ChatEntry[]
@@ -88,7 +89,7 @@ export function ConversationHistory({ entries, pending, onRetry, onPickSuggestio
           {entry.interrupted && <p className="chat-caption">Respuesta detenida.</p>}
           {entry.streamError && <p className="form-error">{entry.streamError}</p>}
           {entry.meta?.historyStatus === 'pending' && <p className="chat-note" role="note">El historial está pendiente de guardarse. Se reintentará al continuar la conversación.</p>}
-          {(entry.isError || entry.streamError || entry.failure) && index === entries.length - 1 && (
+          {(entry.isError || entry.streamError || entry.failure || (entry.actionProposal && entry.meta?.historyStatus === 'pending')) && index === entries.length - 1 && (
             <button type="button" className="button secondary chat-retry" onClick={() => onRetry(entry)} disabled={pending}>
               Reintentar
             </button>
@@ -119,6 +120,10 @@ export function ConversationHistory({ entries, pending, onRetry, onPickSuggestio
                 ))}
               </ul>
             </div>
+          )}
+
+          {entry.actionProposal && !entry.interrupted && !entry.failure && !entry.inputBlock && (
+            <StudentActionCard proposal={entry.actionProposal} waitingForHistory={entry.meta?.historyStatus === 'pending'} />
           )}
 
           {entry.role === 'assistant' && !entry.inputBlock && !entry.isError && !entry.failure && !entry.streamError && !entry.isStreaming && Boolean(entry.content) && (

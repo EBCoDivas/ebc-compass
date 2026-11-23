@@ -5,7 +5,7 @@
 import { BedrockRuntimeClient } from '@aws-sdk/client-bedrock-runtime'
 import { ChatBedrockConverse } from '@langchain/aws'
 import { NodeHttpHandler } from '@smithy/node-http-handler'
-import type { LlmProvider, LlmInput, PromptCacheMode } from '../types.js'
+import type { LlmProvider, LlmInput, ModelTool, PromptCacheMode } from '../types.js'
 import { converseMessages, effectiveCacheMode } from './promptCache.js'
 import { normalizeUsage } from './llmUsage.js'
 
@@ -35,6 +35,15 @@ export class BedrockLlmProvider implements LlmProvider {
     const content = response.content
     const text = typeof content === 'string' ? content : content.map((block) => (block.type === 'text' ? block.text : '')).join('')
     return text.trim()
+  }
+
+  async selectTools(input: LlmInput, tools: ModelTool[]) {
+    const started = performance.now()
+    const response = await this.model.bindTools(tools.map(tool => ({ toolSpec: {
+      name: tool.name, description: tool.description, inputSchema: { json: tool.inputSchema },
+    } }))).invoke(converseMessages(input, 'off'), { signal: this.signal(input) })
+    if (response.usage_metadata) this.report(input, response.usage_metadata, { latencyMs: Math.round(performance.now() - started) })
+    return response.tool_calls ?? []
   }
 
   async *stream(input: LlmInput): AsyncIterable<string> {

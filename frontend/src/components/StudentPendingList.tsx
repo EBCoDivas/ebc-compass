@@ -79,6 +79,12 @@ export function StudentPendingList({ planning }: { planning: StudentJourney }) {
                   <span className="route-status">{statuses[pending.status]}</span>
                 </small>
                 <p className="route-next">{pending.nextStep}</p>
+                {!pending.overdue && pending.status === 'pending' && item.id === 'scholarship-first-entry' && (
+                  <AskAssistantLink className="service-progress-action" question="¿Me ayudas a solicitar la beca de primer ingreso?">Preparar con Compass</AskAssistantLink>
+                )}
+                {item.id === 'procedure-first-enrollment-payment' && (!pending.overdue || pending.status === 'in-progress') && (
+                  <AskAssistantLink className="service-progress-action" question="Quiero pagar mi inscripción">Pagar con Compass</AskAssistantLink>
+                )}
               </div>
             </li>
           )
