@@ -1,5 +1,5 @@
 import { sessionFetch } from './session'
-import type { Opportunity, StudentPlanning } from '../../../shared/contracts/studentPlanning'
+import type { Opportunity, StudentJourney } from '../../../shared/contracts/studentPlanning'
 export type { Opportunity, OpportunityType } from '../../../shared/contracts/studentPlanning'
 
 export interface Recommendation { opportunity: Opportunity; relevanceScore: number; explanation: string }
@@ -28,9 +28,9 @@ export async function fetchAlerts(params: { career?: string; semester?: number; 
   return response.json() as Promise<Alert[]>
 }
 
-export async function fetchStudentPlanning(): Promise<StudentPlanning> {
+export async function fetchStudentPlanning(): Promise<StudentJourney> {
   const response = await sessionFetch(`${API_URL}/api/student-planning`)
   if (!response.ok) throw new Error('No fue posible cargar tus pendientes.')
-  return response.json() as Promise<StudentPlanning>
+  return response.json() as Promise<StudentJourney>
 }
 

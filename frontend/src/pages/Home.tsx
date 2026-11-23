@@ -10,12 +10,10 @@ import { TypeBadge } from '../components/TypeBadge'
 import { Rumbo } from '../components/Rumbo'
 import { daysUntil, formatShortDate } from '../utils/dates'
 import { DateLine } from '../components/DateLine'
-import { dateLabelFor } from '../utils/opportunityTypes'
 import { fetchAcademicProgress, type AcademicProgress } from '../services/academicProgressService'
-import type { StudentPlanning } from '../../../shared/contracts/studentPlanning'
+import type { StudentJourney } from '../../../shared/contracts/studentPlanning'
 import { StudentPendingList } from '../components/StudentPendingList'
-
-const SAVED_KEY = 'ebc_compass_saved_opportunities'
+import { useSavedOpportunities } from '../services/savedOpportunities'
 
 /** Próximas fechas (hoy o después), de la más cercana a la más lejana. */
 function upcomingOf(list: Opportunity[], limit: number) {
@@ -35,7 +33,7 @@ export function Home() {
   const [recommendationsError, setRecommendationsError] = useState('')
   const [all, setAll] = useState<Opportunity[]>([])
   const [alerts, setAlerts] = useState<Alert[] | null>(null)
-  const [planning, setPlanning] = useState<StudentPlanning | null>(null)
+  const [planning, setPlanning] = useState<StudentJourney | null>(null)
   const [planningStatus, setPlanningStatus] = useState<'loading' | 'ready' | 'error'>(() => sessionSubject() ? 'loading' : 'ready')
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   useEffect(() => {
@@ -45,13 +43,7 @@ export function Home() {
     if (saved !== null) { window.scrollTo(0, Number(saved)); sessionStorage.removeItem(key) }
   }, [progressLoading, recommendationsLoading])
   const recommended = recommendations.map((item) => item.opportunity)
-  const [savedIds, setSavedIds] = useState<string[]>(() => JSON.parse(window.localStorage.getItem(personaStorageKey(SAVED_KEY)) ?? '[]') as string[])
-
-  useEffect(() => {
-    const updateSaved = (event: Event) => setSavedIds((event as CustomEvent<string[]>).detail)
-    window.addEventListener('ebc-saved-opportunities', updateSaved)
-    return () => window.removeEventListener('ebc-saved-opportunities', updateSaved)
-  }, [])
+  const savedIds = useSavedOpportunities()
 
   useEffect(() => {
     const scope = { campus: profile?.campus || undefined, career: profile?.career || undefined,
@@ -92,7 +84,8 @@ export function Home() {
   }, [profile?.career, profile?.campus, profile?.currentSemester, profileInterests])
 
   const alertIds = new Set(alerts?.map(alert => alert.opportunityId))
-  const route = upcomingOf(alerts ? all.filter(item => alertIds.has(item.id)) : all, 5)
+  // El rumbo junta las alertas de tu etapa con lo que agregaste a tu calendario.
+  const route = upcomingOf(alerts ? all.filter(item => alertIds.has(item.id) || savedIds.includes(item.id)) : all, 5)
   const picks = (profile ? recommended : all).slice(0, 3)
   const recommendationGroups = [
     { label: 'Cursos y desarrollo profesional', types: ['course', 'professional-development'] },
@@ -101,12 +94,6 @@ export function Home() {
     { label: 'Trámites', types: ['procedure'] },
     { label: 'Oportunidades laborales', types: ['career-opportunity'] },
   ].map((group) => ({ ...group, items: recommendations.filter((item) => group.types.includes(item.opportunity.type)) }))
-  function removeSaved(id: string) {
-    const next = savedIds.filter((savedId) => savedId !== id)
-    setSavedIds(next)
-    window.localStorage.setItem(personaStorageKey(SAVED_KEY), JSON.stringify(next))
-  }
-  const savedItems = all.filter((item) => savedIds.includes(item.id))
 
   const career = academic?.career || profile?.career
   const campus = academic?.campus || profile?.campus
@@ -181,7 +168,7 @@ export function Home() {
               <div className="opportunity-grid">
                 {group.items.slice(0, 1).map(({ opportunity: item, explanation }) => (
                   <article className="opportunity-card" key={item.id}>
-                    <span className="card-top"><TypeBadge type={item.type} />{savedIds.includes(item.id) && <span className="saved-label">Guardada</span>}</span>
+                    <span className="card-top"><TypeBadge type={item.type} />{savedIds.includes(item.id) && <span className="saved-label">En tu calendario</span>}</span>
                     {item.deadline && <DateLine type={item.type} deadline={item.deadline} />}
                     <h4><Link className="card-link" to={`/catalogo?search=${encodeURIComponent(item.title)}`}>{item.title}</Link></h4>
                     <p>{item.description}</p>
@@ -197,7 +184,7 @@ export function Home() {
               <article className="opportunity-card" key={item.id}>
                 <span className="card-top">
                   <TypeBadge type={item.type} />
-                  {savedIds.includes(item.id) && <span className="saved-label">Guardada</span>}
+                  {savedIds.includes(item.id) && <span className="saved-label">En tu calendario</span>}
                 </span>
                 {item.deadline && <DateLine type={item.type} deadline={item.deadline} />}
                 <h3><Link className="card-link" to={`/catalogo?search=${encodeURIComponent(item.title)}`}>{item.title}</Link></h3>
@@ -207,21 +194,6 @@ export function Home() {
           </div>}
         </section>
 
-        {savedItems.length > 0 && (
-          <section className="home-section">
-            <h2>Guardadas para después</h2>
-            <ul className="saved-list">
-              {savedItems.map((item) => (
-                <li className="saved-item" key={item.id}>
-                  <TypeBadge type={item.type} />
-                  <strong>{item.title}</strong>
-                  {item.deadline && <small>{dateLabelFor(item.type)}: {formatShortDate(item.deadline)}</small>}
-                  <button type="button" className="saved-remove" onClick={() => removeSaved(item.id)}>Quitar<span className="visually-hidden"> {item.title} de guardadas</span></button>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
       </div>
     </main>
   )

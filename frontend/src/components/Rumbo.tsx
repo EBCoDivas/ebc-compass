@@ -13,7 +13,7 @@ function dayAndMonth(date: string) {
 }
 
 /**
- * El "rumbo": las próximas fechas en orden, desde hoy. La primera es el siguiente paso.
+ * El "rumbo": las próximas fechas en orden, desde hoy.
  * Las paradas van espaciadas por igual; la distancia real se lee en "Faltan N días".
  */
 export function Rumbo({ items }: { items: Opportunity[] }) {
@@ -58,7 +58,7 @@ export function Rumbo({ items }: { items: Opportunity[] }) {
       {items.length > 2 && <button className="rumbo-expand" type="button" aria-expanded={expanded} aria-controls="rumbo-dates" onClick={() => setExpanded(!expanded)}>{expanded ? 'Ver menos fechas' : 'Ver todas las fechas'}</button>}
       <div className="rumbo-next">
         <p>
-          Tu siguiente paso es <strong>{next.title}</strong>.
+          Lo más próximo en tu calendario es <strong>{next.title}</strong>.
         </p>
         <AskAssistantLink className="button primary" question={`¿Qué necesito para ${next.title}?`}>
           Preguntar qué necesito
