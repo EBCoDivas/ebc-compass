@@ -9,9 +9,10 @@ import { Assistant } from '../pages/Assistant'
 import { SignIn } from '../pages/SignIn'
 import { Layout } from '../components/Layout'
 import { Catalog } from '../pages/Catalog'
+import { Admin } from '../pages/Admin'
 
 export function AppRoutes() {
   return (
-    <Layout>{authConfigured && !getToken() ? <Routes><Route path="/acceso" element={<SignIn />} /><Route path="*" element={<Navigate to="/acceso" replace />} /></Routes> : <ProfileSession key={sessionSubject() ?? 'anonymous'}><Routes><Route path="/" element={<Home />} /><Route path="/dashboard" element={<Navigate to="/" replace />} /><Route path="/catalogo" element={<Catalog />} /><Route path="/guardadas" element={<Navigate to="/" replace />} /><Route path="/calendario" element={<Calendar />} /><Route path="/asistente" element={<Assistant />} /><Route path="/acceso" element={<SignIn />} /><Route path="/perfil" element={<Profile />} /></Routes></ProfileSession>}</Layout>
+    <Layout>{authConfigured && !getToken() ? <Routes><Route path="/acceso" element={<SignIn />} /><Route path="*" element={<Navigate to="/acceso" replace />} /></Routes> : <ProfileSession key={sessionSubject() ?? 'anonymous'}><Routes><Route path="/" element={<Home />} /><Route path="/dashboard" element={<Navigate to="/" replace />} /><Route path="/catalogo" element={<Catalog />} /><Route path="/guardadas" element={<Navigate to="/" replace />} /><Route path="/calendario" element={<Calendar />} /><Route path="/asistente" element={<Assistant />} /><Route path="/acceso" element={<SignIn />} /><Route path="/perfil" element={<Profile />} /><Route path="/admin" element={<Admin />} /></Routes></ProfileSession>}</Layout>
   )
 }

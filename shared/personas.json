@@ -1,5 +1,22 @@
 [
   {
+    "id": "admin",
+    "juryOrder": 0,
+    "name": "Administración demo",
+    "studentId": "",
+    "enrollment": "",
+    "career": "",
+    "program": "",
+    "campus": "",
+    "campusName": "",
+    "period": 0,
+    "periodType": "",
+    "interests": [],
+    "completedCourses": [],
+    "hasProfile": false,
+    "role": "admin"
+  },
+  {
     "id": "diego",
     "juryOrder": 3,
     "name": "Diego Ramírez",

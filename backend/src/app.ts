@@ -10,6 +10,7 @@ import { alertRoutes } from './routes/alertRoutes.js'
 import { createStudentPlanningRoutes } from './routes/studentPlanningRoutes.js'
 import { assistantRoutes } from './routes/assistantRoutes.js'
 import { createAssistant } from './assistant/index.js'
+import { adminRoutes } from './routes/adminRoutes.js'
 
 export const app = express()
 const banner = createBannerReader()
@@ -23,6 +24,7 @@ app.use(express.json())
 app.get('/api/health', (_request, response) => {
   response.json({ status: 'ok', service: 'ebc-compass-backend' })
 })
+app.use('/api/admin', adminRoutes())
 
 app.use('/api/profiles', profileRoutes)
 app.use('/api/academic-progress', createAcademicProgressRoutes(academicProgressReader(banner)))

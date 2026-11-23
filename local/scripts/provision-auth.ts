@@ -1,7 +1,7 @@
 // Cuentas ficticias en el emulador. Nunca imprime contraseñas ni tokens.
 import { randomBytes } from 'node:crypto'
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { CognitoIdentityProviderClient, ListUserPoolsCommand, CreateUserPoolCommand, ListUserPoolClientsCommand, CreateUserPoolClientCommand, UpdateUserPoolClientCommand, AdminGetUserCommand, AdminDeleteUserCommand, AdminCreateUserCommand, AdminSetUserPasswordCommand, AdminUpdateUserAttributesCommand, InitiateAuthCommand, paginateListUsers } from '@aws-sdk/client-cognito-identity-provider'
+import { CognitoIdentityProviderClient, ListUserPoolsCommand, CreateUserPoolCommand, ListUserPoolClientsCommand, CreateUserPoolClientCommand, UpdateUserPoolClientCommand, AdminGetUserCommand, AdminDeleteUserCommand, AdminCreateUserCommand, AdminSetUserPasswordCommand, AdminUpdateUserAttributesCommand, AdminAddUserToGroupCommand, CreateGroupCommand, GetGroupCommand, InitiateAuthCommand, paginateListUsers } from '@aws-sdk/client-cognito-identity-provider'
 import type { AttributeType } from '@aws-sdk/client-cognito-identity-provider'
 import { demoAccessConfig, demoUsername, managedDemoPersona, obsoleteDemoUsers } from '../../shared/demoAccounts.mjs'
 
@@ -11,7 +11,7 @@ if (!/^https:\/\/127\.0\.0\.1:9297\/?$/.test(endpoint)) throw new Error('Aprovis
 const client = new CognitoIdentityProviderClient({})
 const personas = JSON.parse(readFileSync(new URL('../../shared/personas.json', import.meta.url), 'utf8')) as {
   id: string; name: string; hasProfile: boolean; enrollment: string; campus: string; campusName: string;
-  career: string; program: string; period: number; periodType: string
+  career: string; program: string; period: number; periodType: string; role?: string
 }[]
 type State = { poolId: string; clientId: string; issuer: string; jwksUrl: string; users: Record<string, { username: string; password: string; sub?: string; passwordReady?: boolean; shared?: boolean }> }
 const state: State = existsSync(stateFile) ? JSON.parse(readFileSync(stateFile, 'utf8')) : { poolId: '', clientId: '', issuer: '', jwksUrl: '', users: {} }
@@ -25,6 +25,8 @@ export async function provisionAuth(check: boolean) {
     PoolName: 'ebc-compass-demo',
     Schema: ['personaId', 'matricula', 'campus', 'campusCode', 'programa', 'career', 'semestre', 'periodo'].map(Name => ({ Name, AttributeDataType: 'String', Mutable: true })),
   }))).UserPool!.Id!
+  try { await client.send(new GetGroupCommand({ UserPoolId: state.poolId, GroupName: 'admin' })) }
+  catch (error) { if ((error as Error).name !== 'ResourceNotFoundException') throw error; await client.send(new CreateGroupCommand({ UserPoolId: state.poolId, GroupName: 'admin', Description: 'Administración de la demo' })) }
   const clients = await client.send(new ListUserPoolClientsCommand({ UserPoolId: state.poolId, MaxResults: 60 }))
   const web = clients.UserPoolClients?.find(item => item.ClientName === 'compass-web')
   if (!web && check) throw new Error('Falta el cliente Cognito local.')
@@ -66,6 +68,7 @@ export async function provisionAuth(check: boolean) {
       await client.send(new AdminUpdateUserAttributesCommand({ UserPoolId: state.poolId, Username: username, UserAttributes: changes }))
     }
     if (needsPassword) await client.send(new AdminSetUserPasswordCommand({ UserPoolId: state.poolId, Username: username, Password: password, Permanent: true }))
+    if (persona.role === 'admin') await client.send(new AdminAddUserToGroupCommand({ UserPoolId: state.poolId, Username: username, GroupName: 'admin' }))
     state.users[persona.id] = { username, password, sub: savedSub, passwordReady: true, shared: Boolean(sharedPassword) }
     save()
   }

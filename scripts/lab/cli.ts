@@ -26,6 +26,9 @@ import {
   AdminDeleteUserCommand,
   AdminInitiateAuthCommand,
   AdminSetUserPasswordCommand,
+  AdminAddUserToGroupCommand,
+  CreateGroupCommand,
+  GetGroupCommand,
   CognitoIdentityProviderClient,
   paginateListUsers,
   type AttributeType,
@@ -309,7 +312,9 @@ async function personas(): Promise<void> {
   if (o.stage && o.stage !== stage) fail('El stage de LAB_OUTPUTS_FILE no coincide con LAB_STAGE.')
   const registryFile = join(here, '.state', 'personas.json')
   const registry = existsSync(registryFile) ? JSON.parse(readFileSync(registryFile, 'utf8')) as Record<string, { username: string; password: string; ready?: boolean; sub?: string; shared?: boolean }> : {}
-  const seeds = JSON.parse(readFileSync(join(repoRoot, 'shared', 'personas.json'), 'utf8')) as { id: string; hasProfile: boolean; name: string; enrollment: string; campus: string; campusName: string; career: string; program: string; period: number; periodType: string }[]
+  const seeds = JSON.parse(readFileSync(join(repoRoot, 'shared', 'personas.json'), 'utf8')) as { id: string; hasProfile: boolean; name: string; enrollment: string; campus: string; campusName: string; career: string; program: string; period: number; periodType: string; role?: string }[]
+  try { await cognito.send(new GetGroupCommand({ UserPoolId: o.cognitoUserPoolId, GroupName: 'admin' })) }
+  catch (error) { if ((error as { name?: string }).name !== 'ResourceNotFoundException') throw error; await cognito.send(new CreateGroupCommand({ UserPoolId: o.cognitoUserPoolId, GroupName: 'admin', Description: 'Administración de la demo' })) }
   mkdirSync(dirname(registryFile), { recursive: true })
   const save = () => { writeFileSync(registryFile, JSON.stringify(registry, null, 2) + '\n', { mode: 0o600 }); chmodSync(registryFile, 0o600) }
   for (const seed of seeds) {
@@ -341,6 +346,7 @@ async function personas(): Promise<void> {
     if (!existing || !previous?.ready || previous.password !== password || previous.sub !== sub) {
       await cognito.send(new AdminSetUserPasswordCommand({ ...target, Password: password, Permanent: true }))
     }
+    if (seed.role === 'admin') await cognito.send(new AdminAddUserToGroupCommand({ UserPoolId: o.cognitoUserPoolId, Username: username, GroupName: 'admin' }))
     registry[seed.id] = { username, password, ready: true, sub: savedSub, shared: Boolean(sharedPassword) }
     save()
   }

@@ -107,6 +107,20 @@ select { appearance: none; background-color: #fff; background-image: url("data:i
 
 /* Botones */
 .button { border: 0; border-radius: 10px; cursor: pointer; display: inline-block; font-weight: 700; padding: .75rem 1.1rem; text-align: center; text-decoration: none; transition: background .15s, transform .15s; }
+.admin-page { max-width: 1180px; }
+.page-heading { align-items: flex-start; display: flex; justify-content: space-between; gap: 1rem; }
+.admin-badge, .status-ok, .status-blocked { border-radius: 999px; display: inline-block; font-size: .78rem; font-weight: 800; padding: .3rem .65rem; }
+.admin-badge { background: var(--gold-soft); color: var(--gold-ink); }
+.admin-summary { display: grid; gap: 1rem; grid-template-columns: repeat(3, 1fr); margin: 1.5rem 0; }
+.admin-summary article, .panel-card { background: #fff; border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 8px 24px #0b2f6b0d; }
+.admin-summary article { display: flex; flex-direction: column; padding: 1.1rem 1.25rem; }
+.admin-summary strong { color: var(--navy); font-size: 1.8rem; }
+.admin-summary span, .panel-card-heading p, .admin-note { color: var(--ink-soft); }
+.panel-card { overflow: hidden; }
+.panel-card-heading { align-items: center; display: flex; justify-content: space-between; gap: 1rem; padding: 1.25rem; }
+.panel-card-heading h2 { margin: 0; }.panel-card-heading p { margin: .25rem 0 0; }
+.trace-table-wrap { overflow-x: auto; }.trace-table { border-collapse: collapse; min-width: 800px; width: 100%; }.trace-table th, .trace-table td { border-top: 1px solid var(--line); padding: .85rem 1.25rem; text-align: left; vertical-align: top; }.trace-table th { color: var(--ink-soft); font-size: .78rem; text-transform: uppercase; }.trace-table small { color: var(--ink-soft); display: block; margin-top: .25rem; }.status-ok { background: #e5f6ee; color: #12633e; }.status-blocked { background: #fff0e8; color: #9c3e17; }.admin-note { font-size: .9rem; margin-top: 1rem; }
+.admin-empty { color: var(--ink-soft); padding: 1.5rem; }
 .button.primary, .primary { background: var(--blue); color: #fff; }
 .button.primary:hover { background: var(--blue-dark); }
 .button.secondary, .secondary { background: var(--blue-soft); color: var(--blue); }

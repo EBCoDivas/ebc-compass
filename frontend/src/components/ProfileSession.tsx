@@ -17,7 +17,7 @@ export function ProfileSession({ children }: { children: ReactNode }) {
     return () => { active = false }
   }, [attempt])
   if (status === 'ready') {
-    if (sessionSubject() && !hasJuryAccess(activePersona()?.id) && needsProfileSetup(loadProfile()) && pathname !== '/perfil') {
+    if (sessionSubject() && !hasJuryAccess(activePersona()?.id) && needsProfileSetup(loadProfile()) && pathname !== '/perfil' && pathname !== '/admin') {
       return <Navigate to="/perfil" replace />
     }
     return children

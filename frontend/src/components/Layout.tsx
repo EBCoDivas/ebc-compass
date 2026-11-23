@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { usePageTitle } from '../utils/pageTitle'
 import { AssistantDockProvider } from './assistant/AssistantDock'
 
-const titles: Record<string, string> = { '/': 'Inicio', '/catalogo': 'Oportunidades', '/calendario': 'Calendario', '/asistente': 'Compass', '/perfil': 'Mi perfil', '/acceso': 'Iniciar sesión' }
+const titles: Record<string, string> = { '/': 'Inicio', '/catalogo': 'Oportunidades', '/calendario': 'Calendario', '/asistente': 'Compass', '/perfil': 'Mi perfil', '/admin': 'Administración', '/acceso': 'Iniciar sesión' }
 
 function NavIcon({ type }: { type: 'home' | 'opportunities' | 'calendar' | 'chat' }) {
   const paths = {
@@ -28,6 +28,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const signedOut = authConfigured && !token
   const claims = tokenClaims(token)
   const fullName = String(claims?.name ?? claims?.email ?? 'Estudiante')
+  const isAdmin = (Array.isArray(claims?.['cognito:groups']) && claims['cognito:groups'].map(String).includes('admin')) || claims?.['custom:role'] === 'admin'
   const dockEnabled = !signedOut && pathname !== '/asistente' && pathname !== '/acceso'
   return (
     <AssistantDockProvider enabled={dockEnabled}>
@@ -39,6 +40,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <NavLink className="nav-link" to="/catalogo"><NavIcon type="opportunities" />Oportunidades</NavLink>
           <NavLink className="nav-link" to="/calendario"><NavIcon type="calendar" />Calendario</NavLink>
           <NavLink className="nav-link" to="/asistente"><NavIcon type="chat" />Conversar</NavLink>
+          {isAdmin && <NavLink className="nav-link" to="/admin">Administración</NavLink>}
         </nav>}
         {authConfigured && token && <div className="session-menu">
           <NavLink className="profile-link" to="/perfil" aria-label={`Mi perfil, ${fullName}`} title="Mi perfil">
