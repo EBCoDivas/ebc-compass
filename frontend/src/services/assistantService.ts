@@ -51,7 +51,7 @@ export const getConversationId = (): string | null => readStorage(CONVERSATION_I
 const saveConversationId = (id: string | null) => writeStorage(CONVERSATION_ID_KEY, id)
 
 export interface ConversationSummary { id: string; title: string; updatedAt: string; preview: string; messageCount: number }
-export interface MemoryFact { key: string; value: string; origin: 'profile' | 'conversation' | 'user'; updatedAt: string }
+export interface MemoryFact { key: string; value: string; origin: 'profile' | 'conversation' | 'user' | 'demo'; updatedAt: string }
 export interface MemoryData { facts: MemoryFact[]; allowedValues: Record<string, string[]> }
 export async function listConversations(): Promise<ConversationSummary[]> {
   const data = await request<{ conversations: ConversationSummary[] }>('/conversations?limit=100')

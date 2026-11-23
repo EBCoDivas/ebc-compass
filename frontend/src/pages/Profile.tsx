@@ -1,4 +1,5 @@
 import { academicDataFromClaims } from '../services/personaService'
+import { interestOptionsFor, interestSuggestions } from '../utils/interests'
 import { authConfigured, getToken, signOut } from '../services/authService'
 import { useState } from 'react'
 import type { FormEvent } from 'react'
@@ -21,9 +22,9 @@ export function Profile() {
   const [saving, setSaving] = useState(false)
   const onboarding = needsProfileSetup(profile)
   const completeness = profileCompleteness(profile)
-  const interestOptions = ['Finanzas', 'Matemáticas', 'Banca digital', 'Emprendimiento', 'Marketing digital', 'Liderazgo', 'Tecnología', 'Sostenibilidad']
+  const interestOptions = interestOptionsFor(profile.career)
   const preferenceOptions = ['Becas', 'Diplomados', 'Cursos adicionales', 'Estudiar otra carrera', 'Actividades deportivas', 'Voluntariado', 'Eventos y networking']
-  const typedInterestSuggestions = interest.toLowerCase().includes('matem') ? ['Finanzas', 'Estadística', 'Análisis de datos'] : interest.toLowerCase().includes('finan') ? ['Inversiones', 'Mercados financieros', 'Banca digital'] : []
+  const typedInterestSuggestions = interestSuggestions(profile.career, interest, profile.interests)
 
   function update<K extends keyof StudentProfile>(key: K, value: StudentProfile[K]) {
     setProfile((current) => ({ ...current, [key]: value }))
@@ -85,7 +86,7 @@ export function Profile() {
         <fieldset className="profile-fields" disabled={saving}>
         <section className="form-card">
           <h2>Datos personales y académicos</h2>
-          {academic ? <div className="academic-summary" aria-label="Datos académicos demo">
+          {academic ? <div className="academic-summary" aria-label="Datos académicos">
             <div><span>Matrícula</span><strong>{academic?.enrollment}</strong></div>
             <div><span>Campus</span><strong>{academic?.campus || profile?.campus || 'Sin campus'}</strong></div>
             <div><span>Nombre completo</span><strong>{academic?.fullName}</strong></div>
@@ -101,7 +102,7 @@ export function Profile() {
           <h2>Intereses</h2>
           <p className="field-help">Selecciona temas que te gustaría explorar o escribe uno propio.</p>
           <div className="choice-list">{interestOptions.map((option) => <button type="button" className={`choice ${profile.interests.includes(option) ? 'selected' : ''}`} key={option} onClick={() => toggleInterest(option)}>{option}</button>)}</div>
-          <div className="interest-entry"><input value={interest} maxLength={50} onChange={(e) => setInterest(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addInterest() } }} placeholder="Ej. banca digital" /><button type="button" className="button secondary" onClick={addInterest}>Agregar</button></div>
+          <div className="interest-entry"><input value={interest} maxLength={50} onChange={(e) => setInterest(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addInterest() } }} placeholder="Escribe otro interés" /><button type="button" className="button secondary" onClick={addInterest}>Agregar</button></div>
           {typedInterestSuggestions.length > 0 && <div className="suggestions"><span>También puede interesarte:</span>{typedInterestSuggestions.map((suggestion) => <button type="button" key={suggestion} onClick={() => addSuggestedInterest(suggestion)}>{suggestion}</button>)}</div>}
           <div className="tags" aria-label="Intereses agregados">{profile.interests.filter((item) => !interestOptions.some((option) => option.toLowerCase() === item.toLowerCase())).map((item) => <span className="tag" key={item}>{item}<button type="button" aria-label={`Quitar ${item}`} onClick={() => update('interests', profile.interests.filter((interestItem) => interestItem !== item))}>×</button></span>)}</div>
         </section>

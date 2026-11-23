@@ -1,13 +1,11 @@
 ---
 id: preguntas-frecuentes
-title: Preguntas frecuentes (contenido simulado)
+title: Preguntas frecuentes
 topic: faq
 language: es
 simulated: true
 ---
 # Preguntas frecuentes
-
-> Contenido simulado para la demo de EBC Compass.
 
 ## ¿Cómo completo mi perfil?
 Entra a la sección Perfil y llena nombre, campus, carrera y semestre. Con eso recibirás recomendaciones más precisas.

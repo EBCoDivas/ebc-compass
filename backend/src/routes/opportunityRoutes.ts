@@ -1,23 +1,18 @@
-import { matchesAcademicScope } from '../data/academic.js'
 import { Router } from 'express'
-import { opportunities } from '../data/opportunities.js'
+import { resolveOpportunityCatalog } from '../auth/planningStudent.js'
 
 export const opportunityRoutes = Router()
 
-opportunityRoutes.get('/', (request, response) => {
+opportunityRoutes.get('/', async (request, response) => {
   const type = typeof request.query.type === 'string' ? request.query.type : undefined
-  const career = typeof request.query.career === 'string' ? request.query.career : undefined
-  const semester = typeof request.query.semester === 'string' ? Number(request.query.semester) : undefined
   const search = typeof request.query.search === 'string' ? request.query.search.toLowerCase() : undefined
-  const campus = typeof request.query.campus === 'string' ? request.query.campus : undefined
-  const level = typeof request.query.level === 'string' ? request.query.level : undefined
-  const filtered = opportunities.filter((item) =>
-    matchesAcademicScope(item, { campus, career, level }) &&
-    (!type || item.type === type) &&
-    (!career || item.career.includes(career)) &&
-    (!semester || !item.semester || item.semester.includes(semester)) &&
-    (!search || `${item.title} ${item.description}`.toLowerCase().includes(search)),
-  )
-  response.json(filtered)
+  response.setHeader('Cache-Control', 'no-store')
+  try {
+    const { catalog } = await resolveOpportunityCatalog(request)
+    response.json(catalog.filter(item => (!type || item.type === type) &&
+      (!search || `${item.title} ${item.description}`.toLowerCase().includes(search))))
+  } catch {
+    response.status(503).json({ code: 'PLANNING_UNAVAILABLE', message: 'No pudimos cargar tus oportunidades. Intenta de nuevo.' })
+  }
 })
 

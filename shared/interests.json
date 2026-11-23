@@ -1,0 +1,8 @@
+{
+  "general": ["Beca", "Prácticas", "Análisis de datos"],
+  "careers": {
+    "accounting": ["Impuestos", "Contabilidad", "Auditoría", "Educación financiera", "Servicio social"],
+    "marketing": ["Marketing digital", "Marca", "Campaña", "Métricas", "Audiencias"],
+    "law": ["Derecho empresarial", "Titulación", "Clínica jurídica", "Expedientes jurídicos", "Servicio social"]
+  }
+}

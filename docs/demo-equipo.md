@@ -2,7 +2,7 @@
 
 ## Qué podemos mostrar
 
-- **Acceso y perfil:** nueve cuentas ficticias; cada una tiene su sesión, perfil y conversaciones. Intereses, metas y disponibilidad personalizan la orientación.
+- **Acceso y perfil:** diez cuentas ficticias; cada una tiene su sesión, perfil y conversaciones. Intereses, metas y disponibilidad personalizan la orientación.
 - **Inicio:** próximas fechas, siguiente paso sugerido, avance académico simulado y recomendaciones agrupadas con su razón. Cada categoría abre su lista completa en Oportunidades.
 - **Avance académico:** materias, créditos, periodo y promedio cuando está disponible. Ocho cuentas tienen datos; `sin-perfil` muestra el estado vacío.
 - **Oportunidades y calendario:** cursos, becas, eventos, trámites y desarrollo profesional; búsqueda, filtros, fechas y guardado para después en el navegador.
@@ -37,7 +37,7 @@ npm run dev
 
 - Si ya tienes el entorno preparado, basta con actualizar el repo y ejecutar `npm run dev`.
 - Abre **http://localhost:5173**. Las cuentas demo están en `local/.state/cognito.json` (privado, no compartir en el repo).
-- Check-in: entrar con Valerie → revisar Inicio → abrir una categoría → preguntar «¿Qué oportunidades me recomiendas según mi perfil?» → pedir «recuerda que trabajo por las tardes» → revisar “Lo que Compass recuerda” → abrir otra conversación → recargar y comprobar el historial.
+- Check-in: entrar con Ana Lucía (1.er semestre) → revisar Inicio → abrir una categoría → preguntar «¿Qué oportunidades me recomiendas según mi perfil?» → pedir «recuerda que trabajo por las tardes» → revisar “Lo que Compass recuerda” → abrir otra conversación → recargar y comprobar el historial.
 - Sin OpenAI: `npm run dev:rules` (plantillas; no permite comparar respuestas de modelos).
 - `Ctrl+C` detiene la aplicación. `npm run stop` detiene el emulador y borra sus datos.
 

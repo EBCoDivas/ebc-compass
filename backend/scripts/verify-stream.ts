@@ -19,7 +19,7 @@ const server = app.listen(0, '127.0.0.1')
 await once(server, 'listening')
 const base = 'http://127.0.0.1:' + (server.address() as AddressInfo).port
 try {
-  const login = await fetch(base + '/api/dev/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(state.users.valerie) })
+  const login = await fetch(base + '/api/dev/session', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(state.users['ana-ingreso']) })
   assert.equal(login.status, 200)
   const { idToken } = await login.json() as { idToken: string }
   const response = await fetch(base + '/api/assistant/messages/stream', { method: 'POST',

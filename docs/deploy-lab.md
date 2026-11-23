@@ -18,7 +18,7 @@ npm run env:create && npm run setup             # instala dependencias de todos 
 npm run lab:check
 npm run lab:deploy -- --confirm
 
-# 4. Registrar las nueve cuentas demo en Cognito
+# 4. Registrar las cuentas demo en Cognito
 npm run lab:personas -- --confirm
 ```
 
@@ -69,7 +69,7 @@ El código del backend **no cambia**: en local las llamadas de AWS se desvían a
 
 1. Inicia sesión en AWS con el perfil autorizado y ejecuta `npm run lab:check`.
 2. Ejecuta `npm run lab:deploy -- --confirm` para desplegar o actualizar el pool, su cliente y los atributos académicos declarados en `platform/infra/auth.ts`. Si solo actualizas código/configuración y ya tienes la Knowledge Base cargada, puedes usar `--skip-knowledge`; no omitas el despliegue del esquema antes de registrar las personas.
-3. Ejecuta `npm run lab:personas -- --confirm`. Lee las nueve definiciones de `shared/personas.json` y crea o actualiza sus cuentas y atributos en el pool del stage seleccionado. No registra al administrador de F8 todavía.
+3. Ejecuta `npm run lab:personas -- --confirm`. Lee las definiciones de `shared/personas.json` y crea o actualiza sus cuentas y atributos en el pool del stage seleccionado. No registra al administrador de F8 todavía.
 4. Consulta los correos y contraseñas en `scripts/lab/.state/personas.json` en la computadora donde ejecutaste el comando. El archivo tiene permisos 600 y está ignorado por Git. No lo publiques ni copies las credenciales al frontend.
 5. Ejecuta `npm run lab:status`, abre la URL del sitio y entra por `/acceso` con una de esas cuentas. Para cambiar de persona, usa **Cerrar sesión** y entra con otra cuenta.
 
@@ -124,7 +124,7 @@ Después ejecuta `lab:deploy` con `LAB_STAGE` apuntando al mismo stage. `sst ref
 | Elegir y habilitar un modelo de Bedrock | `lab:check` / `lab:deploy` prueban candidatos y eligen uno que responda |
 | Copiar `KNOWLEDGE_BASE_ID`, nombres de tabla y bucket, URLs, IDs de Cognito | SST los conecta entre sí; el frontend se compila con ellos |
 | Subir documentos y sincronizar la Knowledge Base | `lab:knowledge` (incluido en `lab:deploy`) con verificación automática |
-| Registrar cuentas demo y obtener un token para probar | `lab:personas` (las nueve personas), `lab:user` (una cuenta independiente) y `lab:smoke` (temporal) |
+| Registrar cuentas demo y obtener un token para probar | `lab:personas` (las personas demo), `lab:user` (una cuenta independiente) y `lab:smoke` (temporal) |
 | Comprobar que todo funciona | `lab:smoke` |
 | Borrar todo al terminar | `lab:destroy` (vacía el bucket primero) |
 
@@ -142,7 +142,7 @@ Después ejecuta `lab:deploy` con `LAB_STAGE` apuntando al mismo stage. `sst ref
 | `npm run lab:deploy -- --confirm` | Todo el flujo de arriba | Sí |
 | `npm run lab:knowledge -- --confirm` | Solo actualiza documentos, sincroniza y verifica la Knowledge Base | Sí |
 | `npm run lab:smoke -- --confirm` | Prueba de humo (usuario temporal) | Crea y borra un usuario |
-| `npm run lab:personas -- --confirm` | Registra las nueve personas y guarda credenciales privadas en `scripts/lab/.state/personas.json` | Sí |
+| `npm run lab:personas -- --confirm` | Registra las personas demo y guarda credenciales privadas en `scripts/lab/.state/personas.json` | Sí |
 | `npm run lab:user -- --confirm [correo]` | Crea o reinicia el usuario de demostración y muestra su contraseña (solo una vez) | Sí |
 | `npm run lab:status` | URLs y recursos del despliegue | No |
 | `npm run lab:destroy -- --confirm` | Elimina todo (`sst remove`) | Sí |
@@ -183,7 +183,7 @@ Configuración opcional en `scripts/lab/.env` (se crea con `npm run env:create`)
 | Paquete de la Lambda | Compilado con esbuild como lo hace SST (ESM + `require` dinámico, 5,6 MB) y ejecutado | ✅ |
 | Código de infraestructura (SST) | `npm run platform:typecheck` y pruebas de `platform/` | ✅ Compila; **no se ha ejecutado `sst deploy`** |
 | `lab:check` y `lab:deploy` sin credenciales / sin `--confirm` | Con entorno aislado (sin tocar ninguna cuenta) | ✅ Mensajes claros y alto inmediato |
-| `lab:personas` y esquema de atributos de F3b | Comprobación de tipos; creación de las nueve cuentas ensayada en el emulador | ⏳ Registro de cuentas y login SRP pendientes de probar en el lab |
+| `lab:personas` y esquema de atributos de F3b | Comprobación de tipos; creación de las cuentas demo ensayada en el emulador | ⏳ Registro de cuentas y login SRP pendientes de probar en el lab |
 | `lab:user` y llamadas de Cognito | Ensayo contra el AWS Emulator | ✅ |
 | `lab:knowledge`: exportar y subir a S3 | Ensayo contra el emulador (24 objetos) | ✅ |
 | `lab:knowledge`: ingesta de la Knowledge Base y recuperación | El emulador no implementa bien la respuesta de la ingesta | ⏳ **Solo se puede probar en el lab** |

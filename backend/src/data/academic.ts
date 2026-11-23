@@ -135,6 +135,10 @@ export const programs = [
     "level": "posgrado"
   }
 ] as const
+export const allCareers = [...programs.map(program => program.value), 'banking']
+export const allCampuses = campuses.map(campus => campus.value)
+export const allLevels: AcademicLevel[] = ['licenciatura', 'ejecutiva', 'posgrado']
+
 export function levelForCareer(career: string | undefined): AcademicLevel | undefined {
   return career === 'banking' ? 'licenciatura' : programs.find(program => program.value === career)?.level
 }

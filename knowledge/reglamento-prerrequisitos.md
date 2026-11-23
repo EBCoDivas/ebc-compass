@@ -1,13 +1,13 @@
 ---
 id: reglamento-prerrequisitos
-title: Reglas de seriación y prerrequisitos (contenido simulado)
+title: Reglas de seriación y prerrequisitos
 topic: rules
 language: es
 simulated: true
 ---
 # Reglas de seriación y prerrequisitos
 
-> Contenido simulado para la demo de EBC Compass.
+> Confirma los requisitos y fechas vigentes con Servicios Escolares.
 
 ## Cómo funciona la seriación
 

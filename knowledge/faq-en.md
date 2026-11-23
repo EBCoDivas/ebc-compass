@@ -1,13 +1,11 @@
 ---
 id: faq-en
-title: Frequently asked questions (simulated content)
+title: Frequently asked questions
 topic: faq
 language: en
 simulated: true
 ---
 # Frequently asked questions
-
-> Simulated content for the EBC Compass demo.
 
 ## How do I complete my profile?
 Open the Profile section and fill in your name, campus, career and semester. You will then get more accurate recommendations.

@@ -1,5 +1,6 @@
 // Tipos propios del asistente. No dependen de otras partes del backend: los adaptadores traducen
 // el catálogo y el perfil actuales a estas formas (si los datos cambian, solo cambia el adaptador).
+import type { OpportunityStage } from '../../../shared/contracts/studentPlanning.js'
 
 export type ChatModel = 'lunna' | 'terra'
 
@@ -30,6 +31,7 @@ export interface AssistantProfile {
   interests?: string[]
   goals?: string
   availability?: string
+  demoWorkSchedule?: 'works-afternoons'
 }
 
 export type OpportunityType = 'course' | 'scholarship' | 'professional-development' | 'event' | 'procedure' | 'career-opportunity'
@@ -41,6 +43,7 @@ export interface AssistantOpportunity {
   description: string
   careers: string[]
   semesters?: number[]
+  stage?: OpportunityStage
   campus?: string[]
   level?: string[]
   simulated?: boolean

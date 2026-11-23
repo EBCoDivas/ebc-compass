@@ -55,14 +55,36 @@ Si el modelo falla, la ruta y los avisos se muestran con reglas.
 
 - Contrato de datos con dos partes: **catálogo** (lo que ofrece EBC) y **pendientes del alumno** (qué le toca, con estado y fecha). Lo usan todas las demás tareas.
 - Etapa en cada oportunidad (nuevo ingreso, a mitad de carrera, cierre o todas). Alertas, calendario y recomendaciones filtran por etapa.
+- **Dos capas de datos.** La capa por etapa (nuevo ingreso, mitad de carrera y cierre) es compartida y se escribe una vez: inducción, charla de inicio, pago de inscripción y beca de primer ingreso. La capa por carrera (cursos, prácticas, requisitos de servicio social y de titulación) se escribe solo para las tres carreras de la demo.
+- **Tres carreras con datos completos**, cada una con su cuenta:
+
+  | Carrera | Cuenta | Etapa | Qué muestra |
+  |---|---|---|---|
+  | Contaduría | Ana, en 1.º y en 7.º (salto en el tiempo) | Nuevo ingreso y cierre | La historia completa, con la mayor profundidad |
+  | Mercadotecnia | Diego, 5.º | Mitad de carrera | Prácticas, cursos y eventos de su área |
+  | Derecho | Sofía, 9.º | Cierre | Titulación y servicio social con la fecha encima, en una carrera distinta a la de Ana |
+
 - Cuenta nueva de Ana Lucía Torres en 1.er semestre, con la misma carrera y campus que la de 7.º.
 - Escena de 1.º: beca de primer ingreso con requisitos y fecha límite, tarifas simuladas de inscripción y pendientes de nuevo ingreso.
 - Escena de 7.º: requisitos de titulación de Contaduría, horas de servicio social acumuladas con un ritmo que no alcanza a tiempo y opciones de servicio social con horario, algunas por la tarde.
 - Memoria de Ana en 7.º precargada con "trabaja por las tardes".
-- Pendientes coherentes para las demás personas demo.
-- Prueba de coherencia: a nadie le aparece algo fuera de su etapa y cada pendiente apunta a algo del catálogo.
+- Las demás cuentas demo no se escriben a mano: reciben los pendientes de su etapa por reglas, sin contenido propio de la carrera, para que nunca se vean vacías.
+- Prueba de coherencia: a nadie le aparece algo fuera de su etapa o de su carrera, y cada pendiente apunta a algo del catálogo.
+- **Subtarea: ingesta de la base de conocimiento desde S3, como en el lab.** Los documentos nuevos de esta tarea (por ejemplo la guía de inducción de nuevo ingreso) deben llegar a los vectores por el mismo camino que en AWS:
+  - `kb:sync-s3` publica los documentos y sus `.metadata.json` en el bucket del emulador, como `lab:knowledge` en `KnowledgeDocuments`.
+  - `kb:ingest` hace el papel de `StartIngestionJob`: lee el **bucket** (no la carpeta `knowledge/`), fragmenta, genera los embeddings con Titan v2 a través del puente y escribe los vectores. `kb:index` ejecuta ambos pasos.
+  - La fragmentación imita la estrategia por omisión de Bedrock Knowledge Bases (fragmentos de unos 300 tokens que respetan los límites de oración, con traslape), la misma que usa la Knowledge Base del lab, que no declara otra estrategia. Es una aproximación: el conteo de tokens es estimado.
+  - Los metadatos se escriben con las claves de Bedrock (`AMAZON_BEDROCK_TEXT_CHUNK`, `AMAZON_BEDROCK_METADATA`, `x-amz-bedrock-kb-source-uri`).
+  - Lo que no se puede ensayar en local es el `StartIngestionJob` en sí: el emulador no ingiere. Eso se confirma en el lab.
 
-**Listo cuando:** Ana en 1.º y Ana en 7.º ven Inicio, alertas, calendario y recomendaciones distintas, y la prueba de coherencia pasa.
+- **Subtarea: intereses del onboarding alineados a la carrera.** Las opciones de intereses ya no son una lista fija igual para todos:
+  - `shared/interests.json` define los intereses sugeridos por carrera (Contaduría, Mercadotecnia y Derecho) y una lista general para las demás carreras.
+  - Cada interés se redacta con el vocabulario del catálogo, porque el motor de recomendaciones puntúa por coincidencia de texto con el título y la descripción. Si un interés no coincide con ninguna oportunidad, se ve útil pero no hace nada.
+  - Los intereses precargados de las cuentas demo son opciones de esa lista, para que aparezcan seleccionados en el perfil.
+  - Al escribir un interés propio, las sugerencias salen de la misma lista, no de reglas fijas.
+  - Prueba de coherencia: cada interés sugerido coincide con al menos una oportunidad de su carrera.
+
+**Listo cuando:** Ana en 1.º y Ana en 7.º ven Inicio, alertas, calendario y recomendaciones distintas, Diego y Sofía ven los de su carrera y etapa, la prueba de coherencia pasa, la base de conocimiento se indexa leyendo el bucket y las preguntas de oro siguen pasando, y el onboarding ofrece intereses distintos según la carrera.
 
 Responsable: ______
 

@@ -43,7 +43,7 @@ npm run test:scripts # pruebas de los scripts del repo (setup y doctor)
 
 Detalle y lista completa de comandos en [local/README.md](local/README.md). Para desplegar al lab de AWS (cuando esté disponible): `npm run lab:check` y `npm run lab:deploy -- --confirm`; guía en [docs/deploy-lab.md](docs/deploy-lab.md). Cada paquete (`frontend/`, `backend/`, `platform/`, `local/`) mantiene además sus propios scripts.
 
-Para acceder con las nueve personas demo en el lab, despliega la configuración actual y ejecuta `npm run lab:personas -- --confirm`. Consulta las credenciales privadas en `scripts/lab/.state/personas.json` y entra al sitio por `/acceso`. El flujo y la separación respecto a Cognito local están documentados en [Login y cuentas demo del lab](docs/deploy-lab.md#login-y-cuentas-demo-en-el-lab-f3b).
+Para acceder con las cinco cuentas demo en el lab, despliega la configuración actual y ejecuta `npm run lab:personas -- --confirm`. Consulta las credenciales privadas en `scripts/lab/.state/personas.json` y entra al sitio por `/acceso`. El flujo y la separación respecto a Cognito local están documentados en [Login y cuentas demo del lab](docs/deploy-lab.md#login-y-cuentas-demo-en-el-lab-f3b).
 
 ## Configuración local
 

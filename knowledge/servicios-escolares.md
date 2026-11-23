@@ -1,13 +1,13 @@
 ---
 id: servicios-escolares
-title: Servicios Escolares y contacto (contenido simulado)
+title: Servicios Escolares y contacto
 topic: services
 language: es
 simulated: true
 ---
 # Servicios Escolares
 
-> Contenido simulado para la demo de EBC Compass. Los datos de contacto son ficticios.
+> Consulta con tu campus el horario y los canales de atención vigentes.
 
 ## Qué atiende
 

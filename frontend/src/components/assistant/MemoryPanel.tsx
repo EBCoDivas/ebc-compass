@@ -5,7 +5,7 @@ import { campusOptions, careerOptions } from '../../types/profile'
 
 const keyLabels: Record<string, string> = {
   career: 'Carrera', campus: 'Campus', semester: 'Semestre', interests: 'Intereses',
-  goal: 'Meta', schedule: 'Horario', language: 'Idioma', modality: 'Modalidad',
+  goal: 'Meta', schedule: 'Horario', workSchedule: 'Trabajo', language: 'Idioma', modality: 'Modalidad',
 }
 
 // Los valores se guardan como claves internas; aquí se muestran en el idioma de la interfaz.
@@ -14,6 +14,7 @@ const valueLabels: Record<string, Record<string, string>> = {
   career: Object.fromEntries(careerOptions.map(option => [option.value, option.label])),
   goal: { 'banking-internship': 'Prácticas en banca', 'marketing-internship': 'Prácticas en marketing', 'professional-certification': 'Certificación profesional', entrepreneurship: 'Emprender' },
   schedule: { mornings: 'Mañanas', afternoons: 'Tardes', evenings: 'Noches', weekends: 'Fines de semana' },
+  workSchedule: { 'works-afternoons': 'Trabajas por las tardes' },
   language: { es: 'Español', en: 'Inglés' },
   modality: { online: 'En línea', 'in-person': 'Presencial', hybrid: 'Híbrida' },
   interests: { finanzas: 'Finanzas', banca: 'Banca', fintech: 'Fintech', marketing: 'Marketing', emprendimiento: 'Emprendimiento', contabilidad: 'Contabilidad', derecho: 'Derecho', becas: 'Becas' },

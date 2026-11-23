@@ -3,6 +3,7 @@ import { matchesAcademicScope, levelForCareer } from '../../data/academic.js'
 // Si el catálogo cambia (más tipos, códigos, prerrequisitos), solo hay que ajustar este archivo.
 
 import { opportunities as rawOpportunities } from '../../data/opportunities.js'
+import { matchesOpportunityStage } from '../../data/opportunityScope.js'
 import { recommend } from '../../data/recommendations.js'
 import type {
   AssistantOpportunity,
@@ -31,6 +32,7 @@ function toAssistant(raw: RawOpportunity): AssistantOpportunity {
     description: raw.description,
     careers: raw.career,
     semesters: raw.semester,
+    stage: raw.stage,
     campus: raw.campus,
     level: raw.level,
     simulated: raw.simulated,
@@ -53,7 +55,7 @@ export class InMemoryCatalog implements CatalogReader {
         matchesAcademicScope(item, filter) &&
         (!filter.type || item.type === filter.type) &&
         (!filter.career || item.careers.includes(filter.career)) &&
-        (!filter.semester || !item.semesters || item.semesters.includes(filter.semester)),
+        matchesOpportunityStage(item.stage ?? 'all', item.semesters, filter.semester),
     )
   }
 
@@ -74,7 +76,7 @@ export class ProfileRecommendations implements RecommendationProvider {
 
   async recommend(profile: AssistantProfile | undefined, limit: number): Promise<AssistantOpportunity[]> {
     const today = this.now()
-    const all = await this.catalog.list({ campus: profile?.campus, career: profile?.career })
+    const all = await this.catalog.list({ campus: profile?.campus, career: profile?.career, semester: profile?.currentSemester })
     const completed = (profile?.completedCourses ?? []).map((code) => code.toUpperCase())
     const alive = all.filter((item) => (!item.deadline || daysBetween(today, item.deadline) >= 0) && !(item.code && completed.includes(item.code)))
 
@@ -97,7 +99,7 @@ export class CatalogDates implements DatesProvider {
   constructor(private readonly catalog: CatalogReader) {}
 
   async upcoming(profile: AssistantProfile | undefined, days: number, today: Date): Promise<ImportantDate[]> {
-    const all = await this.catalog.list({ career: profile?.career, campus: profile?.campus, level: levelForCareer(profile?.career) })
+    const all = await this.catalog.list({ career: profile?.career, campus: profile?.campus, level: levelForCareer(profile?.career), semester: profile?.currentSemester })
     return all
       .filter((item): item is AssistantOpportunity & { deadline: string } => {
         if (!item.deadline) return false

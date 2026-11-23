@@ -1,13 +1,16 @@
 import { Router } from 'express'
 import { recommend } from '../data/recommendations.js'
+import { resolveOpportunityCatalog } from '../auth/planningStudent.js'
 
 export const recommendationRoutes = Router()
 
-recommendationRoutes.get('/', (request, response) => {
-  const career = typeof request.query.career === 'string' ? request.query.career : undefined
-  const semester = typeof request.query.semester === 'string' ? Number(request.query.semester) : undefined
+recommendationRoutes.get('/', async (request, response) => {
   const interests = typeof request.query.interests === 'string' ? request.query.interests.toLowerCase().split(',').map((item) => item.trim()) : []
-  const campus = typeof request.query.campus === 'string' ? request.query.campus : undefined
-  const level = typeof request.query.level === 'string' ? request.query.level : undefined
-  response.json(recommend({ career, semester, interests, campus, level }))
+  response.setHeader('Cache-Control', 'no-store')
+  try {
+    const { scope, catalog } = await resolveOpportunityCatalog(request)
+    response.json(recommend({ ...scope, interests }, catalog))
+  } catch {
+    response.status(503).json({ code: 'PLANNING_UNAVAILABLE', message: 'No pudimos cargar tus recomendaciones. Intenta de nuevo.' })
+  }
 })

@@ -316,7 +316,6 @@ footer { color: var(--ink-soft); font-size: .85rem; padding: 1.5rem 1rem; text-a
 .signin-form { display: grid; gap: 1rem; }
 .signin-form label { display: grid; font-weight: 650; gap: .4rem; }
 .signin-form .button { margin-top: .25rem; }
-p.signin-note { color: var(--ink-soft); font-size: .8rem; margin: 1.25rem 0 0; }
 .site-header { flex-wrap: wrap; gap: .5rem; }
 @media (min-width: 701px) and (max-width: 1100px) {
   .site-header > nav { order: 3; justify-content: center; width: 100%; }
@@ -358,7 +357,6 @@ p.signin-note { color: var(--ink-soft); font-size: .8rem; margin: 1.25rem 0 0; }
 .recommendation-reason ul { display: flex; flex-wrap: wrap; gap: .35rem; list-style: none; margin: .4rem 0 0; padding: 0; }
 .recommendation-reason li { background: var(--navy-soft); border-radius: 6px; color: var(--navy); font-size: .8rem; padding: .25rem .45rem; }
 .opportunity-action { color: var(--blue); font-size: .9rem; font-weight: 700; }
-.recommendations-demo-note { color: var(--ink-soft); font-size: .85rem; }
 .recommendations-expand { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; color: var(--blue); cursor: pointer; font: inherit; margin-top: .75rem; min-height: 44px; padding: .5rem .8rem; }
 .rumbo-expand { display: none; }
 @media (max-width: 640px) {

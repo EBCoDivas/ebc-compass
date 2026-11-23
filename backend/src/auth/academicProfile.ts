@@ -14,5 +14,8 @@ export function verifiedAcademicProfile(request: Request): AssistantProfile {
   if (typeof career === 'string' && (career === 'banking' || programs.some(item => item.value === career))) profile.career = career as CareerId
   const semester = Number(claims['custom:semestre'])
   if (Number.isInteger(semester) && semester >= 1 && semester <= 10) profile.currentSemester = semester
+  if (claims['custom:personaId'] === 'ana' && profile.career === 'accounting' && profile.campus === 'QRO' && semester === 7) {
+    profile.demoWorkSchedule = 'works-afternoons'
+  }
   return profile
 }

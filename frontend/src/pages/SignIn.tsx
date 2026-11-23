@@ -32,7 +32,7 @@ export function SignIn() {
           {!authConfigured && (
             <p className="institutional-note" role="status">
               <strong>Acceso no disponible</strong>
-              <span>Contacta a la persona responsable de la demostración para habilitarlo.</span>
+              <span>Contacta al equipo de Compass para habilitar el acceso.</span>
             </p>
           )}
           <label>Correo electrónico
@@ -46,7 +46,6 @@ export function SignIn() {
             {pending ? 'Ingresando…' : 'Iniciar sesión'}
           </button>
         </form>
-        <p className="signin-note">Demostración con cuentas ficticias. No uses tu contraseña institucional.</p>
       </section>
     </main>
   )

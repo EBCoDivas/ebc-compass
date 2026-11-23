@@ -1,16 +1,14 @@
 ---
 id: servicio-social
-title: Servicio social: orientación demo
+title: Orientación sobre servicio social
 topic: procedures
 language: es
 simulated: true
 ---
-# Servicio social: orientación demo
-
-> Trámite real mencionado públicamente, con flujo y fecha de demostración.
+# Orientación sobre servicio social
 
 ## Servicio social: alta y terminación
-Para practicar el flujo, prepara una carta de aceptación ficticia, una solicitud de alta y un reporte de terminación ficticio. Estos ejemplos no son una lista oficial de requisitos.
-Fecha del catálogo demo: 02/12/2026. Ana (Contaduría) puede usar este caso para revisar su siguiente paso; el sistema no certifica horas ni valida servicio social.
+Consulta si necesitas una carta de aceptación, una solicitud de alta y un reporte de terminación.
+Fecha en el catálogo: 02/12/2026. Solicita a Servicios Escolares la validación de tus horas.
 Acude a Servicios Escolares para confirmar documentos, tiempos y posibilidades de retroactividad. No se garantiza la aceptación de un trámite retroactivo.
 Fuente del nombre del trámite: https://www.ebc.mx/tramites-escolares/

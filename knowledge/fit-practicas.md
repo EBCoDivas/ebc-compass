@@ -1,21 +1,21 @@
 ---
 id: fit-practicas
-title: FiT EBC, prácticas y desarrollo: guía demo
+title: FiT EBC, prácticas y desarrollo profesional
 topic: careers
 language: es
 simulated: true
 ---
-# FiT EBC, prácticas y desarrollo: guía demo
+# FiT EBC, prácticas y desarrollo profesional
 
-> Nombres de servicios basados en referencias públicas. Todas las actividades, empleadores y vacantes del catálogo son ficticios.
+> Consulta la disponibilidad de las actividades y vacantes con EBC.
 
 ## FiT EBC y prácticas
-FiT EBC es un canal de vinculación con empresas. La sesión de encuentro del catálogo se programa ficticiamente para 25/11/2026 en Guadalajara, CDMX y Querétaro.
-La Ruta de Empleabilidad de esta demo practica CV y entrevista: cierre ficticio 12/12/2026.
-Diego (Mercadotecnia) y Carlos (Comercio y Negocios Internacionales) tienen ejemplos de prácticas de negocios; Mariana (Turismo) tiene una vacante ficticia en Cancún; Javier tiene un proyecto digital ficticio para modalidad ejecutiva.
+FiT EBC es un canal de vinculación con empresas. El catálogo indica el 25/11/2026 para el encuentro en Guadalajara, CDMX y Querétaro.
+La Ruta de Empleabilidad te ayuda a preparar tu CV y practicar para una entrevista. Fecha en el catálogo: 12/12/2026.
+Explora prácticas de negocios, oportunidades de turismo en Cancún o proyectos de transformación digital compatibles con la modalidad ejecutiva.
 Fuente: https://www.ebc.mx/lp/fit/alumnos.php
 
 ## Catapulta, EXU y relaciones internacionales
-Catapulta es el centro de emprendimiento; EXU se refiere a Extensión Universitaria. La sesión de relaciones internacionales se presenta como Global EBC en la demo.
-No se garantizan plazas, intercambios o apoyos. Las fechas de actividades se consultan en el catálogo y son inventadas.
+Catapulta es el centro de emprendimiento; EXU se refiere a Extensión Universitaria. La sesión de relaciones internacionales aparece en el catálogo como Global EBC.
+Consulta el catálogo para conocer las fechas y pregunta en tu campus por plazas, intercambios y apoyos.
 Referencia pública de los servicios: https://www.ebc.mx/pdf/informativo-licenciaturas-ejecutivas.pdf

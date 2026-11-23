@@ -1,18 +1,19 @@
 import { academicDataFromClaims, periodLabel } from '../services/personaService'
-import { getToken } from '../services/authService'
+import { getToken, sessionSubject } from '../services/session'
 import { personaStorageKey } from '../services/personaService'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { loadProfile, profileCompleteness } from '../services/profileService'
-import { fetchOpportunities, fetchRecommendations, type Opportunity } from '../services/opportunityService'
+import { fetchAlerts, fetchOpportunities, fetchRecommendations, fetchStudentPlanning, type Alert, type Opportunity, type Recommendation } from '../services/opportunityService'
 import { TypeBadge } from '../components/TypeBadge'
 import { Rumbo } from '../components/Rumbo'
 import { daysUntil, formatShortDate } from '../utils/dates'
 import { DateLine } from '../components/DateLine'
 import { dateLabelFor } from '../utils/opportunityTypes'
 import { fetchAcademicProgress, type AcademicProgress } from '../services/academicProgressService'
-import type { Recommendation } from '../services/opportunityService'
+import type { StudentPlanning } from '../../../shared/contracts/studentPlanning'
+import { StudentPendingList } from '../components/StudentPendingList'
 
 const SAVED_KEY = 'ebc_compass_saved_opportunities'
 
@@ -33,6 +34,9 @@ export function Home() {
   const [recommendationsLoading, setRecommendationsLoading] = useState(Boolean(profile))
   const [recommendationsError, setRecommendationsError] = useState('')
   const [all, setAll] = useState<Opportunity[]>([])
+  const [alerts, setAlerts] = useState<Alert[] | null>(null)
+  const [planning, setPlanning] = useState<StudentPlanning | null>(null)
+  const [planningStatus, setPlanningStatus] = useState<'loading' | 'ready' | 'error'>(() => sessionSubject() ? 'loading' : 'ready')
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
   useEffect(() => {
     if (progressLoading || recommendationsLoading) return
@@ -50,8 +54,20 @@ export function Home() {
   }, [])
 
   useEffect(() => {
-    fetchOpportunities({ campus: profile?.campus || undefined, career: profile?.career || undefined }).then(setAll).catch(() => setAll([]))
-  }, [profile?.campus, profile?.career])
+    const scope = { campus: profile?.campus || undefined, career: profile?.career || undefined,
+      semester: typeof profile?.currentSemester === 'number' ? profile.currentSemester : undefined }
+    let active = true
+    const signedIn = Boolean(sessionSubject())
+    const catalog = signedIn ? fetchStudentPlanning().then(value => {
+      if (active) { setPlanning(value); setPlanningStatus('ready') }
+      return value.catalog
+    }) : fetchOpportunities(scope)
+    catalog.then(value => { if (active) setAll(value) }).catch(() => {
+      if (active && signedIn) setPlanningStatus('error')
+    })
+    fetchAlerts(scope).then(value => { if (active) setAlerts(value) }).catch(() => { if (active) setAlerts(null) })
+    return () => { active = false }
+  }, [profile?.campus, profile?.career, profile?.currentSemester])
 
   useEffect(() => {
     let active = true
@@ -75,9 +91,8 @@ export function Home() {
     return () => { active = false }
   }, [profile?.career, profile?.campus, profile?.currentSemester, profileInterests])
 
-  // Con perfil, el rumbo usa lo recomendado; si hay pocas fechas, se completa con las generales.
-  const personal = upcomingOf(recommended, 5)
-  const route = personal.length >= 3 ? personal : upcomingOf([...personal, ...all.filter((item) => !personal.some((p) => p.id === item.id))], 5)
+  const alertIds = new Set(alerts?.map(alert => alert.opportunityId))
+  const route = upcomingOf(alerts ? all.filter(item => alertIds.has(item.id)) : all, 5)
   const picks = (profile ? recommended : all).slice(0, 3)
   const recommendationGroups = [
     { label: 'Cursos y desarrollo profesional', types: ['course', 'professional-development'] },
@@ -114,6 +129,9 @@ export function Home() {
       </section>
 
       <div className="page home-body">
+        {planningStatus === 'loading' && <p role="status">Cargando pendientes…</p>}
+        {planningStatus === 'error' && <p className="form-error" role="alert">No pudimos cargar tus pendientes. Recarga la página para intentar de nuevo.</p>}
+        {planning && <StudentPendingList planning={planning} />}
         {!profile && (
           <section className="profile-strip">
             <p>Crea tu perfil para ver fechas y oportunidades de tu carrera. Tus ajustes se guardan en tu cuenta.</p>
@@ -134,7 +152,7 @@ export function Home() {
           <section className="academic-progress-card" aria-labelledby="academic-progress-title">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">Avance académico{academicProgress.source === 'demo' ? ' · Datos demo' : ''}</p>
+                <p className="eyebrow">Avance académico</p>
                 <h2 id="academic-progress-title">Tu avance en {academicProgress.program.name}</h2>
               </div>
               <span>{academicProgress.currentPeriod.number}.º {academicProgress.currentPeriod.type}</span>
@@ -154,7 +172,6 @@ export function Home() {
             <h2>{profile ? 'Recomendaciones para ti' : 'Oportunidades abiertas'}</h2>
             <Link to="/catalogo">Ver todas</Link>
           </div>
-          <p className="recommendations-demo-note">Oportunidades de demostración con datos simulados. Consulta los requisitos y fechas oficiales con EBC.</p>
           {profile && recommendationsLoading && <p role="status">Cargando recomendaciones…</p>}
           {profile && recommendationsError && <p className="form-error" role="alert">{recommendationsError}</p>}
           {profile && !recommendationsLoading && !recommendationsError && recommendations.length === 0 && <p>No hay recomendaciones disponibles para tu perfil en este momento.</p>}
@@ -167,7 +184,7 @@ export function Home() {
                     <span className="card-top"><TypeBadge type={item.type} />{savedIds.includes(item.id) && <span className="saved-label">Guardada</span>}</span>
                     {item.deadline && <DateLine type={item.type} deadline={item.deadline} />}
                     <h4><Link className="card-link" to={`/catalogo?search=${encodeURIComponent(item.title)}`}>{item.title}</Link></h4>
-                    <p>{item.description.replace(/^Demo simulada:\s*(\p{L})/iu, (_match, initial: string) => initial.toLocaleUpperCase('es-MX'))}</p>
+                    <p>{item.description}</p>
                     <div className="recommendation-reason"><span>Por qué te lo recomendamos</span><ul aria-label="Razones de la recomendación">{explanation.split(/(?<=\.)\s+/).filter(Boolean).map(reason => <li key={reason}>{reason.replace('Coincide con tu carrera.', 'Tu carrera').replace('Se ofrece en tu campus.', 'Tu campus').replace('Está disponible para tu periodo académico.', 'Tu periodo académico').replace('Se relaciona con tus intereses:', 'Intereses:')}</li>)}</ul></div>
                     <span className="opportunity-action" aria-hidden="true">Ver oportunidad →</span>
                   </article>
@@ -184,7 +201,7 @@ export function Home() {
                 </span>
                 {item.deadline && <DateLine type={item.type} deadline={item.deadline} />}
                 <h3><Link className="card-link" to={`/catalogo?search=${encodeURIComponent(item.title)}`}>{item.title}</Link></h3>
-                <p>{item.description.replace(/^Demo simulada:\s*(\p{L})/iu, (_match, initial: string) => initial.toLocaleUpperCase('es-MX'))}</p>
+                <p>{item.description}</p>
               </article>
             ))}
           </div>}

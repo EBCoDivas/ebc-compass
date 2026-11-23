@@ -97,7 +97,7 @@ export function ConversationHistory({ entries, pending, onRetry, onPickSuggestio
           {entry.failure && entry.catalogFallback && (
             <details className="chat-catalog-fallback">
               <summary>Ver oportunidades del catálogo</summary>
-              <p className="chat-note">Resultados del catálogo demo seleccionados por filtros. No son una respuesta generada por IA.</p>
+              <p className="chat-note">Resultados del catálogo seleccionados por filtros. No son una respuesta generada por IA.</p>
               <Markdown>{entry.catalogFallback.content}</Markdown>
             </details>
           )}

@@ -13,7 +13,14 @@ export function Calendar() {
   const profile = loadProfile()
   const [items, setItems] = useState<Opportunity[]>([])
   const [error, setError] = useState('')
-  useEffect(() => { fetchOpportunities({ campus: profile?.campus || undefined, career: profile?.career || undefined }).then((all) => setItems(all.filter((item) => item.deadline).sort((a, b) => a.deadline!.localeCompare(b.deadline!)))).catch(() => { setItems([]); setError('No se pudo cargar el calendario. Verifica tu conexión e inténtalo de nuevo.') }) }, [profile?.campus, profile?.career])
+  useEffect(() => {
+    let active = true
+    fetchOpportunities({ campus: profile?.campus || undefined, career: profile?.career || undefined,
+      semester: typeof profile?.currentSemester === 'number' ? profile.currentSemester : undefined })
+      .then(all => { if (active) setItems(all.filter(item => item.deadline).sort((a, b) => a.deadline!.localeCompare(b.deadline!))) })
+      .catch(() => { if (active) { setItems([]); setError('No se pudo cargar el calendario. Verifica tu conexión e inténtalo de nuevo.') } })
+    return () => { active = false }
+  }, [profile?.campus, profile?.career, profile?.currentSemester])
   const now = new Date()
   const year = now.getFullYear()
   const month = now.getMonth()

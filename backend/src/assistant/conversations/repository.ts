@@ -14,9 +14,9 @@ export interface ArchivedMessage extends ChatMessage {
   latencyMs?: number; degraded?: boolean
 }
 export interface Turn { requestId: string; student: ChatMessage; reply: AssistantReply }
-export type MemoryKey = `note:${number}` | 'career' | 'campus' | 'semester' | 'interests' | 'goal' | 'schedule' | 'language' | 'modality'
+export type MemoryKey = `note:${number}` | 'career' | 'campus' | 'semester' | 'interests' | 'goal' | 'schedule' | 'language' | 'modality' | 'workSchedule'
 export interface MemoryFact {
-  key: MemoryKey; value: string; origin: 'profile' | 'conversation' | 'user'; sourceMessageId?: string; updatedAt: string
+  key: MemoryKey; value: string; origin: 'profile' | 'conversation' | 'user' | 'demo'; sourceMessageId?: string; updatedAt: string
   version: number; suppressed?: boolean
   observedAt?: string
 }
@@ -193,12 +193,17 @@ export class ConversationRepository {
   }
   async saveMemory(owner: string, fact: Omit<MemoryFact, 'version' | 'updatedAt'>, respectSuppression = true) {
     const current = await this.store.get(owner, 'MEM#' + fact.key) as unknown as MemoryFact | undefined
+    if (fact.origin === 'demo' && current) return
     if (respectSuppression && current?.suppressed) return
     if (fact.origin !== 'user' && current?.origin === 'user' && current.value) return
     if (current && fact.origin === 'profile' && current.value === fact.value && current.origin === fact.origin && !current.suppressed && !fact.suppressed) return
     if (fact.origin === 'conversation' && current?.origin === 'profile' && current.value) return
     const observedAt = fact.observedAt ?? new Date().toISOString()
     if (fact.origin === 'conversation' && current?.observedAt && observedAt <= current.observedAt) return
-    await this.store.write(owner, [{ key: 'MEM#' + fact.key, value: value({ ...fact, observedAt, updatedAt: new Date().toISOString(), version: (current?.version ?? -1) + 1 }), version: current?.version }])
+    try {
+      await this.store.write(owner, [{ key: 'MEM#' + fact.key, value: value({ ...fact, observedAt, updatedAt: new Date().toISOString(), version: (current?.version ?? -1) + 1 }), version: current?.version }])
+    } catch (error) {
+      if (fact.origin !== 'demo' || !(error instanceof Conflict)) throw error
+    }
   }
 }

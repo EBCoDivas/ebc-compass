@@ -1,22 +1,21 @@
 ---
 id: solicitud-beca
-title: Solicitud de beca: proceso de demostración
+title: Cómo solicitar una beca
 topic: procedures
 language: es
 simulated: true
 ---
-# Solicitud de beca: proceso de demostración
+# Cómo solicitar una beca
 
-> Flujo simulado: Compass no recibe expedientes ni tramita becas.
+> Compass orienta sobre el proceso. Entrega tu expediente en el canal que indique Servicios Escolares.
 
 ## Documentos para solicitar una beca
 Consulta primero la convocatoria y pide orientación a Servicios Escolares. La documentación depende de la beca y modalidad; no se deben asumir requisitos universales ni subir documentos sensibles a Compass.
-Para practicar el flujo utiliza un historial y una solicitud ficticios. No se requiere una carta de recomendación en la demo.
 
-## Pasos de ejemplo
+## Pasos para preparar tu solicitud
 1. Identifica BEA o Beca de Respaldo Económico.
 2. Confirma con Servicios Escolares el procedimiento vigente y los documentos aplicables.
-3. Prepara únicamente archivos ficticios para esta demostración.
-4. Conserva un acuse de ejemplo; Compass no emite un resultado institucional.
-Fecha ilustrativa del catálogo: 28/11/2026. No es un plazo real de EBC.
+3. Reúne los documentos que te soliciten.
+4. Conserva el acuse de la entrega.
+Fecha en el catálogo: 28/11/2026. Confirma el cierre con Servicios Escolares.
 Orientación pública: https://www.ebc.mx/becas/

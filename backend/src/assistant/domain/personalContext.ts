@@ -12,7 +12,7 @@ export function personalContextQuery(text: string): 'goal' | 'schedule' | 'all' 
 }
 
 const labels: Partial<Record<MemoryKey, [string, string]>> = {
-  goal: ['Meta', 'Goal'], schedule: ['Disponibilidad', 'Availability'], interests: ['Intereses', 'Interests'],
+  goal: ['Meta', 'Goal'], schedule: ['Disponibilidad', 'Availability'], workSchedule: ['Trabajo', 'Work'], interests: ['Intereses', 'Interests'],
   career: ['Carrera', 'Program'], campus: ['Campus', 'Campus'], semester: ['Periodo', 'Term'],
   modality: ['Modalidad', 'Modality'], language: ['Idioma', 'Language'],
 }
@@ -20,11 +20,13 @@ const values: Record<string, [string, string]> = {
   'banking-internship': ['Prácticas en banca', 'Banking internship'], 'marketing-internship': ['Prácticas en marketing', 'Marketing internship'],
   'professional-certification': ['Certificación profesional', 'Professional certification'], entrepreneurship: ['Emprender', 'Entrepreneurship'],
   mornings: ['Mañanas', 'Mornings'], afternoons: ['Tardes', 'Afternoons'], evenings: ['Noches', 'Evenings'], weekends: ['Fines de semana', 'Weekends'],
+  'works-afternoons': ['Trabajas por las tardes', 'You work in the afternoons'],
   es: ['Español', 'Spanish'], en: ['Inglés', 'English'], online: ['En línea', 'Online'], 'in-person': ['Presencial', 'In person'], hybrid: ['Híbrida', 'Hybrid'],
 }
 export function personalContextReply(query: 'goal' | 'schedule' | 'all', memories: MemoryFact[], language: Language): string {
   const es = language === 'es'
-  const facts = memories.filter(fact => !fact.suppressed && fact.value && (query === 'all' || fact.key === query || fact.key.startsWith('note:')))
+  const facts = memories.filter(fact => !fact.suppressed && fact.value &&
+    (query === 'all' || fact.key === query || (query === 'schedule' && fact.key === 'workSchedule') || fact.key.startsWith('note:')))
   if (!facts.length) return es
     ? query === 'goal' ? 'Aún no tengo registrada tu meta profesional. ¿En qué área te gustaría trabajar?' : query === 'schedule' ? 'Aún no tengo registrada tu disponibilidad. ¿Qué horario te conviene?' : 'Aún no tengo recuerdos guardados sobre ti. Puedes pedirme que recuerde tu meta o disponibilidad.'
     : query === 'goal' ? 'I do not have your career goal saved yet. What field would you like to work in?' : query === 'schedule' ? 'I do not have your availability saved yet. What schedule works for you?' : 'I do not have any saved memories about you yet. You can ask me to remember your goal or availability.'

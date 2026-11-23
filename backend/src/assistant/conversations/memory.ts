@@ -2,7 +2,7 @@ import { normalize } from '../domain/text.js'
 import type { AssistantProfile } from '../types.js'
 import type { ConversationRepository, MemoryFact, MemoryKey, ArchivedMessage } from './repository.js'
 
-export const MEMORY_KEYS: MemoryKey[] = ['career', 'campus', 'semester', 'interests', 'goal', 'schedule', 'language', 'modality']
+export const MEMORY_KEYS: MemoryKey[] = ['career', 'campus', 'semester', 'interests', 'goal', 'schedule', 'language', 'modality', 'workSchedule']
 export const EDITABLE_VALUES: Partial<Record<MemoryKey, readonly string[]>> = {
   goal: ['banking-internship', 'marketing-internship', 'professional-certification', 'entrepreneurship'],
   schedule: ['mornings', 'afternoons', 'evenings', 'weekends'], language: ['es', 'en'], modality: ['online', 'in-person', 'hybrid'],
@@ -44,6 +44,7 @@ export function extractMemories(text: string): { key: MemoryKey; value: string }
 
 export async function seedMemories(repo: ConversationRepository, owner: string, profile?: AssistantProfile) {
   if (!profile) return
+  if (profile.demoWorkSchedule) await repo.saveMemory(owner, { key: 'workSchedule', value: profile.demoWorkSchedule, origin: 'demo' })
   const facts: Partial<Record<MemoryKey, string>> = {
     career: profile.career, campus: profile.campus, semester: profile.currentSemester?.toString(),
     interests: profile.interests?.map(normalize).filter(item => EDITABLE_VALUES.interests!.includes(item)).join(',') || undefined,

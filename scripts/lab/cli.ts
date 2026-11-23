@@ -325,7 +325,7 @@ async function personas(): Promise<void> {
       save()
     }
   }
-  ok('Nueve cuentas demo preparadas. Credenciales privadas en scripts/lab/.state/personas.json')
+  ok(`${seeds.length} cuentas demo preparadas. Credenciales privadas en scripts/lab/.state/personas.json`)
 }
 
 async function user(): Promise<void> {

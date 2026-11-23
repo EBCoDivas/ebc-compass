@@ -1,7 +1,7 @@
 // Cuentas ficticias en el emulador. Nunca imprime contraseñas ni tokens.
 import { randomBytes } from 'node:crypto'
 import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { CognitoIdentityProviderClient, ListUserPoolsCommand, CreateUserPoolCommand, ListUserPoolClientsCommand, CreateUserPoolClientCommand, UpdateUserPoolClientCommand, AdminGetUserCommand, AdminCreateUserCommand, AdminSetUserPasswordCommand, InitiateAuthCommand } from '@aws-sdk/client-cognito-identity-provider'
+import { CognitoIdentityProviderClient, ListUserPoolsCommand, CreateUserPoolCommand, ListUserPoolClientsCommand, CreateUserPoolClientCommand, UpdateUserPoolClientCommand, AdminGetUserCommand, AdminDeleteUserCommand, AdminCreateUserCommand, AdminSetUserPasswordCommand, InitiateAuthCommand } from '@aws-sdk/client-cognito-identity-provider'
 
 const stateFile = new URL('../.state/cognito.json', import.meta.url)
 const endpoint = process.env.AWS_ENDPOINT_URL ?? ''
@@ -61,6 +61,15 @@ export async function provisionAuth(check: boolean) {
       save()
     }
   }
+  // Cuentas que ya no están en shared/personas.json: se quitan del emulador y del registro local.
+  const current = new Set(personas.map(persona => persona.id))
+  for (const [id, account] of Object.entries(state.users)) {
+    if (current.has(id)) continue
+    if (check) throw new Error('Sobra la cuenta ' + id + '. Ejecuta: npm run provision')
+    await client.send(new AdminDeleteUserCommand({ UserPoolId: state.poolId, Username: account.username })).catch(error => { if ((error as Error).name !== 'UserNotFoundException') throw error })
+    delete state.users[id]
+    save()
+  }
   if (!check) {
     const account = state.users[personas[0].id]
     const auth = await client.send(new InitiateAuthCommand({ ClientId: state.clientId, AuthFlow: 'USER_PASSWORD_AUTH', AuthParameters: { USERNAME: account.username, PASSWORD: account.password } }))
@@ -76,5 +85,5 @@ export async function provisionAuth(check: boolean) {
     if (!state.jwksUrl) throw new Error('No se encontró el JWKS del emulador.')
     save()
   }
-  console.log('✔ Cognito: nueve cuentas verificadas. Registro local privado: local/.state/cognito.json')
+  console.log(`✔ Cognito: ${personas.length} cuentas verificadas. Registro local privado: local/.state/cognito.json`)
 }

@@ -1,13 +1,13 @@
 ---
 id: reinscripcion
-title: Reinscripción al siguiente periodo (contenido simulado)
+title: Reinscripción al siguiente periodo
 topic: procedures
 language: es
 simulated: true
 ---
 # Reinscripción al siguiente periodo
 
-> Contenido simulado para la demo de EBC Compass.
+> Confirma los requisitos y fechas vigentes con Servicios Escolares.
 
 La reinscripción al periodo enero–mayo 2027 se puede realizar **hasta el 20/12/2026**.
 
