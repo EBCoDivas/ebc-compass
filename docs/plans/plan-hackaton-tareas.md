@@ -142,6 +142,20 @@ Responsable: ______
 
 Responsable: ______
 
+### 7. Acceso del jurado a las cuentas demo
+
+Hoy las credenciales del lab quedan solo en `scripts/lab/.state/personas.json`, en la computadora de quien ejecutó `lab:personas`. El jurado no tendría cómo saber con quién entrar. Esta tarea deja todo preparado en el repositorio; el lab todavía no existe y se aplica el día del hackatón.
+
+- **Contraseña compartida para las cuentas demo, en local y en el lab.** `provision` (local) y `lab:personas` la toman de una variable de entorno en lugar de generar una aleatoria por cuenta, para no depender de un archivo privado (`local/.state/cognito.json` o `scripts/lab/.state/personas.json`). Son cuentas ficticias con datos simulados.
+- **Panel "Cuentas de demostración" en el inicio de sesión, en local y en el lab.** Se activa con un indicador de compilación, como el acceso local. Lista las cuentas por lo que representan, en el orden de la historia: Ana en 1.er semestre, Ana en 7.º, Diego y Sofía (y la persona admin cuando exista la tarea 6). Cada una con un botón "Usar esta cuenta" que rellena el correo y la contraseña. El inicio de sesión sigue siendo el real de Cognito. En local, el equipo deja de buscar credenciales en el archivo privado y la demo se ensaya igual que la verá el jurado.
+- **Limpieza de cuentas en `lab:personas`.** Hoy solo crea y actualiza cuentas. Debe borrar las que ya no están en `shared/personas.json`, como ya hace `provision` en local, y registrar la cuenta de Ana en 1.º.
+- **Guía corta para el jurado** en el envío del proyecto: la URL, las cuentas y qué mirar con cada una.
+- **Aviso para el despliegue:** si el sitio es público, cualquiera puede llamar a Bedrock. Fijar una alarma de presupuesto y no publicar la URL fuera del jurado.
+
+**Listo cuando:** quien abre la pantalla de inicio de sesión, en local o en el lab, ve las cuentas, entra con un clic y llega a Inicio con los datos de su etapa, y `provision` y `lab:personas` dejan exactamente las cuentas de `shared/personas.json`.
+
+Responsable: ______
+
 ## Criterio común: listo para desplegar
 
 - Todo corre en el emulador con los servicios de AWS que se usarán en el lab (DynamoDB, Lambda, Cognito).
@@ -152,8 +166,9 @@ Responsable: ______
 
 1. **Tarea 1**, empezando por el contrato de datos.
 2. **Tareas 2 y 3** en paralelo. La 6 empieza aquí con el registro y el rol.
-3. **Tareas 4 y 5** en paralelo.
-4. **Tarea 6** se cierra al final.
+3. **Tarea 7** en cuanto termine la 2. Solo depende de las cuentas de la tarea 1 y se prepara sin el lab.
+4. **Tareas 4 y 5** en paralelo.
+5. **Tarea 6** se cierra al final.
 
 ## Fuera del alcance
 

@@ -9,7 +9,7 @@ import { identityClaims, identitySubject } from './identity.js'
 
 const profiles = new DynamoProfileRepository()
 
-export async function resolvePlanningStudent(request: Request): Promise<PlanningStudent | undefined> {
+export async function resolvePlanningStudent(request: Request): Promise<(PlanningStudent & { subject: string }) | undefined> {
   const subject = identitySubject(request)
   if (!subject) return undefined
   const claims = identityClaims(request)
@@ -17,6 +17,7 @@ export async function resolvePlanningStudent(request: Request): Promise<Planning
   const saved = verified.career && verified.campus && verified.currentSemester ? undefined : await profiles.get(subject)
   const personaId = claims?.['custom:personaId']
   return {
+    subject,
     career: verified.career ?? saved?.career,
     campus: verified.campus ?? saved?.campus,
     semester: verified.currentSemester ?? saved?.currentSemester,

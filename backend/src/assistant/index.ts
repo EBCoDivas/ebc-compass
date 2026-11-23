@@ -31,7 +31,7 @@ export interface AssistantRuntime {
 }
 
 export function createAssistant(options: { config?: AssistantConfig; checkpointer?: BaseCheckpointSaver; conversations?: ConversationRepository;
-  profileReader?: (owner: string) => Promise<AssistantProfile | undefined> } = {}): AssistantRuntime {
+  profileReader?: (owner: string) => Promise<AssistantProfile | undefined> } = {}): AssistantRuntime & { conversations: ConversationRepository } {
   const config = options.config ?? loadAssistantConfig()
   const catalog = new InMemoryCatalog()
   const client = DynamoDBDocumentClient.from(new DynamoDBClient({ region: config.region }), { marshallOptions: { removeUndefinedValues: true } })

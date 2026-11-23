@@ -8,9 +8,7 @@ import type { Writable } from 'node:stream'
 import { once } from 'node:events'
 import { randomUUID } from 'node:crypto'
 import { Router, type Request, type Response } from 'express'
-import { InvalidInputError, MAX_MESSAGE_LENGTH, ensureConversation, maintainConversation, runTurnStreaming, runTurn, suggestionsFor, type AssistantProfile, type CareerId, type ChatMessage, type Language, createAssistant } from '../assistant/index.js'
-
-type Assistant = ReturnType<typeof createAssistant>
+import { InvalidInputError, MAX_MESSAGE_LENGTH, ensureConversation, maintainConversation, runTurnStreaming, runTurn, suggestionsFor, type AssistantProfile, type AssistantRuntime, type CareerId, type ChatMessage, type Language } from '../assistant/index.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const CAREERS: CareerId[] = ["business-administration", "communication-entertainment", "tourism", "international-business", "accounting", "law", "finance", "marketing", "executive-administration", "executive-accounting", "executive-business", "digital-transformation", "senior-management", "financial-management", "tax-specialty", "banking"]
@@ -90,7 +88,7 @@ export async function writeSse(response: Writable, event: string, data: unknown)
   }
 }
 
-export function assistantRoutes(assistant: Assistant): Router {
+export function assistantRoutes(assistant: AssistantRuntime): Router {
   const router = Router()
   router.use((request, response, next) => {
     if (!verifiedSubject(request)) { fail(response, 401, 'UNAUTHORIZED', 'Inicia sesión.'); return }

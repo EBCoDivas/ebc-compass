@@ -2,14 +2,15 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import type { Request } from 'express'
-import type { StudentPlanning } from '../../../shared/contracts/studentPlanning.js'
+import type { StudentJourney } from '../../../shared/contracts/studentPlanning.js'
 import { verifiedAcademicProfile } from '../auth/academicProfile.js'
 import { forgetMemory, memoryContext, seedMemories } from '../assistant/conversations/memory.js'
 import { ConversationRepository } from '../assistant/conversations/repository.js'
 import { MemoryDocumentStore } from '../assistant/conversations/store.js'
 import { levelForCareer } from './academic.js'
 import { studentPlanning } from './studentPlanning.js'
-import { handler } from '../lambda.js'
+process.env.ASSISTANT_STORE = 'memory'
+const { handler } = await import('../lambda.js')
 
 const personas = JSON.parse(readFileSync(new URL('../../../shared/personas.json', import.meta.url), 'utf8')) as {
   id: string; name: string; studentId: string; enrollment: string; campus: string; career: string; period: number; hasProfile: boolean
@@ -20,7 +21,7 @@ type Item = { id: string }
 async function get(path: string, persona?: Persona) {
   const result = await handler({
     httpMethod: 'GET', path, headers: {},
-    queryStringParameters: { personaId: 'ana', studentId: 'ana', career: 'law', campus: 'TLC', semester: '9' },
+    queryStringParameters: { personaId: 'ana', studentId: 'ana', career: 'law', campus: 'TLC', semester: '9', scholarshipInReview: 'true', enrollmentPaymentGenerated: 'true' },
     requestContext: { authorizer: persona ? { claims: {
       sub: persona.studentId, 'custom:personaId': persona.id, 'custom:career': persona.career,
       'custom:campusCode': persona.campus, 'custom:semestre': String(persona.period),
@@ -47,9 +48,12 @@ test('planning, calendar, alerts and recommendations agree for every demo accoun
     )
     for (const response of [planning, calendar, alerts, recommendations]) assert.equal(response.status, 200, persona.id)
     assert.equal(planning.headers['cache-control'], 'no-store')
-    const { stage, catalog, pending } = planning.body as StudentPlanning
+    const { stage, catalog, pending, route, achievements } = planning.body as StudentJourney
     assert.equal(stage, stages[persona.period], persona.id)
     assert.ok(pending.length > 0, persona.id)
+    assert.ok(route.length > 0 && route.every(item => pending.some(row => row.opportunityId === item.opportunityId)), persona.id)
+    // Sin acciones confirmadas solo hay logros por horas registradas o del historial de etapas anteriores.
+    assert.ok(achievements.every(item => !item.earned || item.id === 'social-service-progress' || item.earnedAt), persona.id)
     assert.deepEqual(calendar.body, catalog, persona.id)
 
     const byId = new Map(catalog.map(item => [item.id, item]))

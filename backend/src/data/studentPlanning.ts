@@ -34,6 +34,14 @@ const demoProgress = {
   },
 } as const
 
+/** Lo que Ana logró en su primer semestre (agosto de 2023): se conserva al llegar a 7.º. */
+const demoAchievementHistory = {
+  ana: [
+    { id: 'payment-slip-generated', earnedAt: '2023-07-24' },
+    { id: 'scholarship-requested', earnedAt: '2023-08-04' },
+  ],
+} as const
+
 export function studentPlanning(student: PlanningStudent): StudentPlanning {
   const stage = stageForPeriod(student.semester)
   const catalog = planningOpportunities(student)
@@ -47,6 +55,8 @@ export function studentPlanning(student: PlanningStudent): StudentPlanning {
     stage, catalog, pending,
     ...(student.personaId === 'ana-ingreso' && student.career === 'accounting' && student.campus === 'QRO' && student.semester === 1
       ? { firstEntry: { highSchoolGpa: 9.2, admissionLetter: true, motivationLetter: false } } : {}),
+    ...(student.personaId === 'ana' && student.career === 'accounting' && student.campus === 'QRO'
+      ? { achievementHistory: demoAchievementHistory.ana.map(item => ({ ...item })) } : {}),
     ...(progress && graduationDeadline ? { socialService: {
       completedHours: progress.completedHours, requiredHours: progress.requiredHours,
       weeklyHours: progress.weeklyHours, asOf: progress.asOf, graduationDeadline,
