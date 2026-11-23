@@ -2,6 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { sessionSubject } from '../services/session'
 import { loadProfile, needsProfileSetup, synchronizeProfile } from '../services/profileService'
+import { activePersona } from '../services/personaService'
+import { hasJuryAccess } from '../services/juryAccounts'
 
 /** Evita que Inicio, Perfil o Asistente lean una caché anterior a la carga durable. */
 export function ProfileSession({ children }: { children: ReactNode }) {
@@ -15,7 +17,7 @@ export function ProfileSession({ children }: { children: ReactNode }) {
     return () => { active = false }
   }, [attempt])
   if (status === 'ready') {
-    if (sessionSubject() && needsProfileSetup(loadProfile()) && pathname !== '/perfil') {
+    if (sessionSubject() && !hasJuryAccess(activePersona()?.id) && needsProfileSetup(loadProfile()) && pathname !== '/perfil') {
       return <Navigate to="/perfil" replace />
     }
     return children

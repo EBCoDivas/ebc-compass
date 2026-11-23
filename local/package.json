@@ -7,7 +7,7 @@
   "scripts": {
     "up": "docker compose up -d",
     "down": "docker compose down",
-    "provision": "node ../scripts/with-emulator-env.mjs tsx scripts/provision.ts",
+    "provision": "node ../scripts/with-emulator-env.mjs tsx --env-file-if-exists=.env scripts/provision.ts",
     "bridge": "node ../scripts/with-emulator-env.mjs tsx --env-file=.env bedrock-bridge/server.ts",
     "spike": "bash scripts/spike-emulator.sh",
     "typecheck": "tsc --noEmit",

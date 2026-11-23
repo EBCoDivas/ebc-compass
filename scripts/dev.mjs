@@ -11,6 +11,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { cleanBaseEnv, emulatorEnv, loadEnvFile, root } from './lib/emulator-env.mjs'
 import { waitForEmulator, waitForUrl } from './lib/wait.mjs'
+import { demoAccessConfig, publicDemoEnvironment } from '../shared/demoAccounts.mjs'
 
 const rulesOnly = process.argv.includes('--rules')
 
@@ -33,6 +34,11 @@ for (const pkg of ['backend', 'frontend', 'local']) {
   }
 }
 
+const localEnv = loadEnvFile(join(root, 'local', '.env'))
+let jury
+try { jury = demoAccessConfig({ ...localEnv, ...process.env }) }
+catch (error) { fail(error.message) }
+
 // 2. Docker + emulador
 if (spawnSync('docker', ['info'], { stdio: 'ignore' }).status !== 0) {
   fail('Docker no responde. Abre Docker Desktop y vuelve a ejecutar.')
@@ -43,10 +49,12 @@ if (!(await waitForEmulator(60_000))) fail('El emulador no respondió. Revisa: d
 
 // 3. Recursos (el emulador guarda todo en memoria: se aprovisiona en cada arranque; es idempotente)
 console.log('▶ Aprovisionando recursos')
-runSync('npm', ['--prefix', 'local', 'run', '-s', 'provision'], { ...cleanBaseEnv(), ...emulatorEnv() })
+runSync('npm', ['--prefix', 'local', 'run', '-s', 'provision'], {
+  ...cleanBaseEnv(), ...emulatorEnv(),
+  JURY_DEMO_ENABLED: String(jury.enabled), JURY_DEMO_PASSWORD: jury.password ?? '',
+})
 
 // 4. Modo del asistente
-const localEnv = loadEnvFile(join(root, 'local', '.env'))
 let mode = rulesOnly ? 'rules' : (loadEnvFile(join(root, 'backend', '.env')).ASSISTANT_MODE ?? 'llm')
 if (mode === 'llm' && !localEnv.OPENAI_API_KEY) {
   console.warn('⚠ Falta OPENAI_API_KEY en local/.env: se arranca en modo "rules" (sin LLM).')
@@ -121,7 +129,7 @@ const backendEnv = {
   LOCAL_COGNITO_STATE: join(root, 'local', '.state', 'cognito.json'),
 }
 start('backend', 'npm', ['--prefix', 'backend', 'run', '-s', 'dev'], backendEnv)
-start('frontend', 'npm', ['--prefix', 'frontend', 'run', 'dev', '--', '--port', '5173', '--strictPort'], { ...base, VITE_LOCAL_AUTH: 'true' })
+start('frontend', 'npm', ['--prefix', 'frontend', 'run', 'dev', '--', '--port', '5173', '--strictPort'], { ...base, VITE_LOCAL_AUTH: 'true', ...publicDemoEnvironment(jury) })
 
 const port = backendEnv.PORT ?? '3000'
 const ready = await Promise.all([

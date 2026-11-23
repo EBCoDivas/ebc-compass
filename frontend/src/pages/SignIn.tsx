@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { authConfigured, signIn } from '../services/authService'
+import { juryAccounts, juryPassword } from '../services/juryAccounts'
 
 export function SignIn() {
   const [username, setUsername] = useState('')
@@ -7,19 +8,31 @@ export function SignIn() {
   const [error, setError] = useState('')
   const [pending, setPending] = useState(false)
 
-  async function submit(event: FormEvent) {
-    event.preventDefault()
+  async function login(email: string, credential: string, fromJuryPanel = false) {
     if (pending) return
     setError('')
     setPending(true)
     try {
-      await signIn(username, password)
+      await signIn(email, credential)
       window.location.assign('/')
     } catch {
-      setError('No fue posible iniciar sesión. Verifica tu correo y contraseña.')
+      setError(fromJuryPanel ? 'No pudimos iniciar sesión con esta cuenta. Inténtalo de nuevo o contacta al equipo de Compass.'
+        : 'No fue posible iniciar sesión. Verifica tu correo y contraseña.')
     } finally {
       setPending(false)
     }
+  }
+
+  function submit(event: FormEvent) {
+    event.preventDefault()
+    void login(username, password)
+  }
+
+  function useJuryAccount(email: string) {
+    if (!juryPassword || pending) return
+    setUsername(email)
+    setPassword(juryPassword)
+    void login(email, juryPassword, true)
   }
 
   return (
@@ -46,6 +59,22 @@ export function SignIn() {
             {pending ? 'Ingresando…' : 'Iniciar sesión'}
           </button>
         </form>
+        {authConfigured && juryPassword && (
+          <section className="jury-accounts" aria-labelledby="jury-accounts-title">
+            <h2 id="jury-accounts-title">Cuentas de demostración</h2>
+            <ul>
+              {juryAccounts.map(account => (
+                <li key={account.id}>
+                  <strong>{account.name}</strong>
+                  <span>{account.description}</span>
+                  <button type="button" className="button secondary" disabled={pending}
+                    aria-label={`Usar cuenta de ${account.name}, ${account.description}`}
+                    onClick={() => useJuryAccount(account.email)}>Usar esta cuenta</button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </section>
     </main>
   )

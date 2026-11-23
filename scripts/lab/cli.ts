@@ -27,9 +27,12 @@ import {
   AdminInitiateAuthCommand,
   AdminSetUserPasswordCommand,
   CognitoIdentityProviderClient,
+  paginateListUsers,
+  type AttributeType,
 } from '@aws-sdk/client-cognito-identity-provider'
 import { DeleteObjectsCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { GetCallerIdentityCommand, STSClient } from '@aws-sdk/client-sts'
+import { demoAccessConfig, demoUsername, managedDemoPersona, obsoleteDemoUsers } from '../../shared/demoAccounts.mjs'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..', '..')
@@ -83,6 +86,7 @@ function writeState(patch: Record<string, unknown>): void {
 }
 
 interface Outputs {
+  stage?: string
   apiUrl: string
   siteUrl: string
   cognitoUserPoolId: string
@@ -299,33 +303,59 @@ async function ensureUser(o: Outputs, email: string, password: string): Promise<
 
 async function personas(): Promise<void> {
   requireConfirm('lab:personas')
+  const { enabled, password: sharedPassword } = demoAccessConfig(process.env)
   const o = outputs()
+  if (o.stage && o.stage !== stage) fail('El stage de LAB_OUTPUTS_FILE no coincide con LAB_STAGE.')
   const registryFile = join(here, '.state', 'personas.json')
-  const registry = existsSync(registryFile) ? JSON.parse(readFileSync(registryFile, 'utf8')) as Record<string, { username: string; password: string; ready?: boolean }> : {}
+  const registry = existsSync(registryFile) ? JSON.parse(readFileSync(registryFile, 'utf8')) as Record<string, { username: string; password: string; ready?: boolean; sub?: string; shared?: boolean }> : {}
   const seeds = JSON.parse(readFileSync(join(repoRoot, 'shared', 'personas.json'), 'utf8')) as { id: string; hasProfile: boolean; name: string; enrollment: string; campus: string; campusName: string; career: string; program: string; period: number; periodType: string }[]
   mkdirSync(dirname(registryFile), { recursive: true })
   const save = () => { writeFileSync(registryFile, JSON.stringify(registry, null, 2) + '\n', { mode: 0o600 }); chmodSync(registryFile, 0o600) }
   for (const seed of seeds) {
-    const account = registry[seed.id] ?? { username: seed.id + '@demo.ebc.invalid', password: demoPassword() }
-    registry[seed.id] = account
-    save()
-    const attributes: Record<string, string> = { email: account.username, email_verified: 'true', 'custom:personaId': seed.id }
+    const previous = registry[seed.id]
+    const username = demoUsername(seed.id)
+    const password = sharedPassword ?? (previous?.shared ? undefined : previous?.password) ?? demoPassword()
+    const attributes: Record<string, string> = { email: username, email_verified: 'true', 'custom:personaId': seed.id }
     if (seed.hasProfile) Object.assign(attributes, { name: seed.name, 'custom:matricula': seed.enrollment, 'custom:campus': seed.campusName,
       'custom:campusCode': seed.campus, 'custom:programa': seed.program, 'custom:career': seed.career,
       'custom:semestre': String(seed.period), 'custom:periodo': seed.periodType })
-    let found = true
-    try { await cognito.send(new AdminGetUserCommand({ UserPoolId: o.cognitoUserPoolId, Username: account.username })) }
-    catch (error) { if ((error as Error).name !== 'UserNotFoundException') throw error; found = false }
+    const target = { UserPoolId: o.cognitoUserPoolId, Username: username }
+    let existing: AttributeType[] | undefined
+    try {
+      const result = await cognito.send(new AdminGetUserCommand(target))
+      existing = result.UserAttributes ?? []
+      if (managedDemoPersona(existing) !== seed.id) throw new Error('La identidad de la cuenta no coincide: ' + seed.id)
+    } catch (error) { if ((error as Error).name !== 'UserNotFoundException') throw error }
     const UserAttributes = Object.entries(attributes).map(([Name, Value]) => ({ Name, Value }))
-    if (!found) await cognito.send(new AdminCreateUserCommand({ UserPoolId: o.cognitoUserPoolId, Username: account.username, MessageAction: 'SUPPRESS', UserAttributes }))
-    else await cognito.send(new AdminUpdateUserAttributesCommand({ UserPoolId: o.cognitoUserPoolId, Username: account.username, UserAttributes }))
-    if (!found || !account.ready) {
-      await cognito.send(new AdminSetUserPasswordCommand({ UserPoolId: o.cognitoUserPoolId, Username: account.username, Password: account.password, Permanent: true }))
-      account.ready = true
-      save()
+    const sub = existing?.find(item => item.Name === 'sub')?.Value
+    let savedSub = sub
+    if (!existing) {
+      const created = await cognito.send(new AdminCreateUserCommand({ ...target, MessageAction: 'SUPPRESS', UserAttributes }))
+      savedSub = created.User?.Attributes?.find(item => item.Name === 'sub')?.Value
+    } else {
+      const current = new Map(existing.map(item => [item.Name, item.Value]))
+      const changes = UserAttributes.filter(({ Name, Value }) => current.get(Name) !== Value)
+      if (changes.length > 0) await cognito.send(new AdminUpdateUserAttributesCommand({ ...target, UserAttributes: changes }))
     }
+    if (!existing || !previous?.ready || previous.password !== password || previous.sub !== sub) {
+      await cognito.send(new AdminSetUserPasswordCommand({ ...target, Password: password, Permanent: true }))
+    }
+    registry[seed.id] = { username, password, ready: true, sub: savedSub, shared: Boolean(sharedPassword) }
+    save()
   }
-  ok(`${seeds.length} cuentas demo preparadas. Credenciales privadas en scripts/lab/.state/personas.json`)
+  const current = new Set(seeds.map(seed => seed.id))
+  const obsolete: string[] = []
+  for await (const page of paginateListUsers({ client: cognito }, { UserPoolId: o.cognitoUserPoolId })) {
+    obsolete.push(...obsoleteDemoUsers(page.Users ?? [], current))
+  }
+  for (const Username of obsolete) {
+    await cognito.send(new AdminDeleteUserCommand({ UserPoolId: o.cognitoUserPoolId, Username }))
+      .catch(error => { if ((error as Error).name !== 'UserNotFoundException') throw error })
+  }
+  for (const id of Object.keys(registry)) if (!current.has(id)) delete registry[id]
+  save()
+  ok(`${seeds.length} cuentas demo preparadas. Cuentas obsoletas retiradas: ${obsolete.length}.`)
+  console.log(enabled ? 'Las cuentas están listas para el panel de acceso.' : 'Registro local: scripts/lab/.state/personas.json')
 }
 
 async function user(): Promise<void> {
@@ -436,6 +466,7 @@ function status(): void {
 
 async function deploy(): Promise<void> {
   requireConfirm('lab:deploy')
+  const jury = demoAccessConfig(process.env)
   const skipKnowledge = args.includes('--skip-knowledge')
   const skipSmoke = args.includes('--skip-smoke')
 
@@ -470,7 +501,9 @@ async function deploy(): Promise<void> {
 
   console.log('\n✔ Despliegue completo.')
   status()
-  console.log('\nPara entrar al sitio crea un usuario de demostración: npm run lab:user -- --confirm')
+  console.log(jury.enabled
+    ? '\nPara habilitar las cuentas del panel: npm run lab:personas -- --confirm'
+    : '\nPara entrar al sitio crea un usuario de demostración: npm run lab:user -- --confirm')
 }
 
 async function destroy(): Promise<void> {

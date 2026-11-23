@@ -1,6 +1,7 @@
 [
   {
     "id": "diego",
+    "juryOrder": 3,
     "name": "Diego Ramírez",
     "studentId": "e0bc0000-0000-4000-8000-000000000002",
     "enrollment": "M0100011",
@@ -19,6 +20,7 @@
   },
   {
     "id": "ana",
+    "juryOrder": 2,
     "name": "Ana Lucía Torres",
     "studentId": "e0bc0000-0000-4000-8000-000000000003",
     "enrollment": "M0100012",
@@ -37,6 +39,7 @@
   },
   {
     "id": "ana-ingreso",
+    "juryOrder": 1,
     "name": "Ana Lucía Torres",
     "studentId": "e0bc0000-0000-4000-8000-000000000010",
     "enrollment": "M0100018",
@@ -55,6 +58,7 @@
   },
   {
     "id": "sofia",
+    "juryOrder": 4,
     "name": "Sofía Herrera",
     "studentId": "e0bc0000-0000-4000-8000-000000000005",
     "enrollment": "M0100014",
