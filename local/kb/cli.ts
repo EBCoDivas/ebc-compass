@@ -1,8 +1,8 @@
 // Gestión del corpus de conocimiento (knowledge/).
 //
-//   npm run kb:index      carga el corpus en S3 Vectors del emulador, como la ingesta de la Knowledge Base del lab:
-//                         sube los documentos al bucket, los divide, genera embeddings con Titan v2 (a través del
-//                         puente) y escribe los vectores. Lo ejecuta `npm run dev` en cada arranque.
+//   npm run kb:index      equivalente local de `lab:knowledge`: kb:sync-s3 y luego kb:ingest. Lo ejecuta `npm run dev`.
+//   npm run kb:ingest     hace el papel de StartIngestionJob: lee el bucket, fragmenta (estrategia por omisión de Bedrock),
+//                         genera embeddings con Titan v2 (a través del puente) y escribe los vectores en S3 Vectors.
 //   npm run kb:upload     Vector Store de OpenAI (anterior): valida y sube solo lo que cambió (idempotente)
 //   npm run kb:status     estado del Vector Store de OpenAI
 //   npm run kb:query -- "pregunta" [--lang es|en] [--topic scholarships]   (usa el Retrieve del puente)
@@ -19,11 +19,12 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { dirname, join } from 'node:path'
 import { createInterface } from 'node:readline/promises'
 import { fileURLToPath } from 'node:url'
-import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
+import { GetObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from '@aws-sdk/client-s3'
 import { BedrockRuntimeClient, InvokeModelCommand } from '@aws-sdk/client-bedrock-runtime'
 import { DeleteVectorsCommand, ListVectorsCommand, PutVectorsCommand, S3VectorsClient } from '@aws-sdk/client-s3vectors'
 import { NodeHttpHandler } from '@smithy/node-http-handler'
-import { chunkDocument, DIMENSION, EMBEDDING_MODEL_ID, ensureVectorIndex, SOURCE_KEY, TEXT_KEY, VECTOR_BUCKET, VECTOR_INDEX } from './vectors.js'
+import type { DocumentType } from '@smithy/types'
+import { chunkDocument, DIMENSION, EMBEDDING_MODEL_ID, ensureVectorIndex, METADATA_KEY, SOURCE_KEY, TEXT_KEY, VECTOR_BUCKET, VECTOR_INDEX } from './vectors.js'
 import OpenAI, { toFile } from 'openai'
 import type { ComparisonFilter, CompoundFilter } from 'openai/resources/shared'
 
@@ -358,44 +359,69 @@ async function embedWithBedrock(text: string, cache: EmbeddingCache, bedrock: Be
   return embedding
 }
 
-async function index(): Promise<void> {
-  await syncS3()
-  const docs = loadCorpus()
+/** Lee un objeto de S3 como texto. */
+async function readObject(s3: S3Client, key: string): Promise<string> {
+  const object = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key }))
+  return object.Body!.transformToString()
+}
+
+/**
+ * Hace el papel de `StartIngestionJob` de Bedrock Knowledge Bases: lee el bucket (documentos y sus .metadata.json),
+ * fragmenta con la estrategia por omisión, genera los embeddings con Titan v2 (el puente los traduce a OpenAI)
+ * y escribe los vectores en S3 Vectors. No lee la carpeta knowledge/: la fuente es el bucket, como en el lab.
+ */
+async function ingest(): Promise<void> {
+  const s3 = new S3Client({ forcePathStyle: true })
+  const keys: string[] = []
+  let token: string | undefined
+  do {
+    const page = await s3.send(new ListObjectsV2Command({ Bucket: bucket, ContinuationToken: token }))
+    for (const object of page.Contents ?? []) if (object.Key?.endsWith('.md')) keys.push(object.Key)
+    token = page.NextContinuationToken
+  } while (token)
+  if (keys.length === 0) throw new Error(`El bucket ${bucket} no tiene documentos. Ejecuta: npm run kb:sync-s3`)
+
   const vectors = new S3VectorsClient({})
   await ensureVectorIndex(vectors)
   const bridge = process.env.AWS_ENDPOINT_URL_BEDROCK_RUNTIME ?? `http://127.0.0.1:${process.env.BRIDGE_PORT ?? 8787}`
   const bedrock = new BedrockRuntimeClient({ endpoint: bridge, requestHandler: new NodeHttpHandler(), maxAttempts: 2 })
   const cache = readEmbeddingCache()
   const before = Object.keys(cache).length
-  const keys = new Set<string>()
-  for (const doc of docs) {
-    const chunks = chunkDocument(doc.path, doc.title, doc.body)
+  const written = new Set<string>()
+  for (const key of keys) {
+    const attributes = (JSON.parse(await readObject(s3, `${key}.metadata.json`).catch(() => '{}')) as { metadataAttributes?: Record<string, unknown> }).metadataAttributes ?? {}
     const batch = []
-    for (const chunk of chunks) {
-      keys.add(chunk.key)
+    for (const chunk of chunkDocument(key, await readObject(s3, key))) {
+      written.add(chunk.key)
       batch.push({
         key: chunk.key,
         data: { float32: await embedWithBedrock(chunk.text, cache, bedrock) },
-        metadata: { id: doc.id, title: doc.title, topic: doc.topic, language: doc.language, simulated: true, [SOURCE_KEY]: `s3://${bucket}/${doc.path}`, [TEXT_KEY]: chunk.text },
+        metadata: { ...attributes, [SOURCE_KEY]: `s3://${bucket}/${key}`, [TEXT_KEY]: chunk.text, [METADATA_KEY]: JSON.stringify(attributes) } as Record<string, DocumentType>,
       })
     }
-    await vectors.send(new PutVectorsCommand({ vectorBucketName: VECTOR_BUCKET, indexName: VECTOR_INDEX, vectors: batch }))
+    for (let at = 0; at < batch.length; at += 100) await vectors.send(new PutVectorsCommand({ vectorBucketName: VECTOR_BUCKET, indexName: VECTOR_INDEX, vectors: batch.slice(at, at + 100) }))
   }
   mkdirSync(stateDir, { recursive: true })
   writeFileSync(embeddingCacheFile, JSON.stringify(cache))
 
-  // Quita fragmentos que ya no existen (documento borrado o con menos secciones).
+  // Quita fragmentos que ya no existen (documento borrado o con menos fragmentos), como una nueva ingesta.
   const stale: string[] = []
   let nextToken: string | undefined
   do {
     const page = await vectors.send(new ListVectorsCommand({ vectorBucketName: VECTOR_BUCKET, indexName: VECTOR_INDEX, nextToken }))
-    for (const vector of page.vectors ?? []) if (vector.key && !keys.has(vector.key)) stale.push(vector.key)
+    for (const vector of page.vectors ?? []) if (vector.key && !written.has(vector.key)) stale.push(vector.key)
     nextToken = page.nextToken
   } while (nextToken)
-  if (stale.length > 0) await vectors.send(new DeleteVectorsCommand({ vectorBucketName: VECTOR_BUCKET, indexName: VECTOR_INDEX, keys: stale }))
+  for (let at = 0; at < stale.length; at += 100) await vectors.send(new DeleteVectorsCommand({ vectorBucketName: VECTOR_BUCKET, indexName: VECTOR_INDEX, keys: stale.slice(at, at + 100) }))
 
   const created = Object.keys(cache).length - before
-  console.log(`✔ ${keys.size} fragmentos de ${docs.length} documentos en S3 Vectors (${VECTOR_BUCKET}/${VECTOR_INDEX}) · ${created} embeddings nuevos, ${keys.size - created} desde caché${stale.length ? ` · ${stale.length} eliminados` : ''}`)
+  console.log(`✔ ${written.size} fragmentos de ${keys.length} documentos del bucket en S3 Vectors (${VECTOR_BUCKET}/${VECTOR_INDEX}) · ${created} embeddings nuevos, ${written.size - created} desde caché${stale.length ? ` · ${stale.length} eliminados` : ''}`)
+}
+
+/** Publica el corpus en el bucket y lo ingesta: el equivalente local de lab:knowledge. */
+async function index(): Promise<void> {
+  await syncS3()
+  await ingest()
 }
 
 async function reset(): Promise<void> {
@@ -418,7 +444,7 @@ async function reset(): Promise<void> {
   console.log('✔ Vector Store eliminado. Los archivos globales se conservan. El equipo debe actualizar su ID.')
 }
 
-const commands: Record<string, () => Promise<void>> = { index, upload, status, query, verify, export: exportCommand, 'sync-s3': syncS3, reset }
+const commands: Record<string, () => Promise<void>> = { index, ingest, upload, status, query, verify, export: exportCommand, 'sync-s3': syncS3, reset }
 const command = commands[process.argv[2] ?? '']
 if (!command) {
   console.error(`Uso: kb <${Object.keys(commands).join('|')}>`)

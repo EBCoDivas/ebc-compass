@@ -34,7 +34,8 @@ Sin clave de OpenAI: `npm run dev:rules` (el asistente responde solo con reglas 
 | `npm run provision` | Crea las tablas, el bucket, el índice de S3 Vectors y las cuentas de Cognito en el emulador (idempotente) |
 | `npm run emulator:up` / `emulator:down` | Controla solo el emulador |
 | `npm run bridge` | Levanta solo el puente |
-| `npm run kb:index` | Carga el corpus de `knowledge/` en S3 Vectors del emulador (requiere el puente en marcha). `npm run dev` lo ejecuta solo |
+| `npm run kb:index` | Equivalente local de `lab:knowledge`: `kb:sync-s3` (publica en el bucket) y `kb:ingest`. Requiere el puente en marcha. `npm run dev` lo ejecuta solo |
+| `npm run kb:ingest` | Hace el papel de `StartIngestionJob`: lee el **bucket**, fragmenta, genera los embeddings y escribe los vectores en S3 Vectors |
 | `npm run kb:verify` | Comprueba la recuperación con las preguntas de oro, a través del `Retrieve` del puente |
 | `npm run kb:query -- "texto" [--lang es]` | Consulta de prueba: pasajes recuperados con puntaje |
 | `npm run kb:upload` / `kb:status` | Vector Store de OpenAI (camino anterior, solo con `KNOWLEDGE_STORE=openai`) |
@@ -83,11 +84,17 @@ coseno) y embeddings de Titan Text Embeddings v2. Como el emulador no ejecuta mo
 `OPENAI_EMBEDDING_MODEL` (por omisión `text-embedding-3-small` a 1,024 dimensiones).
 
 - `npm run dev` ejecuta `kb:index` en cada arranque: el emulador pierde los vectores al reiniciarse.
-- `kb:index` sube los documentos al bucket, los divide por secciones, pide los embeddings **a través del puente con
-  el contrato de Bedrock** y escribe los vectores. Guarda los embeddings en `local/.state/embeddings.json`, así que
-  solo se paga la primera vez o cuando cambia un documento.
+- `kb:index` publica los documentos y sus `.metadata.json` en el bucket y los ingesta **leyendo el bucket**, no la carpeta
+  `knowledge/`: fragmenta, pide los embeddings **a través del puente con el contrato de Bedrock** y escribe los vectores.
+  Guarda los embeddings en `local/.state/embeddings.json`, así que solo se paga la primera vez o cuando cambia un documento.
+- La fragmentación imita la estrategia por omisión de Bedrock Knowledge Bases (la de la Knowledge Base del lab):
+  fragmentos de unos 300 tokens que respetan los límites de oración, con traslape. Es una aproximación (el conteo de
+  tokens es estimado). Como los documentos son cortos, la mayoría queda en un solo fragmento.
+- Para agregar un documento: ponlo en `knowledge/`, regístralo en `manifest.json` y ejecuta `npm run kb:index`.
 - El `Retrieve` del puente genera el embedding de la pregunta y consulta S3 Vectors con los mismos filtros de
-  metadatos (`language`, `topic`) que usa el backend. El backend no cambia entre local y lab.
+  metadatos (`language`, `topic`) que usa el backend. El backend no cambia entre local y lab. El emulador filtra los
+  metadatos **después** de elegir los `topK` más cercanos (S3 Vectors real filtra antes), así que con filtro el puente
+  pide más resultados y recorta.
 - Los vectores locales no se llevan al lab: allá la Knowledge Base hace su propia ingesta con Titan.
 - Para volver al Vector Store de OpenAI, define `KNOWLEDGE_STORE=openai` en `local/.env` (sección siguiente).
 
@@ -111,7 +118,7 @@ Los errores de acceso o expiración requieren corregir el ID explícitamente.
 
 ## Acceso con Cognito local
 
-`npm run dev` y `npm run dev:rules` aprovisionan las nueve cuentas ficticias
+`npm run dev` y `npm run dev:rules` aprovisionan las cinco cuentas ficticias
 y habilitan el login en `/acceso`. Ya no se cambia de identidad con un selector.
 Consulta los correos y contraseñas en `local/.state/cognito.json`: es un archivo
 privado ignorado por Git, con permisos 600. No lo compartas ni lo agregues a commits.
@@ -132,7 +139,7 @@ los ID tokens emitidos expiran normalmente y no se revocan inmediatamente.
 
 Verificación: `npm --prefix backend run verify:auth` (solo emulador, sin LLM).
 Para el lab, después de desplegar el esquema de atributos de Cognito,
-`npm run lab:personas -- --confirm` registra las nueve cuentas y guarda credenciales
+`npm run lab:personas -- --confirm` registra las cinco cuentas y guarda credenciales
 en `scripts/lab/.state/personas.json`. Ese comando modifica AWS real; no se ejecuta
 en el arranque local ni como parte de las verificaciones.
 

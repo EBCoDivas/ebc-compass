@@ -20,6 +20,7 @@
     "verify:conversations": "npm --prefix backend run verify:conversations",
     "verify:checkpointer": "npm --prefix backend run verify:checkpointer",
     "kb:index": "npm --prefix local run kb:index",
+    "kb:ingest": "npm --prefix local run kb:ingest",
     "kb:upload": "npm --prefix local run kb:upload",
     "kb:status": "npm --prefix local run kb:status",
     "kb:query": "npm --prefix local run kb:query --",

@@ -45,8 +45,9 @@ Se probó con `@aws-sdk/*` 3.1170, `@langchain/aws` 1.5.2, `@langchain/core` 1.4
 6. **Telemetría:** el emulador envía por defecto datos anónimos de uso a AWS. En el compose se desactiva con `EMULATOR_TELEMETRY=off`.
 7. **Memoria:** el contenedor se limita a 2 GB; si lo supera, se detiene y se pierden los recursos.
 8. **Fidelidad:** AWS verifica contra `us-west-2`; no hubo diferencias en lo que probamos en `us-east-1`. No se ejecutó el `fidelity_tests_runner` (nuestras pruebas directas cubren lo necesario).
-9. **No implementado = HTTP 501 `NotImplemented`**, lo que facilita detectar huecos.
-10. **Lambda real:** como Lambda ejecuta código de verdad, el backend podría empaquetarse como función en el propio emulador. No es necesario para el MVP (Express local), pero queda como camino de ensayo del lab.
+9. **S3 Vectors filtra después de elegir los `topK`** (hallazgo del 2026-11-22): con filtro de metadatos, `query-vectors` puede devolver menos de `topK` resultados, o ninguno, si los más cercanos no cumplen el filtro. El puente pide más y recorta.
+10. **No implementado = HTTP 501 `NotImplemented`**, lo que facilita detectar huecos.
+11. **Lambda real:** como Lambda ejecuta código de verdad, el backend podría empaquetarse como función en el propio emulador. No es necesario para el MVP (Express local), pero queda como camino de ensayo del lab.
 
 ## 4. Decisiones confirmadas
 

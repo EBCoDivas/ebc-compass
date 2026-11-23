@@ -20,7 +20,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { ListVectorsCommand, QueryVectorsCommand, S3VectorsClient } from '@aws-sdk/client-s3vectors'
 import OpenAI from 'openai'
 import type { ComparisonFilter, CompoundFilter } from 'openai/resources/shared'
-import { DIMENSION, SOURCE_KEY, TEXT_KEY, VECTOR_BUCKET, VECTOR_INDEX, toS3VectorsFilter, type BedrockFilter } from '../kb/vectors.js'
+import { DIMENSION, METADATA_KEY, SOURCE_KEY, TEXT_KEY, VECTOR_BUCKET, VECTOR_INDEX, toS3VectorsFilter, type BedrockFilter } from '../kb/vectors.js'
 import { OPENAI_EMBEDDING_MODEL, parseTitanRequest, type TitanEmbeddingRequest } from './embeddings.js'
 
 
@@ -232,20 +232,23 @@ async function retrieveFromVectors(query: string, body: RetrieveRequest) {
   } catch (error) {
     throw new HttpError(400, 'ValidationException', (error as Error).message)
   }
+  const wanted = config?.numberOfResults ?? 5
   const { vectors: [queryVector] } = await embed([query])
+  // El emulador aplica el filtro de metadatos después de elegir los topK más cercanos (S3 Vectors real filtra antes y
+  // devuelve topK coincidencias). Con filtro se piden más y se recorta, para que ambos devuelvan lo mismo.
   let found
   try {
     found = await vectorClient().send(new QueryVectorsCommand({
       vectorBucketName: VECTOR_BUCKET, indexName: VECTOR_INDEX, queryVector: { float32: queryVector },
-      topK: config?.numberOfResults ?? 5, returnMetadata: true, returnDistance: true, ...(filter ? { filter } : {}),
+      topK: filter ? Math.min(100, Math.max(wanted * 10, 50)) : wanted, returnMetadata: true, returnDistance: true, ...(filter ? { filter } : {}),
     }))
   } catch (error) {
     const name = (error as { name?: string }).name ?? ''
     if (name.includes('NotFound')) throw new HttpError(404, 'ResourceNotFoundException', 'La base de conocimiento local no está cargada. Ejecuta: npm run kb:index')
     throw new HttpError(503, 'ServiceUnavailableException', 'No fue posible consultar S3 Vectors en el emulador.')
   }
-  const retrievalResults = (found.vectors ?? []).map((vector) => {
-    const { [TEXT_KEY]: text, ...metadata } = (vector.metadata ?? {}) as Record<string, unknown>
+  const retrievalResults = (found.vectors ?? []).slice(0, wanted).map((vector) => {
+    const { [TEXT_KEY]: text, [METADATA_KEY]: _attributes, ...metadata } = (vector.metadata ?? {}) as Record<string, unknown>
     return {
       content: { type: 'TEXT', text: typeof text === 'string' ? text : '' },
       location: { type: 'S3', s3Location: { uri: String(metadata[SOURCE_KEY] ?? '') } },

@@ -12,34 +12,50 @@ export const EMBEDDING_MODEL_ID = 'amazon.titan-embed-text-v2:0'
 /** Claves de metadatos que Bedrock usa con S3 Vectors. El texto del fragmento no se puede filtrar, igual que en el lab. */
 export const TEXT_KEY = 'AMAZON_BEDROCK_TEXT_CHUNK'
 export const SOURCE_KEY = 'x-amz-bedrock-kb-source-uri'
-const MAX_CHUNK_CHARS = 1200
+export const METADATA_KEY = 'AMAZON_BEDROCK_METADATA'
 
 // ---------- Fragmentos ----------
 
 export interface Chunk { key: string; text: string }
 
+/** Estrategia por omisión de Bedrock Knowledge Bases (la que usa la del lab, que no declara otra): ~300 tokens por fragmento. */
+export const CHUNK_MAX_TOKENS = 300
+export const CHUNK_OVERLAP = 0.2
+
+/** Conteo estimado (~4 caracteres por token): Titan usa su propio tokenizador y aquí no hay uno equivalente. */
+export const estimateTokens = (text: string) => Math.ceil(text.length / 4)
+
 /**
- * Divide un documento por secciones (`##`) y parte las secciones largas por párrafos.
- * Cada fragmento conserva el título del documento y de su sección para que el embedding tenga contexto.
+ * Fragmenta como la estrategia por omisión de Bedrock: fragmentos de unos 300 tokens que respetan los límites de
+ * oración (aquí también los saltos de línea), con 20 % de traslape. Un texto de 300 tokens o menos no se divide.
+ * Es una aproximación: el conteo de tokens es estimado y el traslape sigue la guía de AWS para esa estrategia.
  */
-export function chunkDocument(path: string, title: string, body: string): Chunk[] {
-  const sections = body.replace(/^#\s.*\n?/m, '').split(/\n(?=##\s)/).map((part) => part.trim()).filter(Boolean)
-  const chunks: string[] = []
-  for (const section of sections) {
-    const heading = section.startsWith('##') ? section.split('\n')[0].replace(/^#+\s*/, '') : ''
-    const prefix = heading ? `${title} · ${heading}\n` : `${title}\n`
-    const content = heading ? section.split('\n').slice(1).join('\n').trim() : section
-    let current = ''
-    for (const paragraph of content.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean)) {
-      if (current && prefix.length + current.length + paragraph.length + 2 > MAX_CHUNK_CHARS) {
-        chunks.push(prefix + current)
-        current = ''
-      }
-      current = current ? `${current}\n\n${paragraph}` : paragraph
-    }
-    if (current) chunks.push(prefix + current)
+export function chunkText(text: string, { maxTokens = CHUNK_MAX_TOKENS, overlap = CHUNK_OVERLAP } = {}): string[] {
+  const maxChars = maxTokens * 4
+  const segments: string[] = []
+  // Cada segmento conserva su espacio final para poder reconstruir el texto sin perder saltos de línea.
+  for (const sentence of text.split(/(?<=[.!?…]\s|\n)/).filter(Boolean)) {
+    for (let at = 0; at < sentence.length; at += maxChars) segments.push(sentence.slice(at, at + maxChars)) // oración más larga que un fragmento
   }
-  return chunks.map((text, index) => ({ key: `${path}#${index}`, text }))
+  const chunks: string[] = []
+  let current: string[] = []
+  const size = (parts: string[]) => parts.reduce((total, part) => total + part.length, 0)
+  for (const segment of segments) {
+    if (current.length > 0 && size(current) + segment.length > maxChars) {
+      chunks.push(current.join('').trim())
+      const carried: string[] = []
+      for (let i = current.length - 1; i > 0 && size(carried) + current[i].length <= maxChars * overlap; i--) carried.unshift(current[i])
+      current = size(carried) + segment.length <= maxChars ? carried : []
+    }
+    current.push(segment)
+  }
+  if (current.length > 0) chunks.push(current.join('').trim())
+  return chunks.filter(Boolean)
+}
+
+/** Fragmenta un documento tal como lo lee Bedrock desde S3: el archivo completo, con su front-matter. */
+export function chunkDocument(path: string, text: string): Chunk[] {
+  return chunkText(text).map((chunk, index) => ({ key: `${path}#${index}`, text: chunk }))
 }
 
 // ---------- Filtros ----------
@@ -91,7 +107,7 @@ export async function ensureVectorIndex(client: S3VectorsClient, check = false):
     if (check) throw new Error(`Falta el índice de vectores ${VECTOR_INDEX}`)
     await client.send(new CreateIndexCommand({
       vectorBucketName: VECTOR_BUCKET, indexName: VECTOR_INDEX, dataType: 'float32', dimension: DIMENSION, distanceMetric: 'cosine',
-      metadataConfiguration: { nonFilterableMetadataKeys: [TEXT_KEY] },
+      metadataConfiguration: { nonFilterableMetadataKeys: [TEXT_KEY, METADATA_KEY] },
     }))
     existed = false
   }

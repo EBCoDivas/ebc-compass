@@ -1,23 +1,40 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { chunkDocument, toS3VectorsFilter } from './vectors.js'
+import { CHUNK_MAX_TOKENS, chunkDocument, chunkText, estimateTokens, toS3VectorsFilter } from './vectors.js'
 
-describe('fragmentos', () => {
-  const body = '# Becas\n\n> Demo.\n\n## Beca BEA\nRequisitos de la beca.\n\n## Beca BRE\nDescuentos entre 10% y 40%.\n'
+describe('fragmentos (estrategia por omisión de Bedrock)', () => {
+  const sentence = (n: number) => `Oración número ${n} con información de la demo para el alumno. `
 
-  it('divide por secciones y conserva el título del documento y de la sección', () => {
-    const chunks = chunkDocument('becas.md', 'Becas demo', body)
-    assert.deepEqual(chunks.map((chunk) => chunk.key), ['becas.md#0', 'becas.md#1', 'becas.md#2'])
-    assert.equal(chunks[1].text, 'Becas demo · Beca BEA\nRequisitos de la beca.')
-    assert.match(chunks[2].text, /^Becas demo · Beca BRE\n/)
+  it('un texto de 300 tokens o menos no se divide y conserva el front-matter', () => {
+    const text = '---\nid: becas\nlanguage: es\n---\n# Becas\n\nUna beca demo. Otra línea.\n'
+    assert.deepEqual(chunkText(text), [text.trim()])
+    assert.deepEqual(chunkDocument('becas.md', text).map((chunk) => chunk.key), ['becas.md#0'])
   })
 
-  it('parte una sección larga por párrafos sin perder texto', () => {
-    const paragraphs = Array.from({ length: 6 }, (_, i) => `Párrafo ${i} ${'x'.repeat(400)}`)
-    const chunks = chunkDocument('largo.md', 'Largo', `## Sección\n${paragraphs.join('\n\n')}`)
+  it('parte un texto largo en fragmentos de unos 300 tokens que terminan en una oración completa', () => {
+    const text = Array.from({ length: 60 }, (_, i) => sentence(i)).join('')
+    const chunks = chunkText(text)
     assert.ok(chunks.length > 1)
-    for (const chunk of chunks) assert.ok(chunk.text.length <= 1200, `${chunk.key} mide ${chunk.text.length}`)
-    for (const paragraph of paragraphs) assert.ok(chunks.some((chunk) => chunk.text.includes(paragraph)))
+    for (const chunk of chunks) {
+      assert.ok(estimateTokens(chunk) <= CHUNK_MAX_TOKENS, `mide ${estimateTokens(chunk)} tokens`)
+      assert.match(chunk, /\.$/, 'termina en un límite de oración')
+    }
+  })
+
+  it('traslapa fragmentos contiguos y no pierde ninguna oración', () => {
+    const sentences = Array.from({ length: 60 }, (_, i) => sentence(i).trim())
+    const chunks = chunkText(sentences.join(' '))
+    for (const item of sentences) assert.ok(chunks.some((chunk) => chunk.includes(item)), `falta: ${item}`)
+    const repeated = sentences.filter((item) => chunks.filter((chunk) => chunk.includes(item)).length > 1)
+    assert.ok(repeated.length > 0, 'debe haber traslape')
+    assert.ok(repeated.length <= chunks.length * 3, 'el traslape no debe exceder ~20 %')
+  })
+
+  it('respeta los saltos de línea y parte una oración más larga que un fragmento', () => {
+    const lines = Array.from({ length: 80 }, (_, i) => `- Requisito ${i} del trámite sin punto final`).join('\n')
+    for (const chunk of chunkText(lines)) assert.ok(!chunk.startsWith('quisito') && estimateTokens(chunk) <= CHUNK_MAX_TOKENS)
+    const long = 'palabra '.repeat(500)
+    assert.ok(chunkText(long).every((chunk) => estimateTokens(chunk) <= CHUNK_MAX_TOKENS))
   })
 })
 

@@ -12,6 +12,7 @@
     "spike": "bash scripts/spike-emulator.sh",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test bedrock-bridge/*.test.ts kb/*.test.ts",
+    "kb:ingest": "node ../scripts/with-emulator-env.mjs tsx --env-file=.env kb/cli.ts ingest",
     "kb:index": "node ../scripts/with-emulator-env.mjs tsx --env-file=.env kb/cli.ts index",
     "kb:upload": "tsx --env-file=.env kb/cli.ts upload",
     "kb:status": "tsx --env-file=.env kb/cli.ts status",
