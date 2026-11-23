@@ -10,19 +10,19 @@ simulated: true
 > Confirma la disponibilidad con EBC.
 
 ## FiT EBC: encuentro de empleabilidad
-Conoce empresas y explora opciones de desarrollo profesional. Fecha en el catálogo: 25/11/2026.
+Conoce empresas y explora opciones de desarrollo profesional.
 
 ## Global EBC: sesión de relaciones internacionales
-Explora opciones de movilidad académica. Fecha en el catálogo: 05/12/2026.
+Explora opciones de movilidad académica.
 
 ## Catapulta: ideas de negocio
-Comparte ideas de emprendimiento con otros estudiantes. Fecha en el catálogo: 06/12/2026.
+Comparte ideas de emprendimiento con otros estudiantes.
 
 ## EXU: encuentro de comunidad
-Conoce las actividades de formación complementaria. Fecha en el catálogo: 08/12/2026.
+Conoce las actividades de formación complementaria.
 
 ## Encuentro de turismo y hospitalidad
-Conoce a profesionales del turismo de la región. Fecha en el catálogo: 10/12/2026.
+Conoce a profesionales del turismo de la región.
 
 ## Comunicación y entretenimiento en los negocios
-Conoce proyectos creativos y conversa con sus equipos. Fecha en el catálogo: 11/12/2026.
+Conoce proyectos creativos y conversa con sus equipos.

@@ -17,5 +17,5 @@ Consulta primero la convocatoria y pide orientación a Servicios Escolares. La d
 2. Confirma con Servicios Escolares el procedimiento vigente y los documentos aplicables.
 3. Reúne los documentos que te soliciten.
 4. Conserva el acuse de la entrega.
-Fecha en el catálogo: 28/11/2026. Confirma el cierre con Servicios Escolares.
+Revisa la fecha de cierre en el catálogo y confírmala con Servicios Escolares.
 Orientación pública: https://www.ebc.mx/becas/

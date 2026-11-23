@@ -1,4 +1,6 @@
-import { academicProgressRoutes } from './routes/academicProgressRoutes.js'
+import { createAcademicProgressRoutes } from './routes/academicProgressRoutes.js'
+import { academicProgressReader } from './data/studentAcademicProgress.js'
+import { createBannerReader } from './banner/reader.js'
 import cors from 'cors'
 import express from 'express'
 import { profileRoutes } from './routes/profileRoutes.js'
@@ -11,6 +13,7 @@ import { createAssistant } from './assistant/index.js'
 
 export const app = express()
 const assistant = createAssistant()
+const banner = createBannerReader()
 
 app.use(cors())
 app.use(express.json())
@@ -20,11 +23,11 @@ app.get('/api/health', (_request, response) => {
 })
 
 app.use('/api/profiles', profileRoutes)
-app.use('/api/academic-progress', academicProgressRoutes)
+app.use('/api/academic-progress', createAcademicProgressRoutes(academicProgressReader(banner)))
 app.use('/api/opportunities', opportunityRoutes)
 app.use('/api/recommendations', recommendationRoutes)
 app.use('/api/alerts', alertRoutes)
-app.use('/api/student-planning', createStudentPlanningRoutes(assistant.conversations.store))
+app.use('/api/student-planning', createStudentPlanningRoutes(assistant.conversations.store, banner))
 app.use('/api/assistant', assistantRoutes(assistant))
 
 // Cuerpos JSON mal formados -> 400 con el formato de error de la API.

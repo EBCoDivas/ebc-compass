@@ -9,7 +9,9 @@ simulated: true
 
 > Confirma los requisitos y fechas vigentes con Servicios Escolares.
 
-La reinscripción al periodo enero–mayo 2027 se puede realizar **hasta el 20/12/2026**.
+## ¿Hasta cuándo me puedo reinscribir?
+
+Consulta en el calendario de Compass la fecha límite de reinscripción del periodo que te toca.
 
 ## Requisitos
 

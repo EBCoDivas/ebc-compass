@@ -4,6 +4,7 @@
 export function createBackend(input: {
   stage: string;
   streaming?: boolean;
+  mcp: { banner: { name: any; arn: any }; gateway: { gatewayUrl: any; gatewayArn: any } };
   inputGuardrail: { id: any; arn: any; version: any };
   table: { name: any };
   profilesTable: { name: any; arn: any };
@@ -49,10 +50,15 @@ export function createBackend(input: {
       CONVERSATIONS_TABLE: input.table.name,
       CONVERSATION_HISTORY_TABLE: input.historyTable.name,
       PROFILES_TABLE: input.profilesTable.name,
+      BANNER_FUNCTION_NAME: input.mcp.banner.name,
+      MCP_TRANSPORT: "gateway",
+      MCP_GATEWAY_URL: input.mcp.gateway.gatewayUrl,
       // Respaldo por palabras clave si la Knowledge Base no responde: los documentos viajan dentro del paquete.
       KNOWLEDGE_DIR: "/var/task/knowledge",
     },
     permissions: [
+      { actions: ["lambda:InvokeFunction"], resources: [input.mcp.banner.arn] },
+      { actions: ["bedrock-agentcore:InvokeGateway"], resources: [input.mcp.gateway.gatewayArn] },
       { actions: ["bedrock:ApplyGuardrail"], resources: [input.inputGuardrail.arn] },
       { actions: ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:Query", "dynamodb:BatchWriteItem"], resources: [input.historyTable.arn] },
       { actions: ["dynamodb:GetItem", "dynamodb:PutItem"], resources: [input.profilesTable.arn] },

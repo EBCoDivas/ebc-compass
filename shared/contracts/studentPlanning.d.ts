@@ -18,6 +18,7 @@ export interface Opportunity {
   requirements?: string[]
   scholarshipCriteria?: { minimumHighSchoolGpa: number }
   enrollmentFee?: { amount: number; currency: 'MXN' }
+  serviceHoursRequired?: number
   schedule?: { days: string[]; start: string; end: string }
 }
 

@@ -17,12 +17,17 @@ test("both Lambda functions package the shared Spanish prompt and enable system 
   const root = fileURLToPath(new URL("../", import.meta.url));
   for (const streaming of [false, true]) {
     const { args } = context.exports.createBackend({ streaming, inputGuardrail: { id: "guardrail", arn: "guardrail-arn", version: "1" }, stage: "test", table: { name: "checkpoints" },
+      mcp: { banner: { name: "banner", arn: "banner-arn" }, gateway: { gatewayUrl: "https://gateway.example/mcp", gatewayArn: "gateway-arn" } },
       profilesTable: { name: "profiles", arn: "profiles-arn" }, historyTable: { name: "history", arn: "history-arn" }, knowledgeBaseId: "kb", knowledgeBaseArn: "kb-arn" });
     assert.equal(args.environment.BEDROCK_INPUT_GUARDRAIL_ID, 'guardrail');
     assert.equal(args.environment.BEDROCK_INPUT_GUARDRAIL_VERSION, '1');
     assert.ok(args.permissions.some(p => p.actions.includes('bedrock:ApplyGuardrail') && p.resources.includes('guardrail-arn')));
     assert.equal(args.environment.ASSISTANT_PROMPT_CACHE, "system");
     assert.equal(args.environment.ASSISTANT_PROMPTS_DIR, "/var/task/prompts");
+    assert.equal(args.environment.BANNER_FUNCTION_NAME, "banner");
+    assert.equal(args.environment.MCP_TRANSPORT, "gateway");
+    assert.ok(args.permissions.some(p => p.actions.includes('lambda:InvokeFunction') && p.resources.includes('banner-arn')));
+    assert.ok(args.permissions.some(p => p.actions.includes('bedrock-agentcore:InvokeGateway') && p.resources.includes('gateway-arn')));
     const assets = args.copyFiles.find(({ to }) => to === "prompts");
     assert.ok(assets, "SST must include the prompts in the Lambda package");
     assert.ok(readFileSync(resolve(root, assets.from, "assistant.md"), "utf8").trim());

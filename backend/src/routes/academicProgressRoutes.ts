@@ -11,7 +11,8 @@ export function createAcademicProgressRoutes(reader: AcademicProgressReader = de
     const claims = identityClaims(request)!
     const claim = (key: string) => typeof claims[key] === 'string' ? claims[key] as string : undefined
     try {
-      const progress = await reader.read({ id, personaId: claim('custom:personaId'), career: claim('custom:career'), campus: claim('custom:campusCode') })
+      const progress = await reader.read({ id, personaId: claim('custom:personaId'), enrollment: claim('custom:matricula'),
+        career: claim('custom:career'), campus: claim('custom:campusCode'), semester: Number(claim('custom:semestre')) || undefined })
       response.json({ progress })
     } catch {
       response.status(503).json({ code: 'ACADEMIC_PROGRESS_UNAVAILABLE', message: 'No pudimos cargar tu avance académico. Intenta de nuevo.' })

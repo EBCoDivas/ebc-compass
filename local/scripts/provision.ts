@@ -14,6 +14,7 @@ import {
 import { loadEnvFile, root } from '../../scripts/lib/emulator-env.mjs'
 import { join } from 'node:path'
 import { provisionAuth } from './provision-auth.js'
+import { provisionStudentMcp } from '../../backend/src/mcp/provisionLocal.js'
 import { CreateBucketCommand, HeadBucketCommand, S3Client } from '@aws-sdk/client-s3'
 import { S3VectorsClient } from '@aws-sdk/client-s3vectors'
 import { ensureVectorIndex, VECTOR_BUCKET, VECTOR_INDEX } from '../kb/vectors.js'
@@ -149,6 +150,7 @@ try {
   await ensureBucket()
   await ensureVectors()
   await provisionAuth(check)
+  await provisionStudentMcp(check)
   console.log(check ? '✔ Recursos verificados' : '✔ Aprovisionamiento completo')
 } catch (error) {
   console.error(`✖ ${(error as Error).message}`)

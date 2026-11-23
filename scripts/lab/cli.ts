@@ -89,6 +89,7 @@ interface Outputs {
   stage?: string
   apiUrl: string
   siteUrl: string
+  mcpGatewayUrl?: string
   cognitoUserPoolId: string
   cognitoWebClientId: string
   documentsBucketName: string
@@ -358,6 +359,32 @@ async function personas(): Promise<void> {
   console.log(enabled ? 'Las cuentas están listas para el panel de acceso.' : 'Registro local: scripts/lab/.state/personas.json')
 }
 
+async function mcp(): Promise<void> {
+  if (process.env.AWS_ENDPOINT_URL || process.env.AWS_ENDPOINT_URL_BEDROCK_AGENTCORE) fail('lab:mcp requiere el Gateway de AWS, sin endpoint del emulador.')
+  const o = outputs()
+  if (o.stage && o.stage !== stage) fail('El stage de LAB_OUTPUTS_FILE no coincide con LAB_STAGE.')
+  const gatewayUrl = o.mcpGatewayUrl
+  if (!gatewayUrl) return fail('Falta mcpGatewayUrl en las salidas del lab. Despliega primero la infraestructura de la tarea 3.')
+  const { gatewayMcpClient } = await import('../../backend/src/mcp/client.js')
+  const { smokeStudent, verifyMcpStudent } = await import('../../backend/src/mcp/smoke.js')
+  const registryFile = join(here, '.state', 'personas.json')
+  if (!existsSync(registryFile)) fail('Registra las cuentas con npm run lab:personas -- --confirm.')
+  const accounts = JSON.parse(readFileSync(registryFile, 'utf8')) as Record<string, { username: string; password: string }>
+  for (const persona of ['ana-ingreso', 'ana']) {
+    const account = accounts[persona]
+    if (!account) fail('Falta aprovisionar la cuenta de ' + persona)
+    const auth = await cognito.send(new AdminInitiateAuthCommand({
+      UserPoolId: o.cognitoUserPoolId, ClientId: o.cognitoWebClientId, AuthFlow: 'ADMIN_USER_PASSWORD_AUTH',
+      AuthParameters: { USERNAME: account.username, PASSWORD: account.password },
+    }))
+    const token = auth.AuthenticationResult?.IdToken
+    if (!token) return fail('Cognito no entregó un ID token para ' + persona)
+    const student = smokeStudent(token, persona)
+    await verifyMcpStudent(gatewayMcpClient(student, gatewayUrl), student, o.apiUrl, token, { search: persona === 'ana-ingreso' })
+    ok('MCP Gateway: ' + persona)
+  }
+}
+
 async function user(): Promise<void> {
   requireConfirm('lab:user')
   const o = outputs()
@@ -499,6 +526,12 @@ async function deploy(): Promise<void> {
     await smoke()
   }
 
+  if (args.includes('--verify-mcp')) {
+    step('AgentCore MCP: registro y verificación sin chat')
+    await personas()
+    await mcp()
+  }
+
   console.log('\n✔ Despliegue completo.')
   status()
   console.log(jury.enabled
@@ -522,7 +555,7 @@ async function destroy(): Promise<void> {
   ok('Despliegue eliminado')
 }
 
-const commands: Record<string, () => Promise<void> | void> = { check, deploy, knowledge, smoke, user, personas, status, destroy }
+const commands: Record<string, () => Promise<void> | void> = { check, deploy, knowledge, smoke, user, personas, mcp, status, destroy }
 const command = commands[process.argv[2] ?? '']
 if (!command) {
   console.error(`Uso: lab <${Object.keys(commands).join('|')}>`)

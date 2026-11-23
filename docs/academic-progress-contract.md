@@ -28,4 +28,4 @@ Las cifras de los snapshots son datos explícitos de demostración, no el plan o
 
 ## Fuente de demo
 
-`backend/src/data/studentAcademicProgress.ts` relaciona la identidad verificada con snapshots ficticios. El adaptador futuro de Banner debe implementar `AcademicProgressReader` y devolver el mismo contrato; la pantalla no debe depender de detalles de Banner.
+`backend/src/data/studentAcademicProgress.ts` transforma el expediente que entrega Banner simulado. La Lambda privada de Banner recibe una matrícula obtenida de la identidad verificada y el lector vuelve a comprobar el alcance del expediente. El modo fijo utiliza los mismos fixtures sin invocar servicios. Véase [MCP de datos del alumno](student-mcp.md).

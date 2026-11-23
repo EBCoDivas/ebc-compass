@@ -10,6 +10,7 @@
     "knowledge": "tsx --env-file-if-exists=.env cli.ts knowledge",
     "smoke": "tsx --env-file-if-exists=.env cli.ts smoke",
     "user": "tsx --env-file-if-exists=.env cli.ts user",
+    "mcp": "tsx --env-file-if-exists=.env cli.ts mcp",
     "status": "tsx --env-file-if-exists=.env cli.ts status",
     "destroy": "tsx --env-file-if-exists=.env cli.ts destroy",
     "typecheck": "tsc --noEmit",

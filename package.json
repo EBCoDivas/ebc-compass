@@ -19,6 +19,8 @@
     "verify:prompt-cache": "npm --prefix backend run verify:prompt-cache",
     "verify:conversations": "npm --prefix backend run verify:conversations",
     "verify:checkpointer": "npm --prefix backend run verify:checkpointer",
+    "mcp:verify": "node scripts/with-emulator-env.mjs node --import ./backend/node_modules/tsx/dist/loader.mjs backend/scripts/verify-mcp.ts",
+    "lab:mcp": "npm --prefix scripts/lab run -s mcp --",
     "kb:index": "npm --prefix local run kb:index",
     "kb:ingest": "npm --prefix local run kb:ingest",
     "kb:upload": "npm --prefix local run kb:upload",

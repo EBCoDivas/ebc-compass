@@ -36,6 +36,8 @@ Al terminar `lab:deploy` imprime la URL del sitio. Eso es todo: no hay que copia
 
 La segunda vez que lo ejecutes solo actualiza lo que cambió. Opciones: `--skip-knowledge` y `--skip-smoke` (por ejemplo, para redesplegar solo código).
 
+Con `npm run lab:deploy -- --confirm --skip-smoke --verify-mcp`, el despliegue también registra las cuentas de la historia y prueba sus herramientas en AgentCore Gateway. Para repetir esta verificación sobre un stage desplegado, usa `npm run lab:mcp`. Los permisos y el ensayo local están en la [guía del MCP](student-mcp.md).
+
 ## Qué se despliega
 
 | Recurso | Definición | Para qué |

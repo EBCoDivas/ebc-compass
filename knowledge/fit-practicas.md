@@ -10,8 +10,8 @@ simulated: true
 > Consulta la disponibilidad de las actividades y vacantes con EBC.
 
 ## FiT EBC y prácticas
-FiT EBC es un canal de vinculación con empresas. El catálogo indica el 25/11/2026 para el encuentro en Guadalajara, CDMX y Querétaro.
-La Ruta de Empleabilidad te ayuda a preparar tu CV y practicar para una entrevista. Fecha en el catálogo: 12/12/2026.
+FiT EBC es un canal de vinculación con empresas. Consulta en el catálogo la fecha y sede del encuentro.
+La Ruta de Empleabilidad te ayuda a preparar tu CV y practicar para una entrevista.
 Explora prácticas de negocios, oportunidades de turismo en Cancún o proyectos de transformación digital compatibles con la modalidad ejecutiva.
 Fuente: https://www.ebc.mx/lp/fit/alumnos.php
 

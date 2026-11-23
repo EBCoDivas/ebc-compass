@@ -42,15 +42,18 @@ test('recommendations respect each demo persona campus, level and period', async
   }
 })
 
-test('knowledge calendar stays aligned with its catalog of general reference opportunities', async () => {
+test('knowledge calendar references the catalog and the corpus has no operational dates or enrollments', async () => {
   const { readFileSync, readdirSync } = await import('node:fs')
   const root = new URL('../../../knowledge/', import.meta.url)
   const calendar = readFileSync(new URL('calendario-academico.md', root), 'utf8')
   for (const item of legacyOpportunities.filter(item => item.deadline)) {
-    const [year, month, day] = item.deadline!.split('-')
-    assert.ok(calendar.includes(day + '/' + month + '/' + year + ': ' + item.title + '.'), item.id)
+    assert.ok(calendar.includes('- ' + item.title + '.'), item.id)
   }
   const manifest = JSON.parse(readFileSync(new URL('manifest.json', root), 'utf8')) as { files: { path: string }[] }
   assert.deepEqual(manifest.files.map(file => file.path).sort(), readdirSync(root).filter(file => file.endsWith('.md')).sort())
-  for (const file of manifest.files) assert.match(readFileSync(new URL(file.path, root), 'utf8'), /^simulated: true$/m)
+  for (const file of manifest.files) {
+    const content = readFileSync(new URL(file.path, root), 'utf8')
+    assert.match(content, /^simulated: true$/m)
+    assert.doesNotMatch(content, /\b(?:\d{2}\/\d{2}\/20\d{2}|20\d{2}-\d{2}-\d{2}|M\d{7})\b/, file.path)
+  }
 })

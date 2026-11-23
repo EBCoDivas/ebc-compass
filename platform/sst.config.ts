@@ -28,6 +28,7 @@ export default $config({
       { createBackend },
       { createSite },
       { createInputGuardrail },
+      { createStudentMcp },
     ] = await Promise.all([
       import("./infra/api"),
       import("./infra/auth"),
@@ -36,6 +37,7 @@ export default $config({
       import("./infra/backend"),
       import("./infra/site"),
       import("./infra/input-guardrail"),
+      import("./infra/student-mcp"),
     ]);
 
     const { userPool, webClient } = createAuth();
@@ -44,9 +46,11 @@ export default $config({
     const profilesTable = createProfilesTable();
     const historyTable = createHistoryTable();
     const inputGuardrail = createInputGuardrail();
+    const mcp = createStudentMcp({ stage: $app.stage, historyTable, knowledgeBaseId: knowledge.knowledgeBase.knowledgeBaseId, knowledgeBaseArn: knowledge.knowledgeBase.knowledgeBaseArn });
     const backend = createBackend({
       stage: $app.stage,
       inputGuardrail,
+      mcp,
       table,
       profilesTable,
       historyTable,
@@ -57,6 +61,7 @@ export default $config({
       streaming: true,
       stage: $app.stage,
       inputGuardrail,
+      mcp,
       table,
       profilesTable,
       historyTable,
@@ -79,6 +84,7 @@ export default $config({
       conversationsTable: table.name,
       conversationHistoryTable: historyTable.name,
       backendFunction: backend.name,
+      mcpGatewayUrl: mcp.gateway.gatewayUrl,
       apiUrl: api.url,
       cognitoUserPoolId: userPool.id,
       cognitoWebClientId: webClient.id,

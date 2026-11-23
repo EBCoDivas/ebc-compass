@@ -10,13 +10,13 @@ simulated: true
 > Confirma la disponibilidad con EBC.
 
 ## Prácticas de negocios y finanzas
-Aplica tus conocimientos de negocios y finanzas en un entorno profesional. Fecha en el catálogo: 30/01/2027.
+Aplica tus conocimientos de negocios y finanzas en un entorno profesional.
 
 ## Prácticas de apoyo jurídico
-Apoya en la revisión de documentos y en la preparación de expedientes jurídicos. Fecha en el catálogo: 22/01/2027.
+Apoya en la revisión de documentos y en la preparación de expedientes jurídicos.
 
 ## Prácticas de turismo y hospitalidad
-Conoce el sector turístico y desarrolla habilidades de atención al visitante. Fecha en el catálogo: 20/01/2027.
+Conoce el sector turístico y desarrolla habilidades de atención al visitante.
 
 ## Proyecto de transformación digital
-Participa en un proyecto de transformación digital compatible con la modalidad ejecutiva. Fecha en el catálogo: 25/01/2027.
+Participa en un proyecto de transformación digital compatible con la modalidad ejecutiva.

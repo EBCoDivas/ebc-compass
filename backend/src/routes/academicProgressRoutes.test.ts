@@ -47,8 +47,8 @@ test('demo snapshots expose explicit data only and keep optional values absent',
     const progress = await demoAcademicProgress.read({ id: personaId + '-sub', personaId, career: snapshot.career, campus: snapshot.campus })
     assert.ok(progress, `${personaId} should have a matching snapshot`)
     assert.equal(progress.currentPeriod.number, snapshot.currentPeriod.number)
-    assert.equal(progress.courses?.completed, snapshot.courses.completed)
-    assert.equal(progress.credits?.earned, snapshot.credits.earned)
+    assert.deepEqual(progress.courses, snapshot.courses)
+    assert.deepEqual(progress.credits, snapshot.credits)
   }
   assert.equal(await demoAcademicProgress.read({ id: 'new-student', personaId: 'sin-perfil' }), null)
 })

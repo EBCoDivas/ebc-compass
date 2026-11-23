@@ -7,7 +7,7 @@
 
 import { spawn, spawnSync } from 'node:child_process'
 import net from 'node:net'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { cleanBaseEnv, emulatorEnv, loadEnvFile, root } from './lib/emulator-env.mjs'
 import { waitForEmulator, waitForUrl } from './lib/wait.mjs'
@@ -53,6 +53,8 @@ runSync('npm', ['--prefix', 'local', 'run', '-s', 'provision'], {
   ...cleanBaseEnv(), ...emulatorEnv(),
   JURY_DEMO_ENABLED: String(jury.enabled), JURY_DEMO_PASSWORD: jury.password ?? '',
 })
+
+const mcpState = JSON.parse(readFileSync(join(root, 'local', '.state', 'mcp.json'), 'utf8'))
 
 // 4. Modo del asistente
 let mode = rulesOnly ? 'rules' : (loadEnvFile(join(root, 'backend', '.env')).ASSISTANT_MODE ?? 'llm')
@@ -126,6 +128,10 @@ const backendEnv = {
   ...loadEnvFile(join(root, 'backend', '.env')),
   ...emulatorEnv(),
   ASSISTANT_MODE: mode,
+  BANNER_FUNCTION_NAME: mcpState.bannerFunctionName,
+  MCP_TRANSPORT: mcpState.transport,
+  MCP_GATEWAY_URL: mcpState.gatewayUrl ?? '',
+  MCP_KNOWLEDGE_MODE: mode === 'rules' ? 'keyword' : 'bedrock',
   LOCAL_COGNITO_STATE: join(root, 'local', '.state', 'cognito.json'),
 }
 start('backend', 'npm', ['--prefix', 'backend', 'run', '-s', 'dev'], backendEnv)

@@ -18,6 +18,7 @@ export async function resolvePlanningStudent(request: Request): Promise<(Plannin
   const personaId = claims?.['custom:personaId']
   return {
     subject,
+    enrollment: typeof claims?.['custom:matricula'] === 'string' ? claims['custom:matricula'] : undefined,
     career: verified.career ?? saved?.career,
     campus: verified.campus ?? saved?.campus,
     semester: verified.currentSemester ?? saved?.currentSemester,

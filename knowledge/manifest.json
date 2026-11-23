@@ -68,6 +68,10 @@
     {
       "path": "titulacion-electronica.md",
       "id": "titulacion-electronica"
+    },
+    {
+      "path": "induccion-nuevo-ingreso.md",
+      "id": "induccion-nuevo-ingreso"
     }
   ]
 }
