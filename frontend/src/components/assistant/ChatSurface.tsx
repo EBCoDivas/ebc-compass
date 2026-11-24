@@ -8,9 +8,9 @@ import type { AssistantChat } from './useAssistantChat'
 export function ChatSurface({ chat }: { chat: AssistantChat }) {
   const { entries, suggestions, draft, setDraft, loading, pending, notice, announcement, inputRef, submit, stop, retry } = chat
   const name = loadProfile()?.name
-  // Solo se ofrecen modelos distintos: si Lunna y Terra apuntan al mismo, hay una sola opción y no se muestra selector.
-  const options = (['lunna', 'terra'] as const).filter((model, index, list) => !chat.modelNames[model] || list.findIndex(other => chat.modelNames[other] === chat.modelNames[model]) === index)
-  const current = chat.modelNames[chat.model] ?? (chat.model === 'lunna' ? 'Lunna' : 'Terra')
+  // Solo se ofrecen los modelos configurados y distintos entre sí; con uno solo no hay selector. «lunna» y «terra» son ranuras internas, nunca se muestran.
+  const options = (['lunna', 'terra'] as const).filter((model, index, list) => chat.modelNames[model] && list.findIndex(other => chat.modelNames[other] === chat.modelNames[model]) === index)
+  const current = chat.modelNames[chat.model]
   return (
     <>
       <p className="visually-hidden" role="status">{announcement}</p>
@@ -30,7 +30,7 @@ export function ChatSurface({ chat }: { chat: AssistantChat }) {
       {pending && entries.length === 0 && <p role="status" className="chat-empty">Escribiendo…</p>}
       {notice && <p className="form-error chat-notice" role="alert">{notice}</p>}
 
-      <QueryInput modelSelector={options.length < 2 ? (chat.modelNames[options[0]] ? <span className="chat-model-single" title="Modelo con el que responde Compass">{chat.modelNames[options[0]]}</span> : undefined) :
+      <QueryInput modelSelector={options.length < 2 ? (options[0] ? <span className="chat-model-single" title="Modelo con el que responde Compass">{chat.modelNames[options[0]]}</span> : undefined) :
         <details className="chat-model-picker">
           <summary aria-label={`Elegir modelo, actual: ${current}`}>{current} <svg aria-hidden="true" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m4 6 4 4 4-4" /></svg></summary>
           <div className="chat-model-menu">
@@ -38,7 +38,7 @@ export function ChatSurface({ chat }: { chat: AssistantChat }) {
             {options.map(model => <button key={model} type="button" disabled={pending} aria-pressed={chat.model === model} onClick={event => {
               chat.setModel(model)
               event.currentTarget.closest('details')?.removeAttribute('open')
-            }}><strong>{chat.modelNames[model] ?? (model === 'lunna' ? 'Lunna' : 'Terra')}</strong><span>{model === 'lunna' ? 'Para consultas rápidas' : 'Para explorar con más detalle'}</span></button>)}
+            }}><strong>{chat.modelNames[model]}</strong></button>)}
           </div>
         </details>
       } ref={inputRef} value={draft} onChange={setDraft} onSubmit={submit} disabled={loading} pending={pending} onStop={stop} />
