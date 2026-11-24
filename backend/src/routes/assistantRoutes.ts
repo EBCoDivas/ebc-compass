@@ -12,6 +12,7 @@ import { Router, type Request, type Response } from 'express'
 import { InvalidInputError, MAX_MESSAGE_LENGTH, ensureConversation, maintainConversation, runTurnStreaming, runTurn, suggestionsFor, type AssistantProfile, type AssistantRuntime, type CareerId, type ChatMessage, type Language } from '../assistant/index.js'
 import { auditLogFor, auditUser } from '../admin/audit.js'
 import { recordTurnAudit } from '../admin/turnAudit.js'
+import { modelDisplayName } from '../assistant/domain/modelName.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const CAREERS: CareerId[] = ["business-administration", "communication-entertainment", "tourism", "international-business", "accounting", "law", "finance", "marketing", "executive-administration", "executive-accounting", "executive-business", "digital-transformation", "senior-management", "financial-management", "tax-specialty", "banking"]
@@ -310,7 +311,8 @@ export function assistantRoutes(assistant: AssistantRuntime): Router {
           }
         } catch { /* Los alias siguen disponibles si el puente no publica metadatos. */ }
       }
-      response.json({ models, suggestions: suggestionsFor('unknown', parseLanguage(request.query.language) ?? 'es') })
+      const names = Object.fromEntries(Object.entries(models).flatMap(([key, id]) => { const name = modelDisplayName(id); return name ? [[key, name]] : [] }))
+      response.json({ models: names, suggestions: suggestionsFor('unknown', parseLanguage(request.query.language) ?? 'es') })
     } catch (error) {
       fail(response, 400, 'INVALID_INPUT', (error as Error).message)
     }

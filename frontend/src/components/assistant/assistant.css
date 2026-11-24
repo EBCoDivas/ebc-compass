@@ -414,3 +414,5 @@
 .memory-note-form label { display: grid; gap: .35rem; font-size: .85rem; }
 .memory-note-form textarea { min-height: 5rem; resize: vertical; width: 100%; }
 .memory-note-form small { color: var(--ink-soft); }
+
+.chat-model-single { align-items: center; color: var(--ink-soft); display: inline-flex; font-size: .85rem; padding: 0 .5rem; white-space: nowrap; }

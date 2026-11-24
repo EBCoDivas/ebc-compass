@@ -1,5 +1,6 @@
 import type { Claims } from '../auth/identity.js'
 import type { AssistantReply } from '../assistant/types.js'
+import { modelDisplayName } from '../assistant/domain/modelName.js'
 import { auditLogFor, auditSources, auditUser, clip } from './audit.js'
 import type { DocumentStore } from '../assistant/conversations/store.js'
 
@@ -7,11 +8,11 @@ import type { DocumentStore } from '../assistant/conversations/store.js'
  * Registra en la traza del administrador un turno del chat: quién lo hizo, qué preguntó, qué respondió, qué herramientas
  * y fuentes usó y qué hizo el guardrail. Lo comparten la API normal (JSON y SSE) y la Lambda de streaming del lab.
  */
-/** Nombre del selector (Lunna/Terra) y el modelo de Bedrock que lo atiende, para que la traza diga con qué respondió. */
+/** Nombre legible del modelo que atiende el selector, tal como se configuró, para que la traza diga con qué respondió. */
 function modelLabel(selected?: string) {
   const name = selected === 'terra' ? 'terra' : 'lunna'
   const id = process.env['BEDROCK_' + name.toUpperCase() + '_MODEL_ID']?.trim() || process.env.BEDROCK_MODEL_ID?.trim()
-  return (name === 'terra' ? 'Terra' : 'Lunna') + (id ? ' · ' + id : '')
+  return modelDisplayName(id) ?? (name === 'terra' ? 'Terra' : 'Lunna')
 }
 
 export function recordTurnAudit(store: DocumentStore | undefined, turn: {

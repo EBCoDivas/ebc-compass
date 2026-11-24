@@ -114,7 +114,7 @@ test('the audit keeps each source with its type, how it was retrieved and its si
   assert.equal(auditSources(Array.from({ length: 10 }, (_, index) => ({ kind: 'record' as const, id: 'r' + index, title: 'T' }))).length, 6)
 })
 
-test('la traza de un turno con modelo guarda el selector y el modelo de Bedrock; con reglas no guarda modelo', async () => {
+test('la traza de un turno con modelo guarda el nombre legible del modelo configurado; con reglas no guarda modelo', async () => {
   const { recordTurnAudit } = await import('./turnAudit.js')
   const store = new MemoryDocumentStore()
   process.env.BEDROCK_TERRA_MODEL_ID = 'us.amazon.nova-2-lite-v1:0'
@@ -122,6 +122,6 @@ test('la traza de un turno con modelo guarda el selector y el modelo de Bedrock;
   await recordTurnAudit(store, { owner: 'o', claims: undefined, conversationId: 'c', message: 'hola', reply: { ...(base as object), id: 'm1', generatedBy: 'llm' } as never, latencyMs: 5, model: 'terra' })
   await recordTurnAudit(store, { owner: 'o', claims: undefined, conversationId: 'c', message: 'hola', reply: { ...(base as object), id: 'm2', generatedBy: 'rules' } as never, latencyMs: 5 })
   const records = await auditLogFor(store).list()
-  assert.equal(records.find(item => item.mode === 'llm')?.model, 'Terra · us.amazon.nova-2-lite-v1:0')
+  assert.equal(records.find(item => item.mode === 'llm')?.model, 'Nova 2 Lite')
   assert.equal(records.find(item => item.mode === 'rules')?.model, undefined)
 })
