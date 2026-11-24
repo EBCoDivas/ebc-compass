@@ -177,6 +177,18 @@ export function buildStudentTools(mcp: StudentMcp, actions: Pick<StudentActions,
             : `${es ? 'En revisión' : 'Under review'}${item.estimatedResponse ? (es ? ' · respuesta estimada ' : ' · estimated reply ') + formatDate(item.estimatedResponse) : ''}`
           return `- **${item.title}** · ${state} · ${es ? 'Folio' : 'Folio'} \`${item.folio}\` · ${es ? 'Atiende' : 'Handled by'}: ${item.owner}`
         }
+        // Si preguntó por un trámite concreto, se responde ese; si todavía no existe, se dice claramente.
+        const text = normalize(input.question)
+        const asked: StudentRequest['kind'][] = []
+        if (/\b(pago|inscripcion|payment|tuition)\b/.test(text)) asked.push('enrollment-payment')
+        if (/\b(beca|scholarship)\b/.test(text)) asked.push('scholarship')
+        if (asked.length === 1) {
+          const found = list.filter(item => item.kind === asked[0])
+          if (!found.length) return reply(asked[0] === 'enrollment-payment'
+            ? (es ? 'Todavía no hay un pago de inscripción registrado en tu cuenta. Puedes pedirme que lo prepare.' : 'There is no enrollment payment registered on your account yet. You can ask me to prepare it.')
+            : (es ? 'Todavía no hay una solicitud de beca registrada en tu cuenta. Puedes pedirme que la prepare.' : 'There is no scholarship application registered on your account yet. You can ask me to prepare it.'), [requestsSource])
+          return reply([es ? 'Así va tu trámite:' : 'This is where it stands:', found.map(line).join('\n'), es ? 'Puedes ver el detalle en **Seguimiento**.' : 'You can see the details in **Seguimiento**.'].join('\n\n'), [requestsSource])
+        }
         const inReview = list.filter(item => item.status === 'in-review')
         const head = inReview.length
           ? (es ? 'Así van tus solicitudes:' : 'This is where your requests stand:')
