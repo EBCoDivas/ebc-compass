@@ -10,7 +10,8 @@ import { once } from 'node:events'
 import { randomUUID } from 'node:crypto'
 import { Router, type Request, type Response } from 'express'
 import { InvalidInputError, MAX_MESSAGE_LENGTH, ensureConversation, maintainConversation, runTurnStreaming, runTurn, suggestionsFor, type AssistantProfile, type AssistantRuntime, type CareerId, type ChatMessage, type Language } from '../assistant/index.js'
-import { auditLogFor, auditSources, auditUser, clip } from '../admin/audit.js'
+import { auditLogFor, auditUser } from '../admin/audit.js'
+import { recordTurnAudit } from '../admin/turnAudit.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const CAREERS: CareerId[] = ["business-administration", "communication-entertainment", "tourism", "international-business", "accounting", "law", "finance", "marketing", "executive-administration", "executive-accounting", "executive-business", "digital-transformation", "senior-management", "financial-management", "tax-specialty", "banking"]
@@ -163,7 +164,7 @@ export function assistantRoutes(assistant: AssistantRuntime): Router {
       const started = performance.now()
       const reply = await runTurn(assistant.graph, input)
       const latencyMs = reply.latencyMs ?? Math.round(performance.now() - started)
-      await auditLogFor(assistant.conversations?.store).record({ owner: studentId, user: auditUser(identityClaims(request)), conversationId, messageId: reply.id, question: clip(input.message), answer: clip(reply.content), agent: 'Compass', tools: input.toolTurn?.tools ?? [], usefulInfo: reply.sources.slice(0, 5).map(source => source.title || source.id), sources: auditSources(reply.sources), intent: reply.intent, latencyMs, guardrail: reply.inputBlock ? `Bloqueado · ${reply.inputBlock.category}` : 'Permitido', mode: reply.generatedBy })
+      await recordTurnAudit(assistant.conversations?.store, { owner: studentId, claims: identityClaims(request), conversationId, message: input.message, reply, tools: input.toolTurn?.tools, latencyMs })
 
       response.json({
         conversationId,
@@ -216,7 +217,7 @@ export function assistantRoutes(assistant: AssistantRuntime): Router {
         await writeSse(response, name, { conversationId, ...data })
       })
       const latencyMs = reply.latencyMs ?? Math.round(performance.now() - started)
-      await auditLogFor(assistant.conversations?.store).record({ owner: studentId, user: auditUser(identityClaims(request)), conversationId, messageId: reply.id, question: clip(input.message), answer: clip(reply.content), agent: 'Compass', tools: input.toolTurn?.tools ?? [], usefulInfo: reply.sources.slice(0, 5).map(source => source.title || source.id), sources: auditSources(reply.sources), intent: reply.intent, latencyMs, guardrail: reply.inputBlock ? `Bloqueado · ${reply.inputBlock.category}` : 'Permitido', mode: reply.generatedBy })
+      await recordTurnAudit(assistant.conversations?.store, { owner: studentId, claims: identityClaims(request), conversationId, message: input.message, reply, tools: input.toolTurn?.tools, latencyMs })
       await writeSse(response, 'done', {
         conversationId,
         message: { model: reply.model, inputBlock: reply.inputBlock, id: reply.id, role: 'assistant', content: reply.content, language: reply.language, intent: reply.intent,

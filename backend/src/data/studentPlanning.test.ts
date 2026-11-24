@@ -105,7 +105,8 @@ test('the scenes carry distinct, coherent simulated student data', () => {
   const laterAna = personas.find(item => item.id === 'ana')!
   assert.deepEqual([firstAna.name, firstAna.career, firstAna.campus], [laterAna.name, laterAna.career, laterAna.campus])
   assert.notEqual(firstAna.studentId, laterAna.studentId)
-  assert.notEqual(firstAna.enrollment, laterAna.enrollment)
+  // Es la misma alumna en dos momentos: una sola matrícula.
+  assert.equal(firstAna.enrollment, laterAna.enrollment)
   assert.equal(entry.pending.length, 4)
   assert.ok(entry.catalog.find(item => item.id === 'scholarship-first-entry')?.scholarshipCriteria)
   assert.deepEqual(entry.catalog.find(item => item.id === 'procedure-first-enrollment-payment')?.enrollmentFee, { amount: 4800, currency: 'MXN' })

@@ -34,7 +34,7 @@ const changed = { ok: false, code: 'ACTION_CHANGED' } as const
 type SavedState = BannerActionState & { version: number }
 
 function canonicalRecord(identity: BannerIdentity) {
-  const record = fixtureByEnrollment(identity.enrollment)
+  const record = fixtureByEnrollment(identity.enrollment, identity.semester)
   return record && record.firstEntry && record.personaId === identity.personaId && record.campus === identity.campus
     && record.career === identity.career && record.currentPeriod.number === identity.semester && identity.semester === 1 ? record : undefined
 }
@@ -77,7 +77,8 @@ export function createBannerActionHandler(store: Pick<DocumentStore, 'get' | 'wr
           letter = inspectLetter(request.motivationLetter)
           if (!letter) return { ok: false, code: 'INVALID_LETTER' }
         }
-        receipt = { kind: proposal.kind, status: 'in-review', dueDate: opportunity.deadline, confirmedAt,
+        const folio = 'BEC-' + String(stamp.getFullYear()).slice(2) + '-' + createHash('sha256').update(identity.subject + proposal.id).digest('hex').slice(0, 4).toUpperCase()
+        receipt = { kind: proposal.kind, status: 'in-review', dueDate: opportunity.deadline, confirmedAt, folio,
           ...(letter ? { motivationLetter: { name: letter.name, size: letter.size } } : {}) }
       } else {
         const quote = quoteEnrollmentPayment(identity.subject, opportunity, today)

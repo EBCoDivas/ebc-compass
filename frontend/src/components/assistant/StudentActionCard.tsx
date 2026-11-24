@@ -116,6 +116,7 @@ export function StudentActionCard({ proposal, waitingForHistory }: { proposal: A
       ) : (
         <dl>
           <div><dt>Fecha límite</dt><dd>{formatShortDate(details.dueDate)}</dd></div>
+          {receipt?.kind === 'request-scholarship' && receipt.folio && <div><dt>Folio</dt><dd>{receipt.folio}</dd></div>}
           {receipt?.kind === 'request-scholarship' && receipt.motivationLetter && <div><dt>Carta de motivos</dt><dd>{receipt.motivationLetter.name}</dd></div>}
         </dl>
       )}
@@ -123,7 +124,7 @@ export function StudentActionCard({ proposal, waitingForHistory }: { proposal: A
       {done ? (
         <p className="student-action-status" role="status">
           <Icon name="check" />
-          <span><strong>{scholarship ? 'Solicitud enviada.' : 'Pago registrado.'}</strong> <Link to="/">Ver mi ruta</Link></span>
+          <span><strong>{scholarship ? 'Solicitud enviada.' : 'Pago registrado.'}</strong> <Link to="/solicitudes">Ver mis solicitudes</Link></span>
         </p>
       ) : historical ? <p className="student-action-note">Pide a Compass que prepare el pago de inscripción.</p> : (
         <>

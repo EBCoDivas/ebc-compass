@@ -3,6 +3,8 @@ import type { PaymentMethod } from '../../../shared/contracts/studentActions.js'
 import { completedCourses, type CompletedCourse } from './curriculum.js'
 import type { StudentPlanning } from '../../../shared/contracts/studentPlanning.js'
 
+export interface RequestHistoryItem { kind: 'scholarship' | 'enrollment-payment'; folio: string; submittedAt: string; resolvedAt: string; outcome: string }
+
 export interface BannerRecord {
   enrollment: string
   /** Nombre completo tal como está en el expediente. */
@@ -20,6 +22,8 @@ export interface BannerRecord {
   firstEntry?: StudentPlanning['firstEntry']
   /** Tarjeta registrada en el expediente. Es un número de prueba de la red de pagos, no una tarjeta real. */
   paymentMethod?: PaymentMethod
+  /** Solicitudes de semestres anteriores, ya resueltas. */
+  requestHistory?: RequestHistoryItem[]
   serviceHours?: Pick<NonNullable<StudentPlanning['socialService']>, 'completedHours' | 'weeklyHours' | 'asOf'>
 }
 
@@ -29,8 +33,12 @@ const baseRecords: Omit<BannerRecord, 'completedCourses'>[] = [
     currentPeriod: { number: 5, type: 'semestre' }, courses: { completed: 24, total: 54 }, credits: { earned: 144, total: 324 }, gpa: { value: 8.7, scale: 10 } },
   { enrollment: 'M0100012', fullName: 'Ana Lucía Torres', personaId: 'ana', career: 'accounting', campus: 'QRO', asOf,
     currentPeriod: { number: 7, type: 'semestre' }, courses: { completed: 36, total: 54 }, credits: { earned: 216, total: 324 }, gpa: { value: 9.4, scale: 10 },
-    serviceHours: { completedHours: 260, weeklyHours: 6, asOf: '2026-11-22' } },
-  { enrollment: 'M0100018', fullName: 'Ana Lucía Torres', personaId: 'ana-ingreso', career: 'accounting', campus: 'QRO', asOf,
+    serviceHours: { completedHours: 260, weeklyHours: 6, asOf: '2026-11-22' },
+    requestHistory: [
+      { kind: 'scholarship', folio: 'BEC-23-0418', submittedAt: '2023-08-04', resolvedAt: '2023-08-29', outcome: 'Aprobada' },
+      { kind: 'enrollment-payment', folio: 'EBC-3A7F0C19D2B84E56', submittedAt: '2023-07-24', resolvedAt: '2023-07-24', outcome: 'Pagada' },
+    ] },
+  { enrollment: 'M0100012', fullName: 'Ana Lucía Torres', personaId: 'ana-ingreso', career: 'accounting', campus: 'QRO', asOf,
     currentPeriod: { number: 1, type: 'semestre' }, courses: { completed: 0, total: 54 }, credits: { earned: 0, total: 324 },
     firstEntry: { highSchoolGpa: 9.2, admissionLetter: true, motivationLetter: false },
     paymentMethod: { brand: 'Visa', last4: '4242', holder: 'ANA LUCÍA TORRES', expires: '08/29' } },
@@ -43,6 +51,10 @@ const records: BannerRecord[] = baseRecords.map(record => ({ ...record, complete
 
 export const demoAcademicSnapshots = Object.fromEntries([...records.map(record => [record.personaId, record] as const), ['sin-perfil', null]]) as Record<string, BannerRecord | null>
 
-export function fixtureByEnrollment(enrollment: string): BannerRecord | null {
-  return records.find(record => record.enrollment === enrollment) ?? null
+/**
+ * Un alumno tiene una sola matrícula. Las cuentas de demostración de Ana muestran a la misma alumna en dos momentos
+ * (1.º y 7.º semestre), así que la matrícula se acompaña del semestre para encontrar el expediente de cada momento.
+ */
+export function fixtureByEnrollment(enrollment: string, semester?: number): BannerRecord | null {
+  return records.find(record => record.enrollment === enrollment && (semester === undefined || record.currentPeriod.number === semester)) ?? null
 }

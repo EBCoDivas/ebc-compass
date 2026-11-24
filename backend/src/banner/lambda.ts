@@ -34,8 +34,11 @@ export function createBannerHandler(performAction: ActionHandler, listCatalog: (
   return async (event: unknown) => {
     const request = object(event)
     if (request?.version === 1) {
-      if (request.operation === 'getStudentRecord' && typeof request.enrollment === 'string' &&
-          enrollment.test(request.enrollment) && Object.keys(request).length === 3) return { record: fixtureByEnrollment(request.enrollment) }
+      const semester = request.semester === undefined ? undefined : request.semester
+      if (request.operation === 'getStudentRecord' && typeof request.enrollment === 'string' && enrollment.test(request.enrollment) &&
+          (semester === undefined ? Object.keys(request).length === 3 : typeof semester === 'number' && Number.isInteger(semester) && Object.keys(request).length === 4)) {
+        return { record: fixtureByEnrollment(request.enrollment, semester as number | undefined) }
+      }
       if (request.operation === 'listOpportunities' && Object.keys(request).length === 2) return { opportunities: await listCatalog() }
       const action = actionRequest(request)
       if (action) return performAction(action)

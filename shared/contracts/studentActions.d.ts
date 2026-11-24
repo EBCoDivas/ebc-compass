@@ -16,7 +16,7 @@ type PaymentProposal<K extends PaymentKind> = { kind: K; paymentMethod?: Payment
 export type BannerActionProposal = ScholarshipProposal | PaymentProposal<'pay-enrollment'>
 export type ActionProposal = BannerActionProposal | PaymentProposal<'generate-enrollment-slip'>
 export type ActionReceipt = (
-  | (Scholarship & { status?: 'in-review'; motivationLetter?: { name: string; size: number } })
+  | (Scholarship & { status?: 'in-review'; folio?: string; motivationLetter?: { name: string; size: number } })
   | (Payment<'pay-enrollment'> & PaidWith & { status: 'paid' })
   | Payment<'generate-enrollment-slip'>
 ) & { confirmedAt: string }

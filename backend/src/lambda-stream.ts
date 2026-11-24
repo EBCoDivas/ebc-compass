@@ -4,6 +4,7 @@ import type { Request } from 'express'
 import { createAssistant, ensureConversation, maintainConversation, runTurnStreaming } from './assistant/index.js'
 import { createBannerReader } from './banner/reader.js'
 import { ensureCatalog } from './catalog/catalog.js'
+import { recordTurnAudit } from './admin/turnAudit.js'
 import { parseStudentTurn, writeSse } from './routes/assistantRoutes.js'
 type GatewayEvent = {
   httpMethod?: string; path?: string; rawPath?: string; body?: string; isBase64Encoded?: boolean;
@@ -14,7 +15,7 @@ declare const awslambda: {
   HttpResponseStream: { from: (stream: Writable, metadata: { statusCode: number; headers: Record<string, string> }) => Writable }
 }
 const banner = createBannerReader()
-const assistant = createAssistant({ banner })
+export const assistant = createAssistant({ banner })
 const headers = { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'Access-Control-Allow-Origin': '*' }
 export const handler = awslambda.streamifyResponse(async (event, raw) => {
   let output = raw
@@ -44,6 +45,9 @@ export const handler = awslambda.streamifyResponse(async (event, raw) => {
       const { event: name, ...data } = event
       await writeSse(output, name, { conversationId, ...data })
     })
+    // La traza del administrador también debe incluir los turnos que salen por streaming.
+    await recordTurnAudit(assistant.conversations?.store, { owner: studentId, claims, conversationId, message: input.message, reply, tools: input.toolTurn?.tools,
+      latencyMs: reply.latencyMs ?? Math.round(performance.now() - time) })
     await writeSse(output, 'done', { conversationId, message: { role: 'assistant', ...reply },
       meta: { mode: reply.generatedBy, latencyMs: reply.latencyMs ?? Math.round(performance.now() - time), degraded: reply.degraded, historyStatus: reply.historyStatus, ...(reply.usage ? { usage: reply.usage } : {}) } })
     output.end()

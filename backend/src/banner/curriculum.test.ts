@@ -16,3 +16,12 @@ test('every demo expediente lists exactly the courses its count says it complete
   assert.equal(demoAcademicSnapshots.sofia?.completedCourses?.length, 48)
   assert.deepEqual(completedCourses('unknown', 3), [])
 })
+
+test('Ana shares one enrollment number across her two moments and Banner tells them apart by semester', async () => {
+  const { fixtureByEnrollment } = await import('./fixtures.js')
+  assert.equal(demoAcademicSnapshots['ana-ingreso']?.enrollment, demoAcademicSnapshots.ana?.enrollment)
+  const enrollment = demoAcademicSnapshots.ana!.enrollment
+  assert.equal(fixtureByEnrollment(enrollment, 1)?.personaId, 'ana-ingreso')
+  assert.equal(fixtureByEnrollment(enrollment, 7)?.personaId, 'ana')
+  assert.equal(fixtureByEnrollment(enrollment, 3), null)
+})

@@ -27,7 +27,7 @@ import { BedrockRuntimeClient, type ConverseCommandInput } from '@aws-sdk/client
 import { BedrockLlmProvider } from './adapters/bedrockLlm.js'
 
 const now = () => new Date('2026-11-22T17:00:00Z')
-const entry: StudentContext = { subject: randomUUID(), personaId: 'ana-ingreso', career: 'accounting', campus: 'QRO', semester: 1, enrollment: 'M0100018' }
+const entry: StudentContext = { subject: randomUUID(), personaId: 'ana-ingreso', career: 'accounting', campus: 'QRO', semester: 1, enrollment: 'M0100012' }
 const closing: StudentContext = { ...entry, subject: randomUUID(), personaId: 'ana', semester: 7, enrollment: 'M0100012' }
 
 function setup() {

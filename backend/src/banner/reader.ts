@@ -75,7 +75,7 @@ export function createBannerReader(env = process.env, client?: Pick<LambdaClient
     return createFixedBannerClient()
   }
   const lambda = client ?? new LambdaClient({ maxAttempts: 1, requestHandler: { requestTimeout: 4000, throwOnRequestTimeout: true } })
-  const invoke = async (request: BannerActionRequest | { version: 1; operation: 'getStudentRecord'; enrollment: string } | { version: 1; operation: 'listOpportunities' }) => {
+  const invoke = async (request: BannerActionRequest | { version: 1; operation: 'getStudentRecord'; enrollment: string; semester?: number } | { version: 1; operation: 'listOpportunities' }) => {
     try {
       const result = await lambda.send(new InvokeCommand({ FunctionName: functionName, InvocationType: 'RequestResponse',
         Payload: Buffer.from(JSON.stringify(request)) }))
@@ -89,7 +89,7 @@ export function createBannerReader(env = process.env, client?: Pick<LambdaClient
   return withActions({
     async readRecord(student) {
       if (!student.enrollment || !student.personaId) return null
-      const { record } = await invoke({ version: 1, operation: 'getStudentRecord', enrollment: student.enrollment }) as { record?: BannerRecord | null }
+      const { record } = await invoke({ version: 1, operation: 'getStudentRecord', enrollment: student.enrollment, ...(student.semester ? { semester: student.semester } : {}) }) as { record?: BannerRecord | null }
       if (record === null) return null
       if (!record || typeof record.asOf !== 'string' || !record.currentPeriod ||
         !Number.isInteger(record.currentPeriod.number)) throw new Error('BANNER_UNAVAILABLE')

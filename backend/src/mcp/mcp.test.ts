@@ -75,7 +75,7 @@ test('all demo personas get scoped tools through MCP and the same academic contr
   assert.ok(requests.length)
   assert.ok(requests.every(item => {
     const request = asObject(item)!
-    return request.operation === 'getStudentRecord' ? Object.keys(request).sort().join(',') === 'enrollment,operation,version'
+    return request.operation === 'getStudentRecord' ? Object.keys(request).sort().join(',') === 'enrollment,operation,semester,version'
       : request.operation === 'getEnrollmentActions' && Object.keys(request).sort().join(',') === 'identity,operation,version'
   }))
 })
@@ -93,7 +93,7 @@ test('the tool target requires gateway context and rejects model-supplied identi
   assert.deepEqual(await handler({ opportunityId: 'accounting-graduation' }, context('get_requirements', ana)), { ok: false, code: 'NOT_FOUND' })
   assert.deepEqual(await handler({ query: 'Calificaciones M0100012', language: 'es' }, context('search_knowledge', ana)), { ok: false, code: 'INVALID_INPUT' })
   assert.equal(requests.length, 0)
-  assert.deepEqual(await handler({}, context('get_academic_progress', { ...ana, enrollment: students.ana.enrollment })), { ok: true, data: { progress: null } })
+  assert.deepEqual(await handler({}, context('get_academic_progress', { ...ana, enrollment: students.diego.enrollment })), { ok: true, data: { progress: null } })
   const result = await handler({}, context('get_academic_progress', ana))
   assert.ok(result.ok)
   assert.equal(asObject(asObject(result.data)?.progress)?.studentId, ana.subject)

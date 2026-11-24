@@ -55,6 +55,7 @@ export function StudentPendingList({ planning }: { planning: StudentJourney }) {
       <div className="section-heading">
         <h2 id="student-pending-title">Lo que te toca ahora</h2>
         {planning.stage && <span className="stage-pill">{stages[planning.stage]}</span>}
+        <Link className="section-link" to="/solicitudes">Mis solicitudes</Link>
       </div>
       {steps.length === 0
         ? <p className="route-summary">Estás al día con tus pendientes.</p>

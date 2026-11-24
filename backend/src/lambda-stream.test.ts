@@ -31,3 +31,21 @@ test('Lambda streaming rejects missing identity before opening an SSE response',
   assert.equal(metadata.statusCode, 401)
   assert.match(text, /UNAUTHORIZED/)
 })
+
+test('Lambda streaming leaves each turn in the admin trace with who asked, the answer and the tools', async () => {
+  const { handler, assistant } = await import('./lambda-stream.js')
+  const { auditLogFor } = await import('./admin/audit.js')
+  const output = new Writable({ write(_chunk, _encoding, done) { done() } })
+  await (handler as Invoke)({ httpMethod: 'POST', path: '/api/assistant/messages/stream',
+    requestContext: { authorizer: { claims: { sub: '22222222-2222-4222-8222-222222222222', name: 'Ana Lucía Torres', 'custom:personaId': 'ana' } } },
+    body: JSON.stringify({ message: '¿Qué becas hay disponibles?' }),
+  }, output)
+  const records = await auditLogFor(assistant.conversations?.store).list()
+  const record = records.find(item => item.question === '¿Qué becas hay disponibles?')
+  assert.ok(record, 'el turno por streaming debe quedar en la traza')
+  assert.deepEqual(record.user, { name: 'Ana Lucía Torres', personaId: 'ana' })
+  assert.equal(record.agent, 'Compass')
+  assert.ok(record.answer.length > 0)
+  assert.equal(record.guardrail, 'Permitido')
+  assert.equal('owner' in record, false)
+})

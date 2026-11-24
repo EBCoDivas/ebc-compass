@@ -311,6 +311,7 @@ select { appearance: none; background-color: #fff; background-image: url("data:i
 /* Lo que te toca ahora: la ruta del alumno. Misma idea que el rumbo, en claro: una línea que une los pasos
    y un marcador por estado (pendiente, en curso, en revisión, completado). */
 .stage-pill { background: var(--blue-soft); border-radius: 999px; color: var(--blue); font-size: .82rem; font-weight: 700; padding: .25rem .75rem; }
+.section-link { color: var(--blue); font-size: .9rem; font-weight: 700; margin-left: auto; text-decoration: underline; }
 .route-summary { color: var(--ink-soft); margin: -.25rem 0 1rem; }
 .route-summary strong { color: var(--navy); }
 .route-steps { list-style: none; margin: 0; padding: 0; }
@@ -415,7 +416,7 @@ footer { color: var(--ink-soft); font-size: .85rem; padding: 1.5rem 1rem; text-a
   .form-grid, .catalog-controls, .academic-summary { grid-template-columns: 1fr; }
   .site-header { padding-bottom: .6rem; padding-top: .6rem; }
   .site-header > nav { display: none; }
-  .mobile-nav { align-items: stretch; background: var(--surface); border-top: 1px solid var(--line); bottom: 0; box-shadow: 0 -4px 14px #0b2f6b14; display: grid; grid-template-columns: repeat(4, 1fr); left: 0; padding: .35rem .25rem calc(.35rem + env(safe-area-inset-bottom)); position: fixed; right: 0; z-index: 35; }
+  .mobile-nav { align-items: stretch; background: var(--surface); border-top: 1px solid var(--line); bottom: 0; box-shadow: 0 -4px 14px #0b2f6b14; display: grid; grid-template-columns: repeat(5, 1fr); left: 0; padding: .35rem .15rem calc(.35rem + env(safe-area-inset-bottom)); position: fixed; right: 0; z-index: 35; }
   .mobile-nav-link { align-items: center; border-radius: 10px; color: var(--ink-soft); display: flex; flex-direction: column; font-size: .68rem; gap: .15rem; justify-content: center; min-height: 3rem; text-decoration: none; }
   .mobile-nav-link.active { background: var(--blue-soft); color: var(--blue); font-weight: 800; }
   body { padding-bottom: 4.5rem; }

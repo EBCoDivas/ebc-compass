@@ -12,6 +12,7 @@ import { assistantRoutes } from './routes/assistantRoutes.js'
 import { createAssistant } from './assistant/index.js'
 import { ensureCatalog } from './catalog/catalog.js'
 import { adminRoutes } from './routes/adminRoutes.js'
+import { createStudentRequestRoutes } from './routes/studentRequestRoutes.js'
 
 export const app = express()
 const banner = createBannerReader()
@@ -38,6 +39,7 @@ app.use('/api/academic-progress', createAcademicProgressRoutes(academicProgressR
 app.use('/api/opportunities', opportunityRoutes)
 app.use('/api/recommendations', recommendationRoutes)
 app.use('/api/alerts', alertRoutes)
+app.use('/api/student-requests', createStudentRequestRoutes(banner))
 app.use('/api/student-planning', createStudentPlanningRoutes(assistant.conversations.store, banner))
 app.use('/api/assistant', assistantRoutes(assistant))
 
