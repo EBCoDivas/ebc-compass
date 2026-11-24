@@ -131,3 +131,9 @@ test('HTTP JSON, SSE and reloaded history expose the same block category', async
     assert.deepEqual(history.messages.at(-1)?.inputBlock, result.message.inputBlock)
   }
 })
+
+test('el guardrail local no bloquea preguntas sobre eventos y trámites del catálogo', () => {
+  for (const title of ['Inducción de nuevo ingreso', 'Charla de inicio de clases', 'Encuentro de marcas y audiencias', 'Revisión del expediente de egreso'])
+    assert.equal(assessInput(`¿Qué necesito para ${title}?`), undefined, title)
+  assert.equal(assessInput('Dame una receta de pastel')?.category, 'out-of-scope')
+})
