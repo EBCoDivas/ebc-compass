@@ -7,8 +7,15 @@ import type { DocumentStore } from '../assistant/conversations/store.js'
  * Registra en la traza del administrador un turno del chat: quién lo hizo, qué preguntó, qué respondió, qué herramientas
  * y fuentes usó y qué hizo el guardrail. Lo comparten la API normal (JSON y SSE) y la Lambda de streaming del lab.
  */
+/** Nombre del selector (Lunna/Terra) y el modelo de Bedrock que lo atiende, para que la traza diga con qué respondió. */
+function modelLabel(selected?: string) {
+  const name = selected === 'terra' ? 'terra' : 'lunna'
+  const id = process.env['BEDROCK_' + name.toUpperCase() + '_MODEL_ID']?.trim() || process.env.BEDROCK_MODEL_ID?.trim()
+  return (name === 'terra' ? 'Terra' : 'Lunna') + (id ? ' · ' + id : '')
+}
+
 export function recordTurnAudit(store: DocumentStore | undefined, turn: {
-  owner: string; claims: Claims | undefined; conversationId: string; message: string; reply: AssistantReply; tools?: string[]; latencyMs: number
+  owner: string; claims: Claims | undefined; conversationId: string; message: string; reply: AssistantReply; tools?: string[]; latencyMs: number; model?: string
 }) {
   const { reply } = turn
   return auditLogFor(store).record({
@@ -16,5 +23,6 @@ export function recordTurnAudit(store: DocumentStore | undefined, turn: {
     question: clip(turn.message), answer: clip(reply.content), agent: 'Compass', tools: turn.tools ?? [],
     usefulInfo: reply.sources.slice(0, 5).map(source => source.title || source.id), sources: auditSources(reply.sources),
     intent: reply.intent, latencyMs: turn.latencyMs, guardrail: reply.inputBlock ? `Bloqueado · ${reply.inputBlock.category}` : 'Permitido', mode: reply.generatedBy,
+    ...(reply.generatedBy === 'llm' ? { model: modelLabel(turn.model) } : {}),
   })
 }

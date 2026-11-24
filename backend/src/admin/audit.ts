@@ -12,6 +12,8 @@ export type AuditRecord = {
   tools: string[]; usefulInfo: string[]
   /** Fuentes con su tipo y, en las guías, cómo se recuperaron (vector store o respaldo) y su similitud. */
   sources?: AuditSource[]; intent?: string; latencyMs: number; guardrail: string; rating?: AuditRating; mode: string
+  /** Selector y modelo de Bedrock con el que respondió; ausente cuando respondió con reglas. */
+  model?: string
 }
 export type NewAuditRecord = Omit<AuditRecord, 'id' | 'createdAt'>
 export type PublicAuditRecord = Omit<AuditRecord, 'owner'>

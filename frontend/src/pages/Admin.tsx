@@ -8,7 +8,7 @@ type Rating = 'positive' | 'negative'
 type AuditSource = { kind: 'opportunity' | 'document' | 'record'; id: string; title: string; origin?: 'vector' | 'keyword'; score?: number }
 type AuditRecord = {
   id: string; createdAt: string; conversationId: string; agent: string; tools: string[]; usefulInfo: string[]; intent?: string; latencyMs: number
-  guardrail: string; rating?: Rating; user?: { name: string; personaId?: string }; question?: string; answer?: string; sources?: AuditSource[]
+  guardrail: string; mode?: string; model?: string; rating?: Rating; user?: { name: string; personaId?: string }; question?: string; answer?: string; sources?: AuditSource[]
 }
 type Filter = 'all' | 'chat' | 'actions' | 'blocked' | 'negative'
 
@@ -55,6 +55,13 @@ function SourceChip({ source }: { source: AuditSource }) {
 
 const isBlocked = (record: AuditRecord) => record.guardrail !== 'Permitido'
 const isAction = (record: AuditRecord) => record.agent === 'Banner'
+
+/** Con qué respondió: el modelo configurado o, si no hubo modelo, las reglas. */
+function answeredWith(record: AuditRecord): string {
+  if (record.mode === 'llm') return record.model ?? 'Modelo de lenguaje'
+  if (record.mode === 'error') return 'Error al generar la respuesta'
+  return 'Reglas (sin modelo)'
+}
 const initials = (name: string) => name.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map(part => part[0].toUpperCase()).join('') || '?'
 const accentFor = (key: string) => accents[[...key].reduce((sum, char) => sum + char.charCodeAt(0), 0) % accents.length]
 
@@ -119,6 +126,7 @@ function Entry({ record, now, open, onToggle }: { record: AuditRecord; now: numb
             <div><dt>Fuentes</dt><dd>{sourcesOf(record).length
               ? <ul className="admin-sources">{sourcesOf(record).map((source, index) => <SourceChip key={source.id + index} source={source} />)}</ul>
               : <span className="admin-none">Sin fuentes registradas</span>}</dd></div>
+            <div><dt>Respondió con</dt><dd>{record.mode === 'llm' ? <code>{answeredWith(record)}</code> : <span className="admin-none">{answeredWith(record)}</span>}</dd></div>
             <div><dt>Guardrail</dt><dd><span className={`admin-chip ${blocked ? 'blocked' : 'ok'}`}>{record.guardrail}</span></dd></div>
             <div><dt>Conversación</dt><dd><code className="admin-id">{record.conversationId}</code></dd></div>
           </dl>

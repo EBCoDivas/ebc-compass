@@ -47,7 +47,7 @@ export const handler = awslambda.streamifyResponse(async (event, raw) => {
     })
     // La traza del administrador también debe incluir los turnos que salen por streaming.
     await recordTurnAudit(assistant.conversations?.store, { owner: studentId, claims, conversationId, message: input.message, reply, tools: input.toolTurn?.tools,
-      latencyMs: reply.latencyMs ?? Math.round(performance.now() - time) })
+      latencyMs: reply.latencyMs ?? Math.round(performance.now() - time), model: input.model })
     await writeSse(output, 'done', { conversationId, message: { role: 'assistant', ...reply },
       meta: { mode: reply.generatedBy, latencyMs: reply.latencyMs ?? Math.round(performance.now() - time), degraded: reply.degraded, historyStatus: reply.historyStatus, ...(reply.usage ? { usage: reply.usage } : {}) } })
     output.end()

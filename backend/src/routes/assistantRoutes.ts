@@ -164,7 +164,7 @@ export function assistantRoutes(assistant: AssistantRuntime): Router {
       const started = performance.now()
       const reply = await runTurn(assistant.graph, input)
       const latencyMs = reply.latencyMs ?? Math.round(performance.now() - started)
-      await recordTurnAudit(assistant.conversations?.store, { owner: studentId, claims: identityClaims(request), conversationId, message: input.message, reply, tools: input.toolTurn?.tools, latencyMs })
+      await recordTurnAudit(assistant.conversations?.store, { owner: studentId, claims: identityClaims(request), conversationId, message: input.message, reply, tools: input.toolTurn?.tools, latencyMs, model: input.model })
 
       response.json({
         conversationId,
@@ -217,7 +217,7 @@ export function assistantRoutes(assistant: AssistantRuntime): Router {
         await writeSse(response, name, { conversationId, ...data })
       })
       const latencyMs = reply.latencyMs ?? Math.round(performance.now() - started)
-      await recordTurnAudit(assistant.conversations?.store, { owner: studentId, claims: identityClaims(request), conversationId, message: input.message, reply, tools: input.toolTurn?.tools, latencyMs })
+      await recordTurnAudit(assistant.conversations?.store, { owner: studentId, claims: identityClaims(request), conversationId, message: input.message, reply, tools: input.toolTurn?.tools, latencyMs, model: input.model })
       await writeSse(response, 'done', {
         conversationId,
         message: { model: reply.model, inputBlock: reply.inputBlock, id: reply.id, role: 'assistant', content: reply.content, language: reply.language, intent: reply.intent,
