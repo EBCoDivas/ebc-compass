@@ -70,6 +70,9 @@ export function Requests() {
       {requests?.length === 0 && (
         <p className="requests-note">Todavía no tienes solicitudes. Cuando pidas un trámite con Compass, aparecerá aquí con su folio y su avance.</p>
       )}
+      {requests && requests.length > 0 && inReview.length === 0 && (
+        <p className="requests-note">No tienes trámites en curso. <AskAssistantLink question="¿Qué trámites puedo hacer con Compass?">Pídele a Compass el siguiente</AskAssistantLink>.</p>
+      )}
       {inReview.length > 0 && <section aria-labelledby="in-review-title"><h2 id="in-review-title">En revisión</h2><ul className="request-list">{inReview.map(request => <RequestCard key={request.id} request={request} />)}</ul></section>}
       {resolved.length > 0 && <section aria-labelledby="resolved-title"><h2 id="resolved-title">Resueltas</h2><ul className="request-list">{resolved.map(request => <RequestCard key={request.id} request={request} />)}</ul></section>}
     </main>
