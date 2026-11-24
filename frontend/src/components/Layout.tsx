@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { usePageTitle } from '../utils/pageTitle'
 import { AssistantDockProvider } from './assistant/AssistantDock'
 
-const titles: Record<string, string> = { '/': 'Inicio', '/catalogo': 'Oportunidades', '/calendario': 'Calendario', '/asistente': 'Compass', '/perfil': 'Mi perfil', '/solicitudes': 'Mis solicitudes', '/admin': 'Administración', '/acceso': 'Iniciar sesión' }
+const titles: Record<string, string> = { '/': 'Inicio', '/catalogo': 'Oportunidades', '/calendario': 'Calendario', '/asistente': 'Compass', '/perfil': 'Mi perfil', '/solicitudes': 'Seguimiento', '/admin': 'Administración', '/acceso': 'Iniciar sesión' }
 
 function NavIcon({ type }: { type: 'home' | 'opportunities' | 'calendar' | 'requests' | 'chat' }) {
   const paths = {
@@ -40,7 +40,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <NavLink className="nav-link" to="/"><NavIcon type="home" />Inicio</NavLink>
           <NavLink className="nav-link" to="/catalogo"><NavIcon type="opportunities" />Oportunidades</NavLink>
           <NavLink className="nav-link" to="/calendario"><NavIcon type="calendar" />Calendario</NavLink>
-          <NavLink className="nav-link" to="/solicitudes"><NavIcon type="requests" />Solicitudes</NavLink>
+          <NavLink className="nav-link" to="/solicitudes"><NavIcon type="requests" />Seguimiento</NavLink>
           <NavLink className="nav-link" to="/asistente"><NavIcon type="chat" />Conversar</NavLink>
           {isAdmin && <NavLink className="nav-link" to="/admin">Administración</NavLink>}
         </nav>}
@@ -57,7 +57,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <NavLink className="mobile-nav-link" to="/"><NavIcon type="home" /><span>Inicio</span></NavLink>
         <NavLink className="mobile-nav-link" to="/catalogo"><NavIcon type="opportunities" /><span>Oportunidades</span></NavLink>
         <NavLink className="mobile-nav-link" to="/calendario"><NavIcon type="calendar" /><span>Calendario</span></NavLink>
-        <NavLink className="mobile-nav-link" to="/solicitudes"><NavIcon type="requests" /><span>Solicitudes</span></NavLink>
+        <NavLink className="mobile-nav-link" to="/solicitudes"><NavIcon type="requests" /><span>Seguimiento</span></NavLink>
         <NavLink className="mobile-nav-link" to="/asistente"><NavIcon type="chat" /><span>Conversar</span></NavLink>
       </nav>}
       <footer>EBC Compass, un proyecto para estudiantes de la Escuela Bancaria y Comercial.</footer>

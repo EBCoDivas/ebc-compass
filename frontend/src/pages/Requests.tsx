@@ -60,8 +60,8 @@ export function Requests() {
     <main className="page requests-page">
       <div className="page-heading">
         <div>
-          <h1>Mis solicitudes</h1>
-          <p>Lo que has pedido en EBC y cómo va, hasta que queda resuelto.</p>
+          <h1>Seguimiento de tus trámites</h1>
+          <p>Cómo va lo que ya pediste en EBC, hasta que queda resuelto.</p>
           <p className="requests-hint">Aquí solo das seguimiento. ¿Necesitas hacer otro trámite? <AskAssistantLink question="¿Qué trámites puedo hacer con Compass?">Pídeselo a Compass</AskAssistantLink>.</p>
         </div>
       </div>

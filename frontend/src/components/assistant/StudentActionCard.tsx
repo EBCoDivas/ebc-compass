@@ -124,7 +124,7 @@ export function StudentActionCard({ proposal, waitingForHistory }: { proposal: A
       {done ? (
         <p className="student-action-status" role="status">
           <Icon name="check" />
-          <span><strong>{scholarship ? 'Solicitud enviada.' : 'Pago registrado.'}</strong> <Link to="/solicitudes">Ver mis solicitudes</Link></span>
+          <span><strong>{scholarship ? 'Solicitud enviada.' : 'Pago registrado.'}</strong> <Link to="/solicitudes">Ver mi seguimiento</Link></span>
         </p>
       ) : historical ? <p className="student-action-note">Pide a Compass que prepare el pago de inscripción.</p> : (
         <>
