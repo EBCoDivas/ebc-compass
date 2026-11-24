@@ -1,3 +1,4 @@
+import '../testing/seedCatalog.js'
 import assert from 'node:assert/strict'
 import { once } from 'node:events'
 import type { AddressInfo } from 'node:net'
@@ -9,7 +10,7 @@ import { fixedBanner } from '../banner/reader.js'
 import { createProactiveAgent } from './agent.js'
 import { createProactiveRoutes } from '../routes/proactiveRoutes.js'
 
-const entry = { subject: 'e0bc0000-0000-4000-8000-000000000010', personaId: 'ana-ingreso', enrollment: 'M0100018', career: 'accounting', campus: 'QRO', semester: 1 }
+const entry = { subject: 'e0bc0000-0000-4000-8000-000000000010', personaId: 'ana-ingreso', enrollment: 'M0100012', career: 'accounting', campus: 'QRO', semester: 1 }
 const closing = { subject: 'e0bc0000-0000-4000-8000-000000000003', personaId: 'ana', enrollment: 'M0100012', career: 'accounting', campus: 'QRO', semester: 7 }
 
 function setup(llm?: { generate: () => Promise<string> }) {
