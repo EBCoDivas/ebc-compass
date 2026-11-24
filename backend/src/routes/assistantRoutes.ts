@@ -1,4 +1,4 @@
-import { identitySubject as verifiedSubject } from '../auth/identity.js'
+import { identityClaims, identitySubject as verifiedSubject } from '../auth/identity.js'
 // Rutas del asistente conversacional. Contrato: docs/plans/plan-asistente-integracion.md (sección 6).
 // El perfil llega como resumen en cada petición (el frontend lo guarda en localStorage).
 
@@ -10,7 +10,7 @@ import { once } from 'node:events'
 import { randomUUID } from 'node:crypto'
 import { Router, type Request, type Response } from 'express'
 import { InvalidInputError, MAX_MESSAGE_LENGTH, ensureConversation, maintainConversation, runTurnStreaming, runTurn, suggestionsFor, type AssistantProfile, type AssistantRuntime, type CareerId, type ChatMessage, type Language } from '../assistant/index.js'
-import { recordAudit } from '../admin/audit.js'
+import { auditLogFor, auditSources, auditUser, clip } from '../admin/audit.js'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const CAREERS: CareerId[] = ["business-administration", "communication-entertainment", "tourism", "international-business", "accounting", "law", "finance", "marketing", "executive-administration", "executive-accounting", "executive-business", "digital-transformation", "senior-management", "financial-management", "tax-specialty", "banking"]
@@ -83,7 +83,7 @@ export function parseTurn(request: Request) {
 export async function parseStudentTurn(request: Request, assistant: AssistantRuntime) {
   const turn = parseTurn(request)
   const student = assistant.actions ? await resolvePlanningStudent(request).catch(() => undefined) : undefined
-  return { ...turn, input: { ...turn.input, ...(student ? { toolTurn: { student, conversationId: turn.conversationId, requestId: turn.input.requestId } } : {}) } }
+  return { ...turn, input: { ...turn.input, ...(student ? { toolTurn: { student, conversationId: turn.conversationId, requestId: turn.input.requestId, tools: [] as string[] } } : {}) } }
 }
 
 export async function writeSse(response: Writable, event: string, data: unknown) {
@@ -122,9 +122,25 @@ export function assistantRoutes(assistant: AssistantRuntime): Router {
     try {
       const student = await resolvePlanningStudent(request)
       if (!student) return fail(response, 401, 'UNAUTHORIZED', 'Inicia sesión.')
+      const started = performance.now()
       const receipt = confirm
         ? await assistant.actions.confirm(student, id, proposalId, letter as { name: string; contentBase64: string } | undefined)
         : await assistant.actions.status(student, id, proposalId)
+      if (confirm && receipt) {
+        // Cada confirmación queda en la traza del administrador, con quién la hizo y qué registró Banner.
+        const paid = receipt.kind === 'pay-enrollment' || receipt.kind === 'generate-enrollment-slip'
+        await auditLogFor(assistant.conversations?.store).record({
+          owner: student.subject, user: auditUser(identityClaims(request)), conversationId: id, messageId: 'action-' + proposalId, agent: 'Banner',
+          tools: ['confirm_' + receipt.kind.replace(/-/g, '_')], intent: receipt.kind, latencyMs: Math.round(performance.now() - started),
+          guardrail: 'Permitido', mode: 'rules',
+          question: paid ? 'Confirmó el pago de la inscripción' : 'Confirmó la solicitud de la beca de primer ingreso',
+          answer: receipt.kind === 'pay-enrollment'
+            ? `Pago registrado · ${receipt.payment.reference} · ${receipt.payment.amount} ${receipt.payment.currency}${receipt.paymentMethod ? ` · ${receipt.paymentMethod.brand} •••• ${receipt.paymentMethod.last4}` : ''}`
+            : receipt.kind === 'request-scholarship' ? 'Solicitud en revisión' : 'Registrado',
+          usefulInfo: receipt.kind === 'request-scholarship' && receipt.motivationLetter ? [`Carta: ${receipt.motivationLetter.name}`]
+            : receipt.kind === 'pay-enrollment' ? ['Tarjeta registrada en el expediente'] : [],
+        })
+      }
       response.set('Cache-Control', 'no-store').json({ receipt })
     } catch (error) {
       if ((error as { status?: number }).status) return historyError(response, error)
@@ -140,7 +156,7 @@ export function assistantRoutes(assistant: AssistantRuntime): Router {
       const started = performance.now()
       const reply = await runTurn(assistant.graph, input)
       const latencyMs = reply.latencyMs ?? Math.round(performance.now() - started)
-      recordAudit({ owner: studentId, conversationId, agent: 'Compass', tools: [], usefulInfo: reply.sources.slice(0, 5).map(source => source.title || source.id), intent: reply.intent, latencyMs, guardrail: reply.inputBlock ? `Bloqueado · ${reply.inputBlock.category}` : 'Permitido', mode: reply.generatedBy })
+      await auditLogFor(assistant.conversations?.store).record({ owner: studentId, user: auditUser(identityClaims(request)), conversationId, messageId: reply.id, question: clip(input.message), answer: clip(reply.content), agent: 'Compass', tools: input.toolTurn?.tools ?? [], usefulInfo: reply.sources.slice(0, 5).map(source => source.title || source.id), sources: auditSources(reply.sources), intent: reply.intent, latencyMs, guardrail: reply.inputBlock ? `Bloqueado · ${reply.inputBlock.category}` : 'Permitido', mode: reply.generatedBy })
 
       response.json({
         conversationId,
@@ -193,7 +209,7 @@ export function assistantRoutes(assistant: AssistantRuntime): Router {
         await writeSse(response, name, { conversationId, ...data })
       })
       const latencyMs = reply.latencyMs ?? Math.round(performance.now() - started)
-      recordAudit({ owner: studentId, conversationId, agent: 'Compass', tools: [], usefulInfo: reply.sources.slice(0, 5).map(source => source.title || source.id), intent: reply.intent, latencyMs, guardrail: reply.inputBlock ? `Bloqueado · ${reply.inputBlock.category}` : 'Permitido', mode: reply.generatedBy })
+      await auditLogFor(assistant.conversations?.store).record({ owner: studentId, user: auditUser(identityClaims(request)), conversationId, messageId: reply.id, question: clip(input.message), answer: clip(reply.content), agent: 'Compass', tools: input.toolTurn?.tools ?? [], usefulInfo: reply.sources.slice(0, 5).map(source => source.title || source.id), sources: auditSources(reply.sources), intent: reply.intent, latencyMs, guardrail: reply.inputBlock ? `Bloqueado · ${reply.inputBlock.category}` : 'Permitido', mode: reply.generatedBy })
       await writeSse(response, 'done', {
         conversationId,
         message: { model: reply.model, inputBlock: reply.inputBlock, id: reply.id, role: 'assistant', content: reply.content, language: reply.language, intent: reply.intent,

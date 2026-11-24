@@ -2,6 +2,7 @@ import { extractRequestedMemory, isNoteKey } from '../assistant/conversations/ex
 import { randomUUID } from 'node:crypto'
 import { Router, type Request, type Response } from 'express'
 import { identitySubject } from '../auth/identity.js'
+import { auditLogFor } from '../admin/audit.js'
 import { verifiedAcademicProfile } from '../auth/academicProfile.js'
 import type { AssistantRuntime } from '../assistant/index.js'
 import { EDITABLE_VALUES, forgetMemory, MEMORY_KEYS, seedMemories, validMemoryValue } from '../assistant/conversations/memory.js'
@@ -54,6 +55,7 @@ export function conversationRoutes(assistant: AssistantRuntime) {
     const rating = request.body?.rating
     if (rating !== 'positive' && rating !== 'negative' && rating !== null) throw bad('rating debe ser positive, negative o null.')
     await repo.rate(owner, request.params.id, request.params.messageId, rating)
+    await auditLogFor(repo.store).rate(owner, request.params.id, request.params.messageId, rating)
     response.status(204).end()
   }))
   router.get('/memory', endpoint(async (request, response, owner) => {

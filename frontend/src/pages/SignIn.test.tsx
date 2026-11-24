@@ -24,8 +24,10 @@ it('keeps the manual login and only lists jury accounts in the story order when 
     'Ana Lucía Torres, Contaduría · 7.º semestre · Querétaro',
     'Diego Ramírez, Mercadotecnia · 5.º semestre · Guadalajara',
     'Sofía Herrera, Derecho · 9.º semestre · Toluca',
+    'Administración demo, Traza y observabilidad de Compass',
   ])
   expect(html).toContain('Cuentas de demostración')
   expect(hasJuryAccess('ana-ingreso')).toBe(true)
+  expect(hasJuryAccess('admin')).toBe(true)
   expect(hasJuryAccess('sin-perfil')).toBe(false)
 })

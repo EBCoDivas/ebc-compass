@@ -13,6 +13,8 @@ export interface ToolTurn {
   student: StudentContext
   conversationId: string
   requestId: string
+  /** Herramientas que usó este turno, en orden: el panel de administración las muestra. */
+  tools?: string[]
 }
 
 export type StudentMcp = (student: StudentContext, signal?: AbortSignal) => { call(name: ToolName, args?: object): Promise<ToolReply> }
@@ -107,6 +109,7 @@ export function buildStudentTools(mcp: StudentMcp, actions: Pick<StudentActions,
         try { return [name, await client.call(name, args)] as const }
         catch { return [name, { ok: false, code: 'UNAVAILABLE' } as const] as const }
       })))
+      for (const name of result.keys()) input.turn.tools?.push(name)
       input.signal?.throwIfAborted()
       const data = (name: ToolName) => {
         const match = result.get(name)
@@ -135,7 +138,7 @@ export function buildStudentTools(mcp: StudentMcp, actions: Pick<StudentActions,
         const terms = accepted ? await actions.prepare(input.turn.student, kind) : undefined
         input.signal?.throwIfAborted()
         const proposal = terms && { ...terms, id: input.turn.requestId, conversationId: input.turn.conversationId }
-        if (terms) console.info(JSON.stringify({ event: 'assistant.tool.prepared', tool: actionName }))
+        if (terms) { input.turn.tools?.push(actionName); console.info(JSON.stringify({ event: 'assistant.tool.prepared', tool: actionName })) }
         if (kind === 'request-scholarship') {
           const calculation = context.calculations.scholarship
           const copy = es

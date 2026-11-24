@@ -1,29 +1,195 @@
 import { Navigate } from 'react-router-dom'
 import { getToken } from '../services/authService'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { tokenClaims } from '../services/session'
+import './admin.css'
 
-type Trace = { time: string; conversation: string; agent: string; tool: string; usefulInfo: string; latency: string; guardrail: string; rating: string }
-type AuditRecord = { createdAt: string; conversationId: string; agent: string; tools: string[]; usefulInfo: string[]; intent?: string; latencyMs: number; guardrail: string; rating?: 'positive' | 'negative' }
+type Rating = 'positive' | 'negative'
+type AuditSource = { kind: 'opportunity' | 'document' | 'record'; id: string; title: string; origin?: 'vector' | 'keyword'; score?: number }
+type AuditRecord = {
+  id: string; createdAt: string; conversationId: string; agent: string; tools: string[]; usefulInfo: string[]; intent?: string; latencyMs: number
+  guardrail: string; rating?: Rating; user?: { name: string; personaId?: string }; question?: string; answer?: string; sources?: AuditSource[]
+}
+type Filter = 'all' | 'chat' | 'actions' | 'blocked' | 'negative'
+
 const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3000'
+const REFRESH_MS = 10_000
+const intents: Record<string, string> = {
+  'scholarship-info': 'Becas', 'procedure-info': 'Trámites', 'recommendation-request': 'Recomendaciones', 'course-info': 'Cursos', 'event-info': 'Eventos',
+  'deadline-info': 'Fechas', 'profile-help': 'Perfil', greeting: 'Saludo', help: 'Ayuda', unknown: 'Sin clasificar',
+  'request-scholarship': 'Solicitud de beca', 'pay-enrollment': 'Pago de inscripción', 'generate-enrollment-slip': 'Ficha de inscripción',
+}
+const filters: { id: Filter; label: string }[] = [
+  { id: 'all', label: 'Todas' }, { id: 'chat', label: 'Chat' }, { id: 'actions', label: 'Acciones confirmadas' },
+  { id: 'blocked', label: 'Bloqueadas' }, { id: 'negative', label: 'Valoración negativa' },
+]
+const accents = ['var(--blue)', 'var(--cyan-ink)', 'var(--lime-ink)', 'var(--gold-ink)', 'var(--coral-ink)', 'var(--navy)']
+const relative = new Intl.RelativeTimeFormat('es', { numeric: 'auto' })
+const clock = new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+
+/** El chat responde en Markdown; en la traza se lee como texto plano. */
+const plain = (text?: string) => (text ?? '').replace(/\*\*(.+?)\*\*/g, '$1')
+const sourceKinds = { document: 'Guía', opportunity: 'Catálogo', record: 'Expediente' } as const
+const origins = { vector: 'Vector store', keyword: 'Respaldo por palabras' } as const
+
+/** Las ejecuciones guardadas antes de registrar el tipo solo tienen títulos: se muestran como fuentes sin clasificar. */
+const sourcesOf = (record: AuditRecord): AuditSource[] => record.sources ?? record.usefulInfo.map(title => ({ kind: 'record' as const, id: title, title }))
+
+function SourceChip({ source }: { source: AuditSource }) {
+  const legacy = source.id === source.title && source.kind === 'record'
+  return (
+    <li className={`admin-source ${legacy ? 'legacy' : source.kind}`}>
+      {!legacy && <span className="admin-source-kind">{sourceKinds[source.kind]}</span>}
+      <span className="admin-source-title">{source.kind === 'document' ? source.id : source.title}</span>
+      {source.kind === 'document' && source.origin && <span className={`admin-source-origin ${source.origin}`}>{origins[source.origin]}</span>}
+      {typeof source.score === 'number' && <span className="admin-source-score" title="Similitud con la pregunta">{Math.round(source.score * 100)} %</span>}
+    </li>
+  )
+}
+
+const isBlocked = (record: AuditRecord) => record.guardrail !== 'Permitido'
+const isAction = (record: AuditRecord) => record.agent === 'Banner'
+const initials = (name: string) => name.split(/[\s@.]+/).filter(Boolean).slice(0, 2).map(part => part[0].toUpperCase()).join('') || '?'
+const accentFor = (key: string) => accents[[...key].reduce((sum, char) => sum + char.charCodeAt(0), 0) % accents.length]
+
+function ago(iso: string, now: number) {
+  const seconds = Math.round((new Date(iso).getTime() - now) / 1000)
+  if (Math.abs(seconds) < 45) return 'hace unos segundos'
+  const minutes = Math.round(seconds / 60)
+  if (Math.abs(minutes) < 60) return relative.format(minutes, 'minute')
+  const hours = Math.round(minutes / 60)
+  return Math.abs(hours) < 24 ? relative.format(hours, 'hour') : relative.format(Math.round(hours / 24), 'day')
+}
+
+function Tile({ value, label, tone, hint }: { value: string; label: string; tone?: 'alert' | 'good'; hint?: string }) {
+  return <article className={`admin-tile${tone ? ' ' + tone : ''}`}><strong>{value}</strong><span>{label}</span>{hint && <small>{hint}</small>}</article>
+}
+
+function RatingMark({ rating }: { rating?: Rating }) {
+  if (!rating) return null
+  return <span className={`admin-rating ${rating}`} role="img" aria-label={rating === 'positive' ? 'Valoración positiva' : 'Valoración negativa'}>{rating === 'positive' ? '👍' : '👎'}</span>
+}
+
+function Entry({ record, now, open, onToggle }: { record: AuditRecord; now: number; open: boolean; onToggle: (open: boolean) => void }) {
+  const name = record.user?.name ?? 'Usuario sin nombre'
+  const blocked = isBlocked(record)
+  const kind = intents[record.intent ?? ''] ?? record.intent ?? 'Sin clasificar'
+  return (
+    <li>
+      <details className={`admin-entry${blocked ? ' blocked' : ''}`} open={open} onToggle={event => onToggle(event.currentTarget.open)}>
+        <summary>
+          <span className="admin-avatar" style={{ background: accentFor(record.user?.personaId ?? name) }} aria-hidden="true">{initials(name)}</span>
+          <span className="admin-entry-main">
+            <span className="admin-entry-who"><strong>{name}</strong>{record.user?.personaId && <small>{record.user.personaId}</small>}
+              <time dateTime={record.createdAt} title={new Date(record.createdAt).toLocaleString('es-MX')}>{ago(record.createdAt, now)}</time></span>
+            <span className="admin-entry-question">{plain(record.question) || 'Sin mensaje registrado'}</span>
+          </span>
+          <span className="admin-entry-chips">
+            <span className={`admin-chip agent ${isAction(record) ? 'banner' : 'compass'}`}>{isAction(record) ? 'Banner' : 'Compass'}</span>
+            <span className="admin-chip topic">{kind}</span>
+            {blocked && <span className="admin-chip blocked">{record.guardrail}</span>}
+            <RatingMark rating={record.rating} />
+            <span className="admin-latency">{(record.latencyMs / 1000).toFixed(1)} s</span>
+          </span>
+        </summary>
+        <div className="admin-entry-body">
+          <div className="admin-thread">
+            <div className="admin-bubble student"><small>{name.split(' ')[0]}</small><p>{plain(record.question) || '—'}</p></div>
+            <div className="admin-bubble agent"><small>{isAction(record) ? 'Banner' : 'Compass'}</small><p>{plain(record.answer) || '—'}</p></div>
+          </div>
+          <dl className="admin-facts">
+            <div><dt>Herramientas</dt><dd>{record.tools.length
+              ? <span className="admin-tools">{record.tools.map((tool, index) => <code key={tool + index}>{tool}</code>)}</span>
+              : <span className="admin-none">Ninguna: respondió con reglas y su contexto</span>}</dd></div>
+            <div><dt>Fuentes</dt><dd>{sourcesOf(record).length
+              ? <ul className="admin-sources">{sourcesOf(record).map((source, index) => <SourceChip key={source.id + index} source={source} />)}</ul>
+              : <span className="admin-none">Sin fuentes registradas</span>}</dd></div>
+            <div><dt>Guardrail</dt><dd><span className={`admin-chip ${blocked ? 'blocked' : 'ok'}`}>{record.guardrail}</span></dd></div>
+            <div><dt>Conversación</dt><dd><code className="admin-id">{record.conversationId}</code></dd></div>
+          </dl>
+        </div>
+      </details>
+    </li>
+  )
+}
 
 export function Admin() {
   const claims = tokenClaims(getToken())
   const groups = Array.isArray(claims?.['cognito:groups']) ? claims['cognito:groups'].map(String) : []
-  if (!groups.includes('admin') && claims?.['custom:role'] !== 'admin') return <Navigate to="/" replace />
-  const [traces, setTraces] = useState<Trace[]>([])
-  useEffect(() => { fetch(`${API_URL}/api/admin/audit`, { headers: { authorization: `Bearer ${getToken()}` } }).then(r => r.ok ? r.json() as Promise<{ records: AuditRecord[] }> : Promise.reject()).then(data => setTraces(data.records.map((item) => ({ time: new Date(item.createdAt).toLocaleString('es-MX'), conversation: item.conversationId, agent: `${item.agent}${item.intent ? ` · ${item.intent}` : ''}`, tool: item.tools.join(', ') || 'Sin herramientas', usefulInfo: item.usefulInfo.join(' · ') || 'Sin fuentes registradas', latency: `${(item.latencyMs / 1000).toFixed(1)} s`, guardrail: item.guardrail, rating: item.rating === 'positive' ? '👍' : item.rating === 'negative' ? '👎' : '—' })))).catch(() => undefined) }, [])
-  const blockedCount = traces.filter(trace => trace.guardrail !== 'Permitido').length
-  const rated = traces.filter(trace => trace.rating !== '—')
-  const negativeRate = rated.length ? Math.round((rated.filter(trace => trace.rating === '👎').length / rated.length) * 100) : 0
+  const isAdmin = groups.includes('admin') || claims?.['custom:role'] === 'admin'
+  const [records, setRecords] = useState<AuditRecord[]>([])
+  const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading')
+  const [updatedAt, setUpdatedAt] = useState(0)
+  const [now, setNow] = useState(() => Date.now())
+  const [filter, setFilter] = useState<Filter>('all')
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set())
+
+  const load = useCallback(async (signal?: AbortSignal) => {
+    try {
+      const response = await fetch(`${API_URL}/api/admin/audit`, { headers: { authorization: `Bearer ${getToken()}` }, signal })
+      if (!response.ok) throw new Error()
+      setRecords((await response.json() as { records: AuditRecord[] }).records)
+      setState('ready')
+      setUpdatedAt(Date.now())
+    } catch (error) {
+      if ((error as Error).name !== 'AbortError') setState(current => current === 'ready' ? current : 'error')
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!isAdmin) return
+    const abort = new AbortController()
+    void load(abort.signal)
+    const refresh = window.setInterval(() => { void load(abort.signal); setNow(Date.now()) }, REFRESH_MS)
+    return () => { abort.abort(); window.clearInterval(refresh) }
+  }, [isAdmin, load])
+
+  const counts = useMemo(() => ({
+    all: records.length, chat: records.filter(record => !isAction(record)).length, actions: records.filter(isAction).length,
+    blocked: records.filter(isBlocked).length, negative: records.filter(record => record.rating === 'negative').length,
+  }), [records])
+  const visible = useMemo(() => records.filter(record => filter === 'all' || (filter === 'chat' && !isAction(record)) || (filter === 'actions' && isAction(record))
+    || (filter === 'blocked' && isBlocked(record)) || (filter === 'negative' && record.rating === 'negative')), [records, filter])
+  if (!isAdmin) return <Navigate to="/" replace />
+
+  const positive = records.filter(record => record.rating === 'positive').length
+  const negative = counts.negative
+  const average = records.length ? records.reduce((sum, record) => sum + record.latencyMs, 0) / records.length / 1000 : 0
+  const toggle = (id: string, open: boolean) => setOpenIds(current => { const next = new Set(current); if (open) next.add(id); else next.delete(id); return next })
+
   return <main className="page admin-page">
-    <div className="page-heading"><div><p className="eyebrow">Administración</p><h1>Traza de Compass</h1><p>Observa las ejecuciones recientes y los bloqueos del guardrail.</p></div><span className="admin-badge">Admin</span></div>
-    <section className="admin-summary" aria-label="Resumen de actividad">
-      <article><strong>{traces.length}</strong><span>ejecuciones recientes</span></article><article><strong>{blockedCount}</strong><span>bloqueos del guardrail</span></article><article><strong>{negativeRate}%</strong><span>valoraciones negativas</span></article>
+    <div className="page-heading">
+      <div><p className="eyebrow">Administración</p><h1>Traza de Compass</h1><p>Quién preguntó, qué herramientas usó el agente y qué respondió.</p></div>
+      <span className="admin-badge">Admin</span>
+    </div>
+
+    <section className="admin-tiles" aria-label="Resumen de actividad">
+      <Tile value={String(records.length)} label="ejecuciones recientes" hint={`${counts.actions} acciones confirmadas`} />
+      <Tile value={String(counts.blocked)} label="bloqueos del guardrail" tone={counts.blocked ? 'alert' : undefined} />
+      <Tile value={positive + negative ? `👍 ${positive} · 👎 ${negative}` : '—'} label="valoraciones" tone={negative ? 'alert' : positive ? 'good' : undefined} />
+      <Tile value={records.length ? `${average.toFixed(1)} s` : '—'} label="latencia media" />
     </section>
-    <section className="panel-card"><div className="panel-card-heading"><div><h2>Actividad reciente</h2><p>Datos ficticios de la demo; no se muestran preguntas completas ni información sensible.</p></div><button className="button ghost" type="button" onClick={() => window.location.reload()}>Actualizar</button></div>
-      <div className="trace-table-wrap">{traces.length ? <table className="trace-table"><thead><tr><th>Hora</th><th>Conversación</th><th>Agente / herramientas</th><th>Información útil</th><th>Latencia</th><th>Guardrail</th><th>Valoración</th></tr></thead><tbody>{traces.map((trace) => <tr key={trace.time + trace.conversation}><td>{trace.time}</td><td><strong>{trace.conversation}</strong></td><td>{trace.agent}<small>{trace.tool}</small></td><td>{trace.usefulInfo}</td><td>{trace.latency}</td><td><span className={trace.guardrail === 'Permitido' ? 'status-ok' : 'status-blocked'}>{trace.guardrail}</span></td><td>{trace.rating}</td></tr>)}</tbody></table> : <p className="admin-empty">Todavía no hay ejecuciones registradas. Envía una pregunta desde Compass y pulsa Actualizar.</p>}</div>
+
+    <section className="admin-panel" aria-labelledby="activity-title">
+      <div className="admin-panel-head">
+        <div><h2 id="activity-title">Actividad reciente</h2>
+          <p>Datos ficticios de la demo. Los mensajes se recortan y la traza se guarda en DynamoDB.</p></div>
+        <div className="admin-refresh">
+          <small aria-live="polite">{updatedAt ? `Actualizado ${clock.format(updatedAt)}` : 'Cargando…'}</small>
+          <button className="button ghost" type="button" onClick={() => void load()}>Actualizar</button>
+        </div>
+      </div>
+
+      <div className="admin-filters" role="group" aria-label="Filtrar actividad">
+        {filters.map(item => <button key={item.id} type="button" className={`admin-filter${filter === item.id ? ' active' : ''}`} aria-pressed={filter === item.id}
+          onClick={() => setFilter(item.id)}>{item.label}<span>{counts[item.id]}</span></button>)}
+      </div>
+
+      {state === 'error' && <p className="admin-state error" role="alert">No pudimos cargar la traza. Revisa que el servidor esté en marcha y pulsa Actualizar.</p>}
+      {state === 'loading' && <p className="admin-state">Cargando la traza…</p>}
+      {state === 'ready' && !records.length && <p className="admin-state">Todavía no hay ejecuciones. Haz una pregunta desde Compass o confirma un pago o una beca, y aparecerá aquí.</p>}
+      {state === 'ready' && records.length > 0 && !visible.length && <p className="admin-state">Ninguna ejecución coincide con este filtro.</p>}
+      {visible.length > 0 && <ol className="admin-list">{visible.map(record => <Entry key={record.id} record={record} now={now} open={openIds.has(record.id)} onToggle={open => toggle(record.id, open)} />)}</ol>}
     </section>
-    <p className="admin-note">El panel es una primera vista de demostración. La conexión a un repositorio de trazas persistente se puede incorporar después.</p>
   </main>
 }

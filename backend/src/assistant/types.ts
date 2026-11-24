@@ -107,10 +107,16 @@ export interface FactSheet {
   careerFilter?: CareerId
 }
 
+/** De dónde salió un pasaje de una guía: la búsqueda vectorial (Knowledge Base sobre S3 Vectors) o el respaldo por palabras. */
+export type RetrievalOrigin = 'vector' | 'keyword'
+
 export interface Source {
   kind: 'opportunity' | 'document' | 'record'
   id: string
   title: string
+  /** Solo en guías: cómo se recuperó y con qué similitud (0 a 1). */
+  origin?: RetrievalOrigin
+  score?: number
 }
 
 export interface Passage {
@@ -118,7 +124,13 @@ export interface Passage {
   source: string
   title?: string
   score?: number
+  origin?: RetrievalOrigin
 }
+
+export const documentSource = (passage: Passage): Source => ({
+  kind: 'document', id: passage.source, title: passage.title ?? passage.source,
+  ...(passage.origin ? { origin: passage.origin } : {}), ...(typeof passage.score === 'number' ? { score: Math.round(passage.score * 100) / 100 } : {}),
+})
 
 export interface ChatMessage {
   actionProposal?: ActionProposal

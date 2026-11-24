@@ -40,6 +40,7 @@ import type {
   Passage,
   Source,
 } from '../types.js'
+import { documentSource } from '../types.js'
 
 export const MAX_MESSAGE_LENGTH = 500
 const MAX_HISTORY = 20
@@ -220,7 +221,7 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
     })
     .addNode('composeTemplate', (state: AssistantState, config: LangGraphRunnableConfig) => {
       const rendered = renderReply(state.facts!, state.profile)
-      const documents: Source[] = state.passages.map(passage => ({ kind: 'document', id: passage.source, title: passage.title ?? passage.source }))
+      const documents: Source[] = state.passages.map(documentSource)
       const usePassages = state.toolKnowledge && documents.length > 0 && !(deps.models?.[state.model] ?? deps.llm)
         && (state.facts!.items.length === 0 || state.facts!.intent === 'unknown')
       const sources = usePassages ? documents.slice(0, 1) : rendered.sources
@@ -289,7 +290,7 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
         getWriter(config)?.({ event: 'replace', text: reply.content, reason: reply.content })
         return { draft: undefined, degraded: true, reply }
       }
-      const documents: Source[] = [...new Map(state.passages.map((p) => [p.source, { kind: 'document' as const, id: p.source, title: p.title ?? p.source }])).values()]
+      const documents: Source[] = [...new Map(state.passages.map((p) => [p.source, documentSource(p)])).values()]
       const reply = state.reply!
       // RF-05.13: si no se entendió la pregunta, la respuesta del modelo siempre ofrece preguntas alternativas.
       const alternatives =

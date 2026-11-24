@@ -24,7 +24,7 @@ app.use(express.json())
 app.get('/api/health', (_request, response) => {
   response.json({ status: 'ok', service: 'ebc-compass-backend' })
 })
-app.use('/api/admin', adminRoutes())
+app.use('/api/admin', adminRoutes(assistant.conversations?.store))
 
 app.use('/api/profiles', profileRoutes)
 app.use('/api/academic-progress', createAcademicProgressRoutes(academicProgressReader(banner)))

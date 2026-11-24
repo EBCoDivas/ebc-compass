@@ -53,6 +53,7 @@ export class BedrockKnowledgeBaseRetriever implements KnowledgeRetriever {
         source: uri.split('/').pop() ?? uri,
         title: typeof metadata.title === 'string' ? metadata.title : undefined,
         score: result.score,
+        origin: 'vector' as const,
       }
     })
   }
@@ -107,7 +108,7 @@ export class KeywordRetriever implements KnowledgeRetriever {
       .filter((entry) => entry.score >= 0.34)
       .sort((a, b) => b.score - a.score)
       .slice(0, limit)
-      .map(({ chunk, score }) => ({ text: chunk.text, source: chunk.source, title: chunk.title, score }))
+      .map(({ chunk, score }) => ({ text: chunk.text, source: chunk.source, title: chunk.title, score, origin: 'keyword' as const }))
   }
 }
 

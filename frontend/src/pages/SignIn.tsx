@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
-import { authConfigured, signIn } from '../services/authService'
+import { authConfigured, getToken, signIn } from '../services/authService'
 import { juryAccounts, juryPassword } from '../services/juryAccounts'
+import { tokenClaims } from '../services/session'
 
 export function SignIn() {
   const [username, setUsername] = useState('')
@@ -14,7 +15,9 @@ export function SignIn() {
     setPending(true)
     try {
       await signIn(email, credential)
-      window.location.assign('/')
+      const claims = tokenClaims(getToken())
+      const isAdmin = (Array.isArray(claims?.['cognito:groups']) && claims['cognito:groups'].map(String).includes('admin')) || claims?.['custom:role'] === 'admin'
+      window.location.assign(isAdmin ? '/admin' : '/')
     } catch {
       setError(fromJuryPanel ? 'No pudimos iniciar sesión con esta cuenta. Inténtalo de nuevo o contacta al equipo de Compass.'
         : 'No fue posible iniciar sesión. Verifica tu correo y contraseña.')
