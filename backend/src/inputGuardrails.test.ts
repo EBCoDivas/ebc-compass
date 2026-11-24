@@ -137,3 +137,8 @@ test('el guardrail local no bloquea preguntas sobre eventos y trámites del cat�
     assert.equal(assessInput(`¿Qué necesito para ${title}?`), undefined, title)
   assert.equal(assessInput('Dame una receta de pastel')?.category, 'out-of-scope')
 })
+
+test('el guardrail local acepta las preguntas sugeridas por los avisos proactivos', () => {
+  for (const q of ['¿Qué opciones de servicio social tengo?', '¿Cómo puedo alcanzar mis horas a tiempo?', '¿Qué me falta para solicitar la beca?', '¿Cuáles son los requisitos de la beca?'])
+    assert.equal(assessInput(q), undefined, q)
+})
