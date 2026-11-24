@@ -59,12 +59,16 @@ export function Requests() {
   return (
     <main className="page requests-page">
       <div className="page-heading">
-        <div><h1>Mis solicitudes</h1><p>Lo que has pedido en EBC y cómo va, hasta que queda resuelto.</p></div>
+        <div>
+          <h1>Mis solicitudes</h1>
+          <p>Lo que has pedido en EBC y cómo va, hasta que queda resuelto.</p>
+          <p className="requests-hint">Aquí solo das seguimiento. ¿Necesitas hacer otro trámite? <AskAssistantLink question="¿Qué trámites puedo hacer con Compass?">Pídeselo a Compass</AskAssistantLink>.</p>
+        </div>
       </div>
       {error && <p className="form-error" role="alert">No pudimos cargar tus solicitudes. Revisa tu conexión e inténtalo de nuevo.</p>}
       {!error && requests === undefined && <p className="requests-note">Cargando tus solicitudes…</p>}
       {requests?.length === 0 && (
-        <p className="requests-note">Todavía no tienes solicitudes. <AskAssistantLink question="¿Qué trámites puedo hacer con Compass?">Pregunta a Compass qué puedes pedir</AskAssistantLink>.</p>
+        <p className="requests-note">Todavía no tienes solicitudes. Cuando pidas un trámite con Compass, aparecerá aquí con su folio y su avance.</p>
       )}
       {inReview.length > 0 && <section aria-labelledby="in-review-title"><h2 id="in-review-title">En revisión</h2><ul className="request-list">{inReview.map(request => <RequestCard key={request.id} request={request} />)}</ul></section>}
       {resolved.length > 0 && <section aria-labelledby="resolved-title"><h2 id="resolved-title">Resueltas</h2><ul className="request-list">{resolved.map(request => <RequestCard key={request.id} request={request} />)}</ul></section>}
