@@ -44,7 +44,14 @@
 .admin-entry-question { color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-entry-chips { align-items: center; display: flex; flex-wrap: wrap; gap: .4rem; justify-content: flex-end; }
 .admin-latency { color: var(--ink-soft); font-size: .78rem; font-variant-numeric: tabular-nums; min-width: 2.4rem; text-align: right; }
-.admin-rating { font-size: 1rem; }
+.admin-rating { align-items: center; display: inline-flex; }
+.admin-rating svg, .admin-ratings svg { height: 1.1rem; width: 1.1rem; }
+.admin-rating.positive { color: var(--lime-ink); }
+.admin-rating.negative { color: var(--coral); }
+.admin-ratings { align-items: center; display: inline-flex; gap: 1rem; }
+.admin-ratings-item { align-items: center; display: inline-flex; gap: .35rem; }
+.admin-ratings-item:first-child svg { color: var(--lime-ink); }
+.admin-ratings-item:last-child svg { color: var(--coral); }
 
 .admin-chip { border-radius: 999px; display: inline-block; font-size: .74rem; font-weight: 700; padding: .2rem .6rem; white-space: nowrap; }
 .admin-chip.agent.compass { background: var(--cyan-soft); color: var(--cyan-ink); }

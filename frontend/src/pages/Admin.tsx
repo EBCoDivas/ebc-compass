@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import { getToken } from '../services/authService'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { tokenClaims } from '../services/session'
 import './admin.css'
 
@@ -67,13 +67,22 @@ function ago(iso: string, now: number) {
   return Math.abs(hours) < 24 ? relative.format(hours, 'hour') : relative.format(Math.round(hours / 24), 'day')
 }
 
-function Tile({ value, label, tone, hint }: { value: string; label: string; tone?: 'alert' | 'good'; hint?: string }) {
+function Tile({ value, label, tone, hint }: { value: ReactNode; label: string; tone?: 'alert' | 'good'; hint?: string }) {
   return <article className={`admin-tile${tone ? ' ' + tone : ''}`}><strong>{value}</strong><span>{label}</span>{hint && <small>{hint}</small>}</article>
+}
+
+/** Mismos iconos que el chat para valorar una respuesta. */
+function ThumbIcon({ rating }: { rating: Rating }) {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d={rating === 'positive' ? 'M7 10v11H3V10h4Zm0 0 5-8a3 3 0 0 1 3 3v4h4a2 2 0 0 1 2 2l-2 8a2 2 0 0 1-2 2H7' : 'M17 14V3h4v11h-4Zm0 0-5 8a3 3 0 0 1-3-3v-4H5a2 2 0 0 1-2-2l2-8a2 2 0 0 1 2-2h10'} />
+    </svg>
+  )
 }
 
 function RatingMark({ rating }: { rating?: Rating }) {
   if (!rating) return null
-  return <span className={`admin-rating ${rating}`} role="img" aria-label={rating === 'positive' ? 'Valoración positiva' : 'Valoración negativa'}>{rating === 'positive' ? '👍' : '👎'}</span>
+  return <span className={`admin-rating ${rating}`} role="img" aria-label={rating === 'positive' ? 'Valoración positiva' : 'Valoración negativa'}><ThumbIcon rating={rating} /></span>
 }
 
 function Entry({ record, now, open, onToggle }: { record: AuditRecord; now: number; open: boolean; onToggle: (open: boolean) => void }) {
@@ -172,7 +181,7 @@ export function Admin() {
     <section className="admin-tiles" aria-label="Resumen de actividad">
       <Tile value={String(records.length)} label="ejecuciones recientes" hint={`${counts.actions} acciones confirmadas`} />
       <Tile value={String(counts.blocked)} label="bloqueos del guardrail" tone={counts.blocked ? 'alert' : undefined} />
-      <Tile value={positive + negative ? `👍 ${positive} · 👎 ${negative}` : '—'} label="valoraciones" tone={negative ? 'alert' : positive ? 'good' : undefined} />
+      <Tile value={positive + negative ? <span className="admin-ratings"><span className="admin-ratings-item"><ThumbIcon rating="positive" />{positive}</span><span className="admin-ratings-item"><ThumbIcon rating="negative" />{negative}</span></span> : '—'} label="valoraciones" tone={negative ? 'alert' : positive ? 'good' : undefined} />
       <Tile value={records.length ? `${average.toFixed(1)} s` : '—'} label="latencia media" />
     </section>
 
