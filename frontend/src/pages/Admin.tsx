@@ -187,8 +187,7 @@ export function Admin() {
 
     <section className="admin-panel" aria-labelledby="activity-title">
       <div className="admin-panel-head">
-        <div><h2 id="activity-title">Actividad reciente</h2>
-          <p>Datos ficticios de la demo. Los mensajes se recortan y la traza se guarda en DynamoDB.</p></div>
+        <div><h2 id="activity-title">Actividad reciente</h2></div>
         <div className="admin-refresh">
           <small aria-live="polite">{updatedAt ? `Actualizado ${clock.format(updatedAt)}` : 'Cargando…'}</small>
           <button className="button ghost" type="button" onClick={() => void load()}>Actualizar</button>
