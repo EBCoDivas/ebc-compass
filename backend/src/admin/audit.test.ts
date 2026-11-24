@@ -89,6 +89,8 @@ test('the admin endpoint reads the persisted trace and is only open to admins', 
   }
   assert.equal((await get()).status, 403)
   assert.equal((await get({ 'cognito:groups': ['students'] })).status, 403)
+  assert.equal((await get({ 'cognito:groups': '[admin]' })).status, 200)
+  assert.equal((await get({ 'cognito:groups': '[students]' })).status, 403)
   const allowed = await get({ 'cognito:groups': ['admin'] })
   assert.equal(allowed.status, 200)
   const record = allowed.body.records?.find(item => item.conversationId === 'c-api')
