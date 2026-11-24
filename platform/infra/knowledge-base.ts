@@ -1,4 +1,5 @@
-const region = "us-east-1";
+// La región la fija quien despliega (lab:deploy la toma del perfil de AWS o de LAB_REGION y la exporta como AWS_REGION).
+const region = process.env.AWS_REGION ?? "us-east-1";
 const embeddingModelArn = `arn:aws:bedrock:${region}::foundation-model/amazon.titan-embed-text-v2:0`;
 
 export function createKnowledgeBase() {
@@ -7,7 +8,10 @@ export function createKnowledgeBase() {
     cors: false,
   });
 
-  const vectorBucket = new awsnative.s3vectors.VectorBucket("KnowledgeVectors");
+  // S3 Vectors exige minúsculas, números y guiones (3 a 63 caracteres): el nombre autogenerado de aws-native lleva mayúsculas y se rechaza.
+  const vectorBucket = new awsnative.s3vectors.VectorBucket("KnowledgeVectors", {
+    vectorBucketName: `ebc-compass-${$app.stage.toLowerCase()}-knowledge-vectors`,
+  });
 
   const vectorIndex = new awsnative.s3vectors.Index("KnowledgeVectorIndex", {
     vectorBucketArn: vectorBucket.vectorBucketArn,
@@ -101,10 +105,9 @@ export function createKnowledgeBase() {
       },
       storageConfiguration: {
         type: "S3_VECTORS",
+        // CloudFormation acepta el ARN del índice, o bien el bucket y el nombre del índice, pero no las dos formas a la vez.
         s3VectorsConfiguration: {
-          vectorBucketArn: vectorBucket.vectorBucketArn,
           indexArn: vectorIndex.indexArn,
-          indexName: vectorIndex.indexName,
         },
       },
     },

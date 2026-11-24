@@ -1,6 +1,6 @@
 # Despliegue de EBC Compass al lab de AWS
 
-> **Estado:** listo para desplegar, **todavía no desplegado** (aún no hay lab). Todo lo de abajo está preparado y verificado hasta donde se puede sin una cuenta de AWS; la sección [Qué está verificado y qué no](#qué-está-verificado-y-qué-no) dice exactamente cuál es cada caso.
+> **Estado:** desplegado y verificado en un lab real (us-west-2): `lab:deploy`, `lab:personas`, `lab:mcp` y `lab:smoke` pasan. Ver [Lecciones del primer despliegue](#lecciones-del-primer-despliegue).
 
 ## En resumen
 
@@ -242,3 +242,13 @@ mismo authorizer Cognito. Las rutas REST se declaran explícitamente para que lo
 recursos hijos no oculten los métodos del padre. El mantenimiento se espera tras
 cerrar la respuesta, también en el handler Lambda de streaming. No agrega
 llamadas al modelo. Ver [contrato y validación local](assistant-conversations.md).
+
+## Lecciones del primer despliegue
+
+- **Región:** se toma de `LAB_REGION`, si no del perfil/`AWS_REGION` y, en último caso, `us-east-1`. Una región inválida en el perfil (por ejemplo `us-west-2"` con comilla) ahora detiene el despliegue con un error claro. Los labs de Workshop Studio solo permiten ciertas regiones: usa la que muestra el lab.
+- **Permisos del lab:** si `sst deploy` falla con `ssm:GetParameter /sst/bootstrap` AccessDenied, la cuenta aún no tiene permisos. Comprueba con `aws dynamodb list-tables` antes de desplegar; si falla, espera o abre otro lab.
+- **Credenciales:** usa un perfil (`AWS_PROFILE=lab`) en lugar de variables exportadas, para no chocar con tu sesión SSO.
+- **Bundles ESM:** SST ya inyecta `require`; no declares un banner propio con `createRequire` (rompe el arranque de la Lambda con `Identifier 'require' has already been declared`).
+- **S3 Vectors:** el nombre del bucket debe ir en minúsculas (3–63) y la Knowledge Base recibe solo `indexArn`.
+- **Smoke:** `npm run lab:smoke -- --confirm`.
+- **Cuentas del jurado:** `JURY_DEMO_ENABLED=true` y `JURY_DEMO_PASSWORD` en `scripts/lab/.env` (no versionado) habilitan el panel de cuentas en `/acceso`.

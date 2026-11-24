@@ -67,7 +67,11 @@ export function makeToolHandler(dependencies: ToolDependencies) {
         }
       }
       return invalid
-    } catch { return unavailable }
+    } catch (error) {
+      // Sin esta línea, un fallo de Banner o de DynamoDB solo se ve como UNAVAILABLE. No incluye datos del alumno.
+      console.error(JSON.stringify({ event: 'mcp.tool.failed', tool: name, error: (error as Error).name, message: String((error as Error).message).slice(0, 200) }))
+      return unavailable
+    }
   }
 }
 

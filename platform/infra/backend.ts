@@ -70,11 +70,6 @@ export function createBackend(input: {
       { from: "../knowledge", to: "knowledge" },
       { from: "../backend/prompts", to: "prompts" },
     ],
-    nodejs: {
-      // Express y LangChain usan require() dinámico: se habilita dentro del paquete ESM.
-      banner:
-        "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);",
-    },
     logging: { format: "json", retention: "1 week" },
   });
 }

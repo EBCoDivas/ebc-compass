@@ -21,7 +21,6 @@ export function createStudentMcp(input: {
       { actions: ["dynamodb:GetItem", "dynamodb:PutItem"], resources: [bannerActions.arn] },
       { actions: ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:Query"], resources: [bannerCatalog.arn] },
     ],
-    nodejs: { banner: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);" },
     logging: { format: "json", retention: "1 week" },
   });
   const tools = new sst.aws.Function("CompassMcpTools", {

@@ -39,7 +39,29 @@ import { demoAccessConfig, demoUsername, managedDemoPersona, obsoleteDemoUsers }
 
 const here = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(here, '..', '..')
-const REGION = 'us-east-1' // misma región que platform/sst.config.ts
+/**
+ * La región es la del lab: LAB_REGION, o la que resuelva el SDK (AWS_REGION o la región del perfil en uso).
+ * Así el mismo comando sirve para cualquier lab. Por omisión, us-east-1.
+ */
+async function resolveRegion(): Promise<string> {
+  const fixed = process.env.LAB_REGION
+  if (fixed) {
+    if (!/^[a-z]{2,3}(-[a-z]+)+-\d$/.test(fixed)) throw new Error(`LAB_REGION no es una región válida: «${fixed}».`)
+    return fixed
+  }
+  try {
+    return await new STSClient({}).config.region()
+  } catch (error) {
+    // Una región mal escrita (por ejemplo con una comilla de más) no debe pasar en silencio a otra región.
+    if (/Region not accepted|valid hostname/i.test((error as Error).message)) {
+      throw new Error(`La región configurada en tu perfil o en AWS_REGION no es válida (${(error as Error).message}). Corrígela, por ejemplo: aws configure set region us-west-2 --profile <perfil>`)
+    }
+    return 'us-east-1' // sin región configurada
+  }
+}
+const REGION = await resolveRegion()
+/** Los perfiles de inferencia de Bedrock se agrupan por geografía: us.*, eu.*, apac.*… */
+const GEO = REGION.startsWith('eu-') ? 'eu' : REGION.startsWith('ap-') ? 'apac' : 'us'
 const stage = process.env.LAB_STAGE || 'dev'
 const stateFile = join(here, '.state', 'lab.json')
 // SST escribe aquí las salidas del despliegue; LAB_OUTPUTS_FILE permite apuntar a otro archivo (p. ej. un despliegue hecho en otra máquina).
@@ -137,7 +159,7 @@ async function candidateModels(): Promise<string[]> {
   const ids = new Set<string>()
   try {
     const profiles = await bedrock.send(new ListInferenceProfilesCommand({ typeEquals: 'SYSTEM_DEFINED', maxResults: 100 }))
-    for (const profile of profiles.inferenceProfileSummaries ?? []) if (profile.inferenceProfileId?.startsWith('us.')) ids.add(profile.inferenceProfileId)
+    for (const profile of profiles.inferenceProfileSummaries ?? []) if (profile.inferenceProfileId?.startsWith(GEO + '.')) ids.add(profile.inferenceProfileId)
   } catch {
     // Sin permiso para listar perfiles: se usan solo los modelos base.
   }
@@ -148,7 +170,7 @@ async function candidateModels(): Promise<string[]> {
     // idem
   }
   const all = [...ids]
-  return MODEL_PREFERENCE.flatMap((pattern) => all.filter((id) => pattern.test(id)).sort((a, b) => Number(b.startsWith('us.')) - Number(a.startsWith('us.')))).filter(
+  return MODEL_PREFERENCE.flatMap((pattern) => all.filter((id) => pattern.test(id)).sort((a, b) => Number(b.startsWith(GEO + '.')) - Number(a.startsWith(GEO + '.')))).filter(
     (id, index, list) => list.indexOf(id) === index,
   )
 }
@@ -517,7 +539,7 @@ async function deploy(): Promise<void> {
     if (!existsSync(join(repoRoot, pkg, 'node_modules'))) run('npm', ['--prefix', pkg, 'install', '--no-audit', '--no-fund'])
   }
   run('npx', ['sst', 'install'], { cwd: join(repoRoot, 'platform') })
-  run('npx', ['sst', 'deploy', '--stage', stage], { cwd: join(repoRoot, 'platform'), env: { BEDROCK_MODEL_ID: modelId } })
+  run('npx', ['sst', 'deploy', '--stage', stage], { cwd: join(repoRoot, 'platform'), env: { BEDROCK_MODEL_ID: modelId, AWS_REGION: REGION } })
   writeState({ deployedAt: new Date().toISOString() })
 
   if (skipKnowledge) warn('Conocimiento omitido (--skip-knowledge). Ejecuta después: npm run lab:knowledge -- --confirm')
@@ -557,7 +579,7 @@ async function destroy(): Promise<void> {
     if (keys.length > 0) await s3.send(new DeleteObjectsCommand({ Bucket: o.documentsBucketName, Delete: { Objects: keys.map((Key) => ({ Key })) } }))
     ok(`Bucket de documentos vaciado (${keys.length} objetos)`)
   }
-  run('npx', ['sst', 'remove', '--stage', stage], { cwd: join(repoRoot, 'platform'), env: { BEDROCK_MODEL_ID: process.env.LAB_BEDROCK_MODEL_ID || (readState().modelId as string) || 'unused' } })
+  run('npx', ['sst', 'remove', '--stage', stage], { cwd: join(repoRoot, 'platform'), env: { BEDROCK_MODEL_ID: process.env.LAB_BEDROCK_MODEL_ID || (readState().modelId as string) || 'unused', AWS_REGION: REGION } })
   ok('Despliegue eliminado')
 }
 
