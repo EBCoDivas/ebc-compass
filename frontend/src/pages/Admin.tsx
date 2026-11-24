@@ -169,6 +169,8 @@ export function Admin() {
 
   const positive = records.filter(record => record.rating === 'positive').length
   const negative = counts.negative
+  const rated = positive + negative
+  const percent = (count: number) => Math.round(count * 100 / rated)
   const average = records.length ? records.reduce((sum, record) => sum + record.latencyMs, 0) / records.length / 1000 : 0
   const toggle = (id: string, open: boolean) => setOpenIds(current => { const next = new Set(current); if (open) next.add(id); else next.delete(id); return next })
 
@@ -181,7 +183,7 @@ export function Admin() {
     <section className="admin-tiles" aria-label="Resumen de actividad">
       <Tile value={String(records.length)} label="ejecuciones recientes" hint={`${counts.actions} acciones confirmadas`} />
       <Tile value={String(counts.blocked)} label="bloqueos del guardrail" tone={counts.blocked ? 'alert' : undefined} />
-      <Tile value={positive + negative ? <span className="admin-ratings"><span className="admin-ratings-item"><ThumbIcon rating="positive" />{positive}</span><span className="admin-ratings-item"><ThumbIcon rating="negative" />{negative}</span></span> : '—'} label="valoraciones" tone={negative ? 'alert' : positive ? 'good' : undefined} />
+      <Tile value={rated ? <span className="admin-ratings"><span className="admin-ratings-item"><ThumbIcon rating="positive" />{percent(positive)} %</span><span className="admin-ratings-item"><ThumbIcon rating="negative" />{percent(negative)} %</span></span> : '—'} label="valoraciones" hint={rated ? `${rated} ${rated === 1 ? 'valoración' : 'valoraciones'}` : undefined} tone={negative ? 'alert' : positive ? 'good' : undefined} />
       <Tile value={records.length ? `${average.toFixed(1)} s` : '—'} label="latencia media" />
     </section>
 
