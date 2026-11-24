@@ -253,6 +253,19 @@
 /* Panel flotante (solo escritorio): el único elemento flotante de la app. */
 .dock-launcher { align-items: center; background: linear-gradient(var(--navy), var(--navy)) padding-box, var(--grad) border-box; border: 2px solid transparent; border-radius: 999px; bottom: 1.5rem; box-shadow: 0 8px 24px #0b2f6b40; color: #fff; cursor: pointer; display: inline-flex; font-family: var(--font-display); font-size: .95rem; font-weight: 700; gap: .55rem; padding: .3rem 1.1rem .3rem .3rem; position: fixed; right: 1.5rem; z-index: 25; }
 .dock-launcher img { background: #fff; border-radius: 50%; }
+.dock-launcher.has-notice { animation: dock-notice-pulse 2.4s ease-in-out infinite; }
+.dock-notice-dot { background: var(--coral); border: 2px solid var(--navy); border-radius: 50%; height: .7rem; margin-left: -.25rem; margin-top: -.8rem; width: .7rem; }
+.proactive-bubble { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; bottom: 5.7rem; box-shadow: 0 16px 36px #0b2f6b30; display: grid; gap: .45rem; max-width: calc(100vw - 3rem); padding: 1rem 1.1rem; position: fixed; right: 1.5rem; width: 340px; z-index: 24; }
+.proactive-bubble::after { background: var(--surface); border-bottom: 1px solid var(--line); border-right: 1px solid var(--line); bottom: -8px; content: ''; height: 15px; position: absolute; right: 2rem; transform: rotate(45deg); width: 15px; }
+.proactive-bubble-brand { color: var(--blue); font-size: .82rem; font-weight: 750; margin: 0; }
+.proactive-bubble-brand span { color: var(--cyan-ink); }
+.proactive-bubble h2 { color: var(--navy); font-size: 1.05rem; margin: 0; padding-right: 1.5rem; }
+.proactive-bubble > p:not(.proactive-bubble-brand) { line-height: 1.45; margin: 0; }
+.proactive-bubble-action { background: none; border: 0; color: var(--blue); cursor: pointer; font: inherit; font-weight: 750; justify-self: start; min-height: 2.5rem; padding: .25rem 0; text-align: left; }
+.proactive-bubble-action:hover { text-decoration: underline; text-underline-offset: 3px; }
+.proactive-bubble-close { background: transparent; border: 0; border-radius: 8px; color: var(--ink-soft); cursor: pointer; font-size: 1.3rem; line-height: 1; min-height: 2rem; min-width: 2rem; padding: 0; position: absolute; right: .55rem; top: .55rem; }
+.proactive-bubble-close:hover { background: var(--mist); color: var(--navy); }
+@keyframes dock-notice-pulse { 50% { box-shadow: 0 8px 24px #0b2f6b40, 0 0 0 5px #22a6b933; } }
 .dock-launcher:hover { background: linear-gradient(var(--blue-dark), var(--blue-dark)) padding-box, var(--grad) border-box; }
 .dock-launcher:focus-visible { outline-color: var(--lime); }
 .dock-launcher[hidden], .dock-panel[hidden] { display: none; }
@@ -278,7 +291,10 @@
 .dock-chat .chat-form textarea { border-radius: 20px; padding: .6rem .9rem; }
 .dock-chat .chat-form .chat-icon-button { border-radius: 50%; }
 .dock-chat .chat-form .chat-help:not(.warn) .chat-help-keys { display: none; }
-@media (max-width: 900px) { .dock-launcher, .dock-panel { display: none !important; } }
+@media (max-width: 900px) {
+  .dock-launcher, .dock-panel { display: none !important; }
+  .proactive-bubble { bottom: 1rem; right: 1rem; width: min(340px, calc(100vw - 2rem)); }
+}
 
 
 /* Acciones de cada conversación: en escritorio aparecen al pasar el mouse, con el foco o en la conversación actual. */

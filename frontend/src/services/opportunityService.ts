@@ -1,5 +1,6 @@
 import { sessionFetch } from './session'
 import type { Opportunity, StudentJourney } from '../../../shared/contracts/studentPlanning'
+import type { ProactiveNotice } from '../../../shared/contracts/proactive'
 export type { Opportunity, OpportunityType } from '../../../shared/contracts/studentPlanning'
 
 export interface Recommendation { opportunity: Opportunity; relevanceScore: number; explanation: string }
@@ -32,5 +33,17 @@ export async function fetchStudentPlanning(): Promise<StudentJourney> {
   const response = await sessionFetch(`${API_URL}/api/student-planning`)
   if (!response.ok) throw new Error('No fue posible cargar tus pendientes.')
   return response.json() as Promise<StudentJourney>
+}
+
+export async function ensureProactiveNotices(): Promise<ProactiveNotice[]> {
+  const response = await sessionFetch(`${API_URL}/api/proactive/notices/ensure`, { method: 'POST' })
+  if (!response.ok) throw new Error('No fue posible cargar tus avisos.')
+  return (await response.json() as { notices: ProactiveNotice[] }).notices
+}
+
+export async function createProactiveConversation(noticeId: string): Promise<string> {
+  const response = await sessionFetch(`${API_URL}/api/proactive/notices/${encodeURIComponent(noticeId)}/conversation`, { method: 'POST' })
+  if (!response.ok) throw new Error('No fue posible abrir el mensaje de Compass.')
+  return (await response.json() as { conversationId: string }).conversationId
 }
 

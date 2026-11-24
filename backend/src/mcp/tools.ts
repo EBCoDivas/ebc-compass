@@ -1,13 +1,13 @@
 import { assessInput } from '../assistant/domain/inputGuardrail.js'
-import { memoryContext } from '../assistant/conversations/memory.js'
 import type { ConversationRepository } from '../assistant/conversations/repository.js'
 import type { DocumentStore } from '../assistant/conversations/store.js'
-import type { AssistantProfile, KnowledgeRetriever } from '../assistant/types.js'
+import type { KnowledgeRetriever } from '../assistant/types.js'
 import type { BannerReader } from '../banner/reader.js'
 import { academicProgressReader } from '../data/studentAcademicProgress.js'
 import { planningOpportunities } from '../data/studentPlanning.js'
-import { readStudentJourney, type StudentContext } from '../planning/readStudentJourney.js'
+import type { StudentContext } from '../planning/readStudentJourney.js'
 import { asObject, opportunityTypes, toolList, type ToolReply } from './contract.js'
+import { readStudentContext } from './studentContext.js'
 
 export interface ToolDependencies {
   banner: BannerReader
@@ -32,14 +32,7 @@ export function makeToolHandler(dependencies: ToolDependencies) {
     try {
       switch (name) {
         case 'get_student_context': {
-          const [journey, stored] = await Promise.all([
-            readStudentJourney(student, dependencies.banner, dependencies.store, dependencies.today?.()),
-            dependencies.memories.memories(student.subject),
-          ])
-          const profile: AssistantProfile = { career: student.career as AssistantProfile['career'], campus: student.campus, currentSemester: student.semester }
-          const memory = memoryContext(stored, profile).map(({ key, value, origin }) => ({ key, value, origin }))
-          if (student.personaId === 'ana' && student.career === 'accounting' && student.campus === 'QRO' && student.semester === 7 &&
-              !stored.some(fact => fact.key === 'workSchedule')) memory.unshift({ key: 'workSchedule', value: 'works-afternoons', origin: 'demo' })
+          const { journey, memory } = await readStudentContext(student, { ...dependencies, today: dependencies.today?.() })
           const { stage, pending, route, achievements, calculations } = journey
           return { ok: true, data: { stage, pending, route, achievements, calculations, memory } }
         }

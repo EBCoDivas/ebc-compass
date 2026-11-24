@@ -6,6 +6,7 @@ import { MAX_MESSAGE_LENGTH, getConversationId } from '../services/assistantServ
 import { deleteConversation, listConversations, loadMemories, renameConversation, type ConversationSummary, type MemoryData } from '../services/assistantService'
 import { MemoryPanel } from '../components/assistant/MemoryPanel'
 import { loadProfile, profileCompleteness } from '../services/profileService'
+import { createProactiveConversation, ensureProactiveNotices } from '../services/opportunityService'
 import '../components/assistant/assistant.css'
 
 export function Assistant() {
@@ -59,15 +60,41 @@ export function Assistant() {
     return () => window.removeEventListener('keydown', onKey)
   }, [contextOpen])
   const [searchParams, setSearchParams] = useSearchParams()
+  const [incomingNoticeId] = useState(() => searchParams.get('notice'))
+  const [incomingConversationId] = useState(() => searchParams.get('conversation'))
 
   // Pregunta enviada desde otra pantalla (p. ej. "Preguntar al asistente"): se precarga para revisarla y enviarla.
   const incoming = searchParams.get('q')
   useEffect(() => {
     if (!incoming) return
-    setDraft(incoming.slice(0, MAX_MESSAGE_LENGTH))
-    setSearchParams({}, { replace: true })
-    inputRef.current?.focus()
-  }, [incoming, setSearchParams, setDraft, inputRef])
+    if (!incomingNoticeId || !incomingConversationId) {
+      setDraft(incoming.slice(0, MAX_MESSAGE_LENGTH))
+      setSearchParams({}, { replace: true })
+      inputRef.current?.focus()
+      return
+    }
+    let active = true
+    void (async () => {
+      try { await openConversation(incomingConversationId) }
+      catch { if (active) setPanelError('No fue posible abrir el mensaje de Compass.') }
+      if (!active) return
+      setDraft(incoming.slice(0, MAX_MESSAGE_LENGTH))
+      setSearchParams({}, { replace: true })
+      inputRef.current?.focus()
+    })()
+    return () => { active = false }
+  }, [incoming, incomingNoticeId, incomingConversationId, openConversation, setSearchParams, setDraft, inputRef])
+  useEffect(() => {
+    let active = true
+    ensureProactiveNotices().then(async notices => {
+      if (!active) return
+      const notice = incomingNoticeId ? notices.find(item => item.id === incomingNoticeId) : notices[0]
+      if (!notice) return
+      await createProactiveConversation(notice.id)
+      if (active) await refreshPanels()
+    }).catch(() => undefined)
+    return () => { active = false }
+  }, [incomingNoticeId])
 
   const sortedConversations = [...conversations].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
   // Si dos conversaciones comparten día, se agrega la hora para distinguirlas.
