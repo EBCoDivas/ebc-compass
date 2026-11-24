@@ -1,6 +1,6 @@
 import type { ActionProposal } from '../../../shared/contracts/studentActions'
 
-export interface InputBlock { category: 'prompt-injection' | 'other-person-data' | 'harmful-content' | 'out-of-scope' | 'guardrail-unavailable'; source: 'local' | 'bedrock' }
+export interface InputBlock { category: 'prompt-injection' | 'other-person-data' | 'harmful-content' | 'out-of-scope' | 'wellbeing' | 'guardrail-unavailable'; source: 'local' | 'bedrock' }
 // Tipos del contrato de la API del asistente (backend: /api/assistant).
 
 export type AssistantLanguage = 'es' | 'en'

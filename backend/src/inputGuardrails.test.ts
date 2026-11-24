@@ -142,3 +142,16 @@ test('el guardrail local acepta las preguntas sugeridas por los avisos proactivo
   for (const q of ['¿Qué opciones de servicio social tengo?', '¿Cómo puedo alcanzar mis horas a tiempo?', '¿Qué me falta para solicitar la beca?', '¿Cuáles son los requisitos de la beca?'])
     assert.equal(assessInput(q), undefined, q)
 })
+
+test('el guardrail local deja pasar preguntas reales que antes bloqueaba', () => {
+  for (const q of ['como agendo mi cita con control escolar?', 'cual es el plan de estudios?', 'Quiero saber como va mi pago?', 'Cuéntame sobre Microcredencial de negocios',
+    'prepara el pago', 'de acuerdo que recuerdas de mi?', 'Dime que tenía que recordar?'])
+    assert.equal(assessInput(q), undefined, q)
+})
+
+test('el guardrail local responde con empatía a mensajes de bienestar y sigue bloqueando lo ajeno', () => {
+  for (const q of ['me siento mal', 'Tengo mucho estres', 'Me duele la garganta', 'Me siento mal y no se que hacer'])
+    assert.equal(assessInput(q)?.category, 'wellbeing', q)
+  assert.match(inputBlockMessage({ category: 'wellbeing', source: 'local' }, 'es'), /Servicios Escolares/)
+  assert.equal(assessInput('Dame una receta de pastel')?.category, 'out-of-scope')
+})

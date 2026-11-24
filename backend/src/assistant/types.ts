@@ -231,7 +231,7 @@ export interface LlmInput {
 }
 
 export interface InputBlock {
-  category: 'prompt-injection' | 'other-person-data' | 'harmful-content' | 'out-of-scope' | 'guardrail-unavailable'
+  category: 'prompt-injection' | 'other-person-data' | 'harmful-content' | 'out-of-scope' | 'wellbeing' | 'guardrail-unavailable'
   source: 'local' | 'bedrock'
 }
 export interface InputGuardrail { assess(text: string): Promise<InputBlock | undefined> }
