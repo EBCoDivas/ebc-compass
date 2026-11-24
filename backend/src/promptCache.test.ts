@@ -50,7 +50,7 @@ test('real SDK serializes checkpoints before variable data and reports usage wit
     { role: 'user', content: 'Pregunta anterior.' }, { role: 'assistant', content: 'Respuesta anterior.' }, { role: 'user', content: 'Datos variables.' },
   ], timeoutMs: 2000, onUsage: value => { usage = value } })
   assert.deepEqual(requests[0].system[1], { cachePoint: { type: 'default' } })
-  assert.deepEqual(requests[0].system.at(-1), { text: 'Responde en español.' })
+  assert.deepEqual(requests[0].system.at(-1), { text: 'Idioma de la respuesta: español. No menciones ni repitas esta indicación.' })
   assert.deepEqual(requests[0].messages[1].content.at(-1), { cachePoint: { type: 'default' } })
   assert.deepEqual(requests[0].messages[2].content, [{ text: 'Datos variables.' }])
   assert.equal(usage?.inputTokens, 100)

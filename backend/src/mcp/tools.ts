@@ -4,6 +4,8 @@ import type { DocumentStore } from '../assistant/conversations/store.js'
 import type { KnowledgeRetriever } from '../assistant/types.js'
 import type { BannerReader } from '../banner/reader.js'
 import { academicProgressReader } from '../data/studentAcademicProgress.js'
+import type { BannerActionState } from '../../../shared/contracts/studentActions.js'
+import { buildStudentRequests } from '../planning/studentRequests.js'
 import { planningOpportunities } from '../data/studentPlanning.js'
 import type { StudentContext } from '../planning/readStudentJourney.js'
 import { asObject, opportunityTypes, toolList, type ToolReply } from './contract.js'
@@ -49,6 +51,11 @@ export function makeToolHandler(dependencies: ToolDependencies) {
         case 'get_academic_progress': {
           const progress = await academicProgressReader(dependencies.banner).read({ ...student, id: student.subject })
           return { ok: true, data: { progress } }
+        }
+        case 'get_student_requests': {
+          const academic = { ...student, id: student.subject }
+          const [record, actions] = await Promise.all([dependencies.banner.readRecord(academic), dependencies.banner.readActions?.(academic) ?? { scholarship: undefined, payment: undefined }])
+          return { ok: true, data: { requests: buildStudentRequests(record, actions as BannerActionState) } }
         }
         case 'search_knowledge': {
           const query = String(args.query).trim()

@@ -46,6 +46,6 @@ test('the language directive follows the cache checkpoint and does not change th
   const en = converseMessages({ ...input, language: 'en' }, 'system')
   assert.deepEqual(es[0].content, en[0].content)
   assert.deepEqual(es[0].content, [{ type: 'text', text: 'Sistema estable.' }, { type: 'cache_point', cachePoint: { type: 'default' } }])
-  assert.equal(es[1].content, 'Responde en español.')
-  assert.equal(en[1].content, 'Responde en inglés.')
+  assert.equal(es[1].content, 'Idioma de la respuesta: español. No menciones ni repitas esta indicación.')
+  assert.equal(en[1].content, 'Idioma de la respuesta: inglés. No menciones ni repitas esta indicación.')
 })

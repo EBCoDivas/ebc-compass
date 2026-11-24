@@ -3,6 +3,8 @@ import { normalize } from './text.js'
 
 export const studentTopic = (value: string) => {
   const text = normalize(value)
+  if ((/\b(estatus|estado|como va|como van|seguimiento|avance|en que va|respuesta|resolvieron|aprobaron|aprobada|status|progress|where is)\b/.test(text) && /\b(beca|solicitud\w*|tramite\w*|pago|inscripcion|folio|scholarship|application|request\w*|payment)\b/.test(text))
+    || /\b(mis solicitudes|mis tramites|my requests)\b/.test(text)) return 'requests'
   if (/\b(beca|scholarship)\b/.test(text) && /\b(primer ingreso|nuevo ingreso|primera|first entry|first year|first semester|incoming)\b/.test(text)) return 'request-scholarship'
   if (/\b(inscripcion|enrollment|matricula|tuition)\b/.test(text) && /\b(pag\w*|ficha|comprobante|recibo|tarifa|cuesta|importe|cost\w*|pay\w*|receipt|fee|how much)\b/.test(text)) return 'pay-enrollment'
   if (/\b(servicio social|social service)\b/.test(text) && /\b(mi|my|horas|hours|ritmo|tarda\w*|alcanza\w*|proyeccion|opciones|titul\w*|trabajo|horario|complet\w*|puedo|finish|deadline|options|schedule)\b/.test(text)) return 'social-service'

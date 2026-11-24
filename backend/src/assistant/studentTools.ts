@@ -1,5 +1,6 @@
 import type { AcademicProgress } from '../../../shared/contracts/academicProgress.js'
 import type { BannerActionKind } from '../../../shared/contracts/studentActions.js'
+import type { StudentRequest } from '../../../shared/contracts/studentRequests.js'
 import type { Opportunity, StudentJourney } from '../../../shared/contracts/studentPlanning.js'
 import { asObject, opportunityTypes, toolList, type ToolName, type ToolReply } from '../mcp/contract.js'
 import type { StudentContext } from '../planning/readStudentJourney.js'
@@ -84,6 +85,7 @@ export function buildStudentTools(mcp: StudentMcp, actions: Pick<StudentActions,
         add('get_student_context')
         add('list_opportunities')
       } else if (topic === 'progress') add('get_academic_progress')
+      else if (topic === 'requests') add('get_student_requests')
 
       for (const choice of picked.slice(0, 3)) {
         const args = asObject(choice.args)
@@ -161,6 +163,26 @@ export function buildStudentTools(mcp: StudentMcp, actions: Pick<StudentActions,
           ? (es ? `La inscripción cuesta **${payment.amount.toLocaleString('es-MX')} MXN** y vence el **${date}**.` : `Enrollment costs **${payment.amount.toLocaleString('en-US')} MXN** and is due on **${date}**.`)
           : '') + '\n\n' + (proposal ? (es ? 'Revisa los datos y confirma el pago en la tarjeta.' : 'Review the details and confirm the payment on the card.')
             : payment?.canPay && !accepted && !wantsProposal ? (es ? 'Puedes pedirme que prepare el pago.' : 'You can ask me to prepare the payment.') : contact(input.language)), citations, proposal)
+      }
+
+      if (topic === 'requests') {
+        const raw = data('get_student_requests')?.requests
+        if (!Array.isArray(raw)) return reply(contact(input.language))
+        const list = raw as StudentRequest[]
+        const requestsSource: Source = { kind: 'record', id: 'student-requests', title: es ? 'Tus solicitudes' : 'Your requests' }
+        if (!list.length) return reply(es ? 'Todavía no tienes solicitudes registradas en tu cuenta. Puedes pedirme que prepare la beca de primer ingreso o el pago de tu inscripción.' : 'You have no requests registered yet. You can ask me to prepare the first-entry scholarship or your enrollment payment.', [requestsSource])
+        const line = (item: StudentRequest) => {
+          const state = item.status === 'resolved'
+            ? `${item.outcome ?? (es ? 'Resuelta' : 'Resolved')} ${es ? 'el' : 'on'} ${formatDate(item.resolvedAt ?? item.submittedAt)}`
+            : `${es ? 'En revisión' : 'Under review'}${item.estimatedResponse ? (es ? ' · respuesta estimada ' : ' · estimated reply ') + formatDate(item.estimatedResponse) : ''}`
+          return `- **${item.title}** · ${state} · ${es ? 'Folio' : 'Folio'} \`${item.folio}\` · ${es ? 'Atiende' : 'Handled by'}: ${item.owner}`
+        }
+        const inReview = list.filter(item => item.status === 'in-review')
+        const head = inReview.length
+          ? (es ? 'Así van tus solicitudes:' : 'This is where your requests stand:')
+          : (es ? 'No tienes trámites en curso. Esto es lo que ya quedó resuelto:' : 'You have nothing in progress. These are already resolved:')
+        return reply([head, [...inReview, ...list.filter(item => item.status === 'resolved')].map(line).join('\n'),
+          es ? 'Puedes ver el detalle en **Seguimiento**.' : 'You can see the details in **Seguimiento**.'].join('\n\n'), [requestsSource])
       }
 
       const progress = data('get_academic_progress')?.progress as AcademicProgress | null | undefined

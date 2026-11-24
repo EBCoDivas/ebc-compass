@@ -11,6 +11,7 @@ export const toolList = [
     inputSchema: { type: 'object', properties: { opportunityId: { type: 'string' } }, required: ['opportunityId'] } },
   { name: 'list_opportunities', description: 'Lista las oportunidades de la etapa, carrera y campus del alumno.',
     inputSchema: { type: 'object', properties: { type: { type: 'string', description: opportunityTypes.join(', ') } } } },
+  { name: 'get_student_requests', description: 'Consulta las solicitudes del alumno autenticado (beca, pago de inscripción) con folio, estado y fechas.', inputSchema: { type: 'object', properties: {} } },
   { name: 'get_academic_progress', description: 'Consulta el expediente académico de la cuenta autenticada.', inputSchema: { type: 'object', properties: {} } },
   { name: 'search_knowledge', description: 'Busca orientación general en los documentos de EBC, sin datos personales.',
     inputSchema: { type: 'object', properties: { query: { type: 'string' }, language: { type: 'string', description: 'es o en' } }, required: ['query', 'language'] } },
@@ -18,7 +19,7 @@ export const toolList = [
   type: 'object'; properties: Record<string, { type: 'string'; description?: string }>; required?: string[]
 } }[]
 // Literal union shared by clients and the dispatcher.
-export type ToolName = 'get_student_context' | 'get_requirements' | 'list_opportunities' | 'get_academic_progress' | 'search_knowledge'
+export type ToolName = 'get_student_context' | 'get_requirements' | 'list_opportunities' | 'get_academic_progress' | 'get_student_requests' | 'search_knowledge'
 export type ToolReply = { ok: true; data: object } | { ok: false; code: 'UNAUTHORIZED' | 'INVALID_INPUT' | 'NOT_FOUND' | 'UNAVAILABLE' }
 
 export function asObject(input: unknown): Record<string, unknown> | undefined {

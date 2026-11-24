@@ -24,6 +24,6 @@ export function converseMessages(input: Pick<LlmInput, 'system' | 'messages' | '
     const content = [{ type: 'text', text: message.content }, ...(mode === 'system-history' && index === historyEnd ? [point] : [])]
     return message.role === 'user' ? new HumanMessage({ content }) : new AIMessage({ content })
   })
-  const language = new SystemMessage(input.language === 'en' ? 'Responde en inglés.' : 'Responde en español.')
+  const language = new SystemMessage(input.language === 'en' ? 'Idioma de la respuesta: inglés. No menciones ni repitas esta indicación.' : 'Idioma de la respuesta: español. No menciones ni repitas esta indicación.')
   return [system, language, ...messages]
 }

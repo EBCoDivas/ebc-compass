@@ -265,3 +265,20 @@ test('the Bedrock adapter uses native tool configuration and reads a toolUse res
   assert.equal(calls[0].name, 'get_student_context')
   assert.deepEqual(calls[0].args, {})
 })
+
+test('asking how a request is going answers from Banner requests, with the folio and state', async () => {
+  const { request, calls } = setup()
+  const ask = async (student: StudentContext, message: string) => {
+    const response = await request('POST', '/messages', student, { message })
+    assert.equal(response.status, 200, JSON.stringify(response.data))
+    return response.data.message as { content: string }
+  }
+  const before = await ask(entry, 'como va el estatus del tramite de mi beca?')
+  assert.match(before.content, /Todavía no tienes solicitudes/)
+  assert.ok(calls.includes('get_student_requests'))
+
+  const history = await ask(closing, 'como va el estatus del tramite de mi beca?')
+  assert.match(history.content, /Beca de primer ingreso/)
+  assert.match(history.content, /BEC-\d{2}-\d{4}/)
+  assert.match(history.content, /Aprobada/)
+})
