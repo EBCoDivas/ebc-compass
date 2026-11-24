@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type { AssistantReply, ChatMessage, Intent, Language, Source, LlmUsage } from '../types.js'
 import { Conflict, FeedbackLocked, NotFound, type DocumentStore, type Value } from './store.js'
 
@@ -24,6 +25,7 @@ const value = (item: object) => item as Value
 const metaKey = (id: string) => 'CONV#' + id
 const msgPrefix = (id: string) => 'MSG#' + id + '#'
 const turnKey = (id: string, request: string) => 'TURN#' + id + '#' + request
+const proactiveKey = (notice: string) => 'PROACTIVE#' + notice
 const messageKey = (id: string, message: ChatMessage) => msgPrefix(id) + message.createdAt + '#' + (message.role === 'student' ? '0#' : '1#') + message.id
 const TOPIC_INTENTS = ['scholarship-info', 'course-info', 'procedure-info', 'event-info', 'career-info', 'recommendation-request', 'deadline-query']
 
@@ -40,6 +42,27 @@ export class ConversationRepository {
     const conversation: Conversation = { id, title: 'Nueva conversación', createdAt: stamp, updatedAt: stamp, preview: '', messageCount: 0, version: 0, language: 'es', summary: '', summarizedCount: 0 }
     await this.store.write(owner, [{ key: metaKey(id), value: value(conversation) }])
     return conversation
+  }
+  async createProactive(owner: string, notice: string, title: string, content: string, suggestions: string[]) {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const mapped = await this.store.get(owner, proactiveKey(notice)) as { conversationId?: string; version?: number } | undefined
+      if (typeof mapped?.conversationId === 'string') {
+        const current = await this.get(owner, mapped.conversationId)
+        if (current && !current.deleted && !current.deleting) return current
+      }
+      const id = randomUUID()
+      const stamp = new Date().toISOString()
+      const message: ChatMessage = { id: randomUUID(), role: 'assistant', content, language: 'es', intent: 'unknown', createdAt: stamp, suggestions }
+      const conversation: Conversation = { id, title, createdAt: stamp, updatedAt: stamp, preview: content.slice(0, 160), messageCount: 1, version: 0, language: 'es', summary: '', summarizedCount: 0 }
+      try {
+        await this.store.write(owner, [
+          { key: proactiveKey(notice), value: value({ conversationId: id, version: Number(mapped?.version ?? -1) + 1 }), version: mapped?.version },
+          { key: metaKey(id), value: value(conversation) }, { key: messageKey(id, message), value: value(message) },
+        ])
+        return conversation
+      } catch (error) { if (!(error instanceof Conflict) || attempt === 2) throw error }
+    }
+    throw new Conflict('No pudimos crear la conversación de Compass.')
   }
   async list(owner: string, limit = 30, cursor?: string) {
     const page = await this.store.page(owner, 'CONV#', limit, cursor)

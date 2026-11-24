@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { assistantPath, getConversationId, listConversations } from '../../services/assistantService'
+import { createProactiveConversation } from '../../services/opportunityService'
 import { ChatSurface } from './ChatSurface'
 import { useAssistantChat } from './useAssistantChat'
 import { AssistantDockContext, type AssistantDockApi } from './dockContext'
+import { markProactiveNoticeSeen, proactiveNoticeSeen, proactivePreview, proactiveQuestion } from './proactiveNotice'
+import type { ProactiveNotice } from '../../../../shared/contracts/proactive'
 import './assistant.css'
 
-interface Prefill { question: string; nonce: number }
+interface Prefill { question: string; conversationId?: string; nonce: number }
+interface ProactiveInbox { notice: ProactiveNotice; conversationId?: string }
 
 function DockChat({ open, prefill, onExpand, onClose }: { open: boolean; prefill: Prefill; onExpand: (draft: string) => void; onClose: () => void }) {
   const chat = useAssistantChat()
@@ -36,11 +40,12 @@ function DockChat({ open, prefill, onExpand, onClose }: { open: boolean; prefill
     if (!prefill.question || loading || handledRef.current === prefill.nonce) return
     handledRef.current = prefill.nonce
     void (async () => {
-      if (entriesRef.current > 0) { try { await startNew() } catch { /* se queda en la conversación actual */ } }
+      if (prefill.conversationId) await openConversation(prefill.conversationId)
+      else if (entriesRef.current > 0) { try { await startNew() } catch { /* se queda en la conversación actual */ } }
       setDraft(prefill.question)
       inputRef.current?.focus()
     })()
-  }, [prefill, loading, setDraft, startNew, inputRef])
+  }, [prefill, loading, setDraft, startNew, openConversation, inputRef])
 
   useEffect(() => {
     if (open) inputRef.current?.focus()
@@ -84,10 +89,46 @@ export function AssistantDockProvider({ enabled, children }: { enabled: boolean;
   const [open, setOpen] = useState(false)
   const [started, setStarted] = useState(false)
   const [prefill, setPrefill] = useState<Prefill>({ question: '', nonce: 0 })
+  const [proactiveNotice, setProactiveNotice] = useState<ProactiveInbox | null>(null)
+  const [bubbleOpen, setBubbleOpen] = useState(false)
+  const [unread, setUnread] = useState(false)
   const launcherRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!proactiveNotice) { setBubbleOpen(false); setUnread(false); return }
+    const seen = proactiveNoticeSeen(proactiveNotice.notice)
+    setUnread(!seen)
+    setBubbleOpen(!seen)
+  }, [proactiveNotice?.notice.id, proactiveNotice?.notice.createdAt])
+
+  function markNoticeSeen() {
+    if (!proactiveNotice) return
+    markProactiveNoticeSeen(proactiveNotice.notice)
+    setUnread(false)
+  }
+
+  async function openProactiveNotice() {
+    if (!proactiveNotice) return
+    const notice = proactiveNotice.notice
+    let conversationId = proactiveNotice.conversationId
+    if (!conversationId) {
+      try {
+        conversationId = await createProactiveConversation(notice.id)
+        setProactiveNotice({ notice, conversationId })
+      } catch { /* Compass conserva la apertura contextual si el historial no está disponible. */ }
+    }
+    markNoticeSeen()
+    setBubbleOpen(false)
+    const question = proactiveQuestion(notice)
+    if (window.matchMedia('(max-width: 900px)').matches) { navigate(assistantPath(question) + '&notice=' + encodeURIComponent(notice.id) + (conversationId ? '&conversation=' + encodeURIComponent(conversationId) : '')); return }
+    setPrefill(current => ({ question, conversationId, nonce: current.nonce + 1 }))
+    setStarted(true)
+    setOpen(true)
+  }
 
   const api = useMemo<AssistantDockApi>(() => ({
     openWith: (question) => { setPrefill(current => ({ question, nonce: current.nonce + 1 })); setStarted(true); setOpen(true) },
+    setProactiveNotice: (notice, conversationId) => setProactiveNotice(notice ? { notice, conversationId } : null),
   }), [])
 
   function close() {
@@ -100,10 +141,24 @@ export function AssistantDockProvider({ enabled, children }: { enabled: boolean;
       {children}
       {enabled && (
         <>
-          <button ref={launcherRef} type="button" className="dock-launcher" hidden={open} aria-expanded={open} aria-controls="dock-panel"
-            onClick={() => { setStarted(true); setOpen(true) }}>
+          {proactiveNotice && bubbleOpen && <aside className="proactive-bubble" aria-label="Nuevo mensaje de Compass">
+            <button type="button" className="proactive-bubble-close" onClick={() => setBubbleOpen(false)} aria-label="Minimizar mensaje de Compass">×</button>
+            <p className="proactive-bubble-brand"><span aria-hidden="true">✦</span> Compass</p>
+            <h2>{proactiveNotice.notice.title}</h2>
+            <p>{proactivePreview(proactiveNotice.notice)}</p>
+            <button type="button" className="proactive-bubble-action" onClick={() => void openProactiveNotice()}>{proactiveNotice.notice.kind === 'social-service' ? 'Ver qué encontré' : 'Revisar conmigo'} <span aria-hidden="true">→</span></button>
+          </aside>}
+          <button ref={launcherRef} type="button" className={`dock-launcher${unread ? ' has-notice' : ''}`} hidden={open} aria-expanded={open || bubbleOpen} aria-controls="dock-panel"
+            onClick={() => {
+              if (proactiveNotice && unread) {
+                if (bubbleOpen) void openProactiveNotice()
+                else setBubbleOpen(true)
+                return
+              }
+              setStarted(true); setOpen(true)
+            }}>
             <img src="/ebc-compass-mark.svg" alt="" width="30" height="30" />
-            <span>Compass</span>
+            <span>Compass</span>{unread && <span className="dock-notice-dot" aria-label="Tienes un mensaje nuevo" />}
           </button>
           <section id="dock-panel" className="dock-panel" role="dialog" aria-labelledby="dock-title" hidden={!open}>
             {started && <DockChat open={open} prefill={prefill} onClose={close} onExpand={(draft) => { setOpen(false); navigate(draft.trim() ? assistantPath(draft.trim()) : '/asistente') }} />}

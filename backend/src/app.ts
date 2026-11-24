@@ -10,10 +10,14 @@ import { alertRoutes } from './routes/alertRoutes.js'
 import { createStudentPlanningRoutes } from './routes/studentPlanningRoutes.js'
 import { assistantRoutes } from './routes/assistantRoutes.js'
 import { createAssistant } from './assistant/index.js'
+import { createProactiveAgent } from './proactive/agent.js'
+import { createProactiveRoutes } from './routes/proactiveRoutes.js'
 
 export const app = express()
 const banner = createBannerReader()
 const assistant = createAssistant({ banner })
+const proactive = createProactiveAgent({ store: assistant.conversations.store, memories: assistant.conversations, banner,
+  llm: assistant.memoryLlm, llmTimeoutMs: assistant.config.llmTimeoutMs })
 
 app.use(cors())
 // La confirmación de la beca incluye la carta de motivos en base64 (hasta 1.5 MB).
@@ -30,6 +34,7 @@ app.use('/api/opportunities', opportunityRoutes)
 app.use('/api/recommendations', recommendationRoutes)
 app.use('/api/alerts', alertRoutes)
 app.use('/api/student-planning', createStudentPlanningRoutes(assistant.conversations.store, banner))
+app.use('/api/proactive', createProactiveRoutes(proactive, assistant.conversations))
 app.use('/api/assistant', assistantRoutes(assistant))
 
 // Cuerpos JSON mal formados -> 400 con el formato de error de la API.

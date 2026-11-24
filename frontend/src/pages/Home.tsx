@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { loadProfile, profileCompleteness } from '../services/profileService'
-import { fetchAlerts, fetchOpportunities, fetchRecommendations, fetchStudentPlanning, type Alert, type Opportunity, type Recommendation } from '../services/opportunityService'
+import { createProactiveConversation, ensureProactiveNotices, fetchAlerts, fetchOpportunities, fetchRecommendations, fetchStudentPlanning, type Alert, type Opportunity, type Recommendation } from '../services/opportunityService'
 import { TypeBadge } from '../components/TypeBadge'
 import { Rumbo } from '../components/Rumbo'
 import { daysUntil, formatShortDate } from '../utils/dates'
@@ -15,6 +15,7 @@ import type { StudentJourney } from '../../../shared/contracts/studentPlanning'
 import { StudentPendingList } from '../components/StudentPendingList'
 import { useSavedOpportunities } from '../services/savedOpportunities'
 import { STUDENT_ACTION_CONFIRMED } from '../services/assistantService'
+import { useAssistantDock } from '../components/assistant/dockContext'
 
 /** Próximas fechas (hoy o después), de la más cercana a la más lejana. */
 function upcomingOf(list: Opportunity[], limit: number) {
@@ -38,6 +39,8 @@ export function Home() {
   const [planningRevision, setPlanningRevision] = useState(0)
   const [planningStatus, setPlanningStatus] = useState<'loading' | 'ready' | 'error'>(() => sessionSubject() ? 'loading' : 'ready')
   const [recommendations, setRecommendations] = useState<Recommendation[]>([])
+  const [proactiveError, setProactiveError] = useState('')
+  const dock = useAssistantDock()
   useEffect(() => {
     if (progressLoading || recommendationsLoading) return
     const key = personaStorageKey('home-return-scroll')
@@ -67,6 +70,25 @@ export function Home() {
     fetchAlerts(scope).then(value => { if (active) setAlerts(value) }).catch(() => { if (active) setAlerts(null) })
     return () => { active = false }
   }, [profile?.campus, profile?.career, profile?.currentSemester, planningRevision])
+
+  useEffect(() => {
+    if (!sessionSubject()) { dock?.setProactiveNotice(null); setProactiveError(''); return }
+    let active = true
+    setProactiveError('')
+    ensureProactiveNotices().then(async value => {
+      const notice = value[0]
+      if (active) dock?.setProactiveNotice(notice ?? null)
+      let conversationId: string | undefined
+      if (notice) {
+        try { conversationId = await createProactiveConversation(notice.id) }
+        catch { /* El bubble sigue disponible y abre Compass con la pregunta contextualizada. */ }
+      }
+      if (active) dock?.setProactiveNotice(notice ?? null, conversationId)
+    }).catch(() => {
+      if (active) { dock?.setProactiveNotice(null); setProactiveError('No pudimos cargar el seguimiento de Compass. Recarga para intentar de nuevo.') }
+    })
+    return () => { active = false }
+  }, [dock, planningRevision])
 
   useEffect(() => {
     let active = true
@@ -125,6 +147,7 @@ export function Home() {
       <div className="page home-body">
         {planningStatus === 'loading' && <p role="status">Cargando pendientes…</p>}
         {planningStatus === 'error' && <p className="form-error" role="alert">No pudimos cargar tus pendientes. Recarga la página para intentar de nuevo.</p>}
+        {proactiveError && <p className="form-error" role="alert">{proactiveError}</p>}
         {planning && <StudentPendingList planning={planning} />}
         {!profile && (
           <section className="profile-strip">

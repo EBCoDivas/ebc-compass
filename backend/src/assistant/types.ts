@@ -130,6 +130,7 @@ export interface ChatMessage {
   language: Language
   intent?: Intent
   createdAt: string
+  suggestions?: string[]
   interrupted?: boolean
   failure?: AssistantFailure
   catalogFallback?: CatalogFallback
