@@ -335,3 +335,14 @@ test('asking for the academic history answers with the academic record', async (
   }
   assert.equal(studentTopic('¿Qué necesito para Revisión del expediente de egreso?'), undefined)
 })
+
+test('a short follow-up with unknown intent is left to the model instead of the generic route list', async () => {
+  const { studentMcp, runtime } = setup()
+  const answer = await buildStudentTools(studentMcp, runtime.actions!)({
+    turn: { student: closing, conversationId: randomUUID(), requestId: randomUUID() },
+    question: 'con quien debo confirmar disponibilidad?', previousQuestion: 'Cuéntame sobre Encuentro de marcas y audiencias',
+    language: 'es', intent: 'unknown', relevantIds: [], now: now(),
+    provider: { async generate() { throw new Error('unexpected synthesis') }, async selectTools() { return [{ name: 'get_student_context', args: {} }, { name: 'list_opportunities', args: {} }] } },
+  })
+  assert.equal(answer?.reply, undefined)
+})

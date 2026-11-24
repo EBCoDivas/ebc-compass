@@ -216,7 +216,7 @@ export function buildStudentTools(mcp: StudentMcp, actions: Pick<StudentActions,
         if (progress.gpa) pieces.push(es ? `Tu promedio es **${progress.gpa.value} de ${progress.gpa.scale}**.` : `Your GPA is **${progress.gpa.value} out of ${progress.gpa.scale}**.`)
         return reply(pieces.join(' ') + ' ' + (es ? 'Revisa Inicio para ver qué pendientes siguen en tu ruta.' : 'Open Home to see the next items on your route.'), [bannerSource])
       }
-      if (topic === 'social-service' || topic === 'route' || (input.intent === 'unknown' && context && options && !requirements)) {
+      if (topic === 'social-service' || topic === 'route' || (input.intent === 'unknown' && !input.previousQuestion && context && options && !requirements)) {
         if (!context || !options) return reply(contact(input.language))
         const projection = context.calculations.socialService
         if (topic === 'social-service' && projection) {
