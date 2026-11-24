@@ -21,6 +21,7 @@ export function ChatSurface({ chat }: { chat: AssistantChat }) {
           <img src="/ebc-compass-mark.svg" alt="" width="56" height="56" />
           <h2>¡Hola{name ? `, ${name}` : ''}! Soy Compass</h2>
           <p>Tu asistente con IA. Pregúntame sobre becas, cursos, trámites, eventos y fechas, en español o en inglés.</p>
+          <p className="chat-disclaimer">Compass orienta; para decisiones oficiales consulta a Servicios Escolares.</p>
           <SuggestedQuestions suggestions={suggestions} onPick={submit} disabled={pending} />
         </div>
       ) : (

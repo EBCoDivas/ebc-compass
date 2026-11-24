@@ -74,11 +74,8 @@ export const QueryInput = forwardRef<HTMLTextAreaElement, Props>(function QueryI
           {pending ? <rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor" stroke="none" /> : <path d="m22 2-7 20-4-9-9-4 20-7ZM22 2 11 13" />}
         </svg>
       </button>
-      <p id="assistant-question-help" className={`chat-help${nearLimit ? ' warn' : ''}`}>
-        {touched && !trimmed ? 'Escribe una pregunta para enviarla.' : <>
-          <span className="chat-help-note">Compass orienta; para decisiones oficiales consulta a Servicios Escolares.</span>
-          <span className="chat-help-keys">Enter envía, Shift+Enter nueva línea, {value.length}/{MAX_MESSAGE_LENGTH}</span>
-        </>}
+      <p id="assistant-question-help" className={`chat-help${nearLimit ? ' warn' : ''}${touched && !trimmed ? ' error' : ''}`}>
+        {touched && !trimmed ? 'Escribe una pregunta para enviarla.' : <span className="chat-help-keys">Enter envía, Shift+Enter nueva línea, {value.length}/{MAX_MESSAGE_LENGTH}</span>}
       </p>
     </form>
   )

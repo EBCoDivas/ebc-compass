@@ -177,6 +177,9 @@
 .chat-form .button { min-height: 2.9rem; }
 .chat-help { color: var(--ink-soft); display: flex; flex-wrap: wrap; font-size: .72rem; gap: .15rem 1rem; grid-column: 1 / -1; justify-content: space-between; margin: 0; }
 .chat-help.warn { color: var(--gold-ink); font-weight: 700; }
+/* Los atajos de teclado y el contador solo se muestran mientras se escribe. */
+.chat-form:not(:focus-within) .chat-help:not(.warn):not(.error) { display: none; }
+.chat-disclaimer { color: var(--ink-soft); font-size: .8rem; margin: -.25rem 0 0; }
 
 @media (max-width: 900px) {
   .assistant-page { grid-template-columns: 1fr; padding-top: .6rem; }
