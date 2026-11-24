@@ -8,7 +8,7 @@ export const studentTopic = (value: string) => {
   if (/\b(beca|scholarship)\b/.test(text) && /\b(primer ingreso|nuevo ingreso|primera|first entry|first year|first semester|incoming)\b/.test(text)) return 'request-scholarship'
   if (/\b(inscripcion|enrollment|matricula|tuition)\b/.test(text) && /\b(pag\w*|ficha|comprobante|recibo|tarifa|cuesta|importe|cost\w*|pay\w*|receipt|fee|how much)\b/.test(text)) return 'pay-enrollment'
   if (/\b(servicio social|social service)\b/.test(text) && /\b(mi|my|horas|hours|ritmo|tarda\w*|alcanza\w*|proyeccion|opciones|titul\w*|trabajo|horario|complet\w*|puedo|finish|deadline|options|schedule)\b/.test(text)) return 'social-service'
-  if (/\b(avance academico|mis materias|mis creditos|mis calificaciones|mi promedio|academic progress|my credits|my grades|my gpa)\b/.test(text)) return 'progress'
+  if (/\b(avance academico|historial academico|(?:mi|mis) (?:historial|expediente|kardex|trayectoria)|academic history|my (?:academic )?(?:record|transcript)|mis materias|mis creditos|mis calificaciones|mi promedio|academic progress|my credits|my grades|my gpa)\b/.test(text)) return 'progress'
   if (/\b(mi ruta|mis pendientes|que (?:tengo|me falta) pendiente|que (?:hago|me toca|me queda|sigue)|my route|my next steps|what should i do next)\b/.test(text)) return 'route'
 }
 

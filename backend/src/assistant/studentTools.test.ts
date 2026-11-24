@@ -20,6 +20,7 @@ import { assistantRoutes } from '../routes/assistantRoutes.js'
 import { KeywordRetriever } from './adapters/retrievers.js'
 import { ConversationRepository } from './conversations/repository.js'
 import { MemoryDocumentStore } from './conversations/store.js'
+import { studentTopic } from './domain/studentIntent.js'
 import { buildStudentTools } from './studentTools.js'
 import type { ToolName } from '../mcp/contract.js'
 import type { ActionProposal } from '../../../shared/contracts/studentActions.js'
@@ -321,4 +322,16 @@ test('"quiero solicitar una beca" opens the first-entry scholarship flow for a f
     question: 'quiero solicitar una beca', language: 'es', intent: 'scholarship-info', relevantIds: [], now: now(),
   })
   assert.equal(answer?.reply?.actionProposal?.kind, 'request-scholarship')
+})
+
+test('asking for the academic history answers with the academic record', async () => {
+  const { studentMcp, runtime } = setup()
+  for (const question of ['mi historial academico, me gustaria conocerlo', 'quiero ver mi expediente']) {
+    const answer = await buildStudentTools(studentMcp, runtime.actions!)({
+      turn: { student: closing, conversationId: randomUUID(), requestId: randomUUID() },
+      question, language: 'es', intent: 'unknown', relevantIds: [], now: now(),
+    })
+    assert.match(answer?.reply?.content ?? '', /créditos/, question)
+  }
+  assert.equal(studentTopic('¿Qué necesito para Revisión del expediente de egreso?'), undefined)
 })

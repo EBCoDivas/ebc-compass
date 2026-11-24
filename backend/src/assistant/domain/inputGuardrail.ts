@@ -5,7 +5,12 @@ import { isStudentFollowUp, studentTopic } from './studentIntent.js'
 import { normalize } from './text.js'
 
 /** Reglas conservadoras y reproducibles para la demo; no reemplazan la evaluación nativa del lab. */
-export function assessInput(text: string): InputBlock | undefined {
+/**
+ * `inConversation`: ya hubo preguntas válidas en esta conversación. Los seguimientos cortos («¿con quién confirmo
+ * la disponibilidad?») no tienen palabras clave propias, así que la regla de «tema desconocido» no los bloquea;
+ * las demás reglas (inyección, datos ajenos, contenido dañino, bienestar, temas ajenos conocidos) siguen igual.
+ */
+export function assessInput(text: string, options: { inConversation?: boolean } = {}): InputBlock | undefined {
   const value = normalize(text)
   const block = (category: InputBlock['category']): InputBlock => ({ category, source: 'local' })
   if (/(ignora|olvida|omite|desobedece|ignore|forget|disregard|override).{0,60}(instrucciones|reglas|prompt|instructions|rules|system)/.test(value)
@@ -22,7 +27,7 @@ export function assessInput(text: string): InputBlock | undefined {
   const relevant = /\b(correo institucional|institutional email|student email|servicios escolares|school services|school hours|opportunities|oportunidad|oportunidades|account|cuenta|ebc|bea|fit|campus|modalidad|modalidades|programa|programas|academico|academicos|academic|degree|reinscribir|reinscripcion|reinscribirme|enroll|re-enroll|servicio social|social service|titulacion|cedula|finanzas|banca|fintech|contabilidad|derecho|marketing|emprendimiento|practicas|internship|certificacion|induccion|nuevo ingreso|primer ingreso|inicio de clases|bienvenida|orientacion|creditos|optativas|inscripcion|taller|talleres|evento|eventos|beca|becas|encuentro|charla|marcas|audiencias|expediente|egreso|horas|carrera|carreras|falta|falte|faltan|pendiente|pendientes|ambas|ambos|cita|control escolar|plan de estudios?|pago|pagos|pagar|microcredencial(?:es)?|curso|cursos|horario|requisitos?|tramites?|constancias?|credencial|documentos?|materias|calendario|fechas?|recuerd\w*|record\w*|payments?|courses?|requirements?|certificates?)\b/.test(value)
   const conversational = /^(hola|hello|hi|gracias|thanks|thank you|adios|bye|si|yes|no|ok|vale|y la fecha|y los requisitos|cuando|when|por que|why|cuanto cuesta|how much|puedes explicarlo|tell me more|continua|continue|y en ingles|y en espanol|in english|in spanish|donde|where)(?: por favor| please)?$/.test(value)
   const preference = /^(yo )?(mi meta|mi objetivo|mis intereses|me interesa|solo puedo|mi disponibilidad|prefiero|mi idioma|recuerda que|no olvides que|my goal|my interests|i am interested|i am available|i can only|i prefer|remember that)\b/.test(value)
-  if (intent === 'unknown' && !personalContextQuery(text) && !studentTopic(text) && !isStudentFollowUp(text) && !relevant && !conversational && !preference) return block('out-of-scope')
+  if (!options.inConversation && intent === 'unknown' && !personalContextQuery(text) && !studentTopic(text) && !isStudentFollowUp(text) && !relevant && !conversational && !preference) return block('out-of-scope')
   return undefined
 }
 

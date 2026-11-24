@@ -151,7 +151,8 @@ export function buildAssistantGraph(deps: AssistantDeps, checkpointer?: BaseChec
       language: state.requestedLanguage ?? detectLanguage(state.userMessage, state.conversationLanguage),
     }))
     .addNode('checkInput', async (state: AssistantState) => {
-      let inputBlock = assessInput(state.userMessage)
+      const earlier = (state.history ?? state.messages ?? []).filter(message => message.role === 'student' && !message.inputBlock).length
+      let inputBlock = assessInput(state.userMessage, { inConversation: earlier > 0 })
       if (!inputBlock && deps.inputGuardrail) {
         try { inputBlock = await deps.inputGuardrail.assess(state.userMessage) }
         catch { inputBlock = { category: 'guardrail-unavailable', source: 'bedrock' } }
