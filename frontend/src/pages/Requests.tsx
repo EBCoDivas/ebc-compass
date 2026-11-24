@@ -62,7 +62,7 @@ export function Requests() {
         <div>
           <h1>Seguimiento de tus trámites</h1>
           <p>Cómo va lo que ya pediste en EBC, hasta que queda resuelto.</p>
-          <p className="requests-hint">Aquí solo das seguimiento. ¿Necesitas hacer otro trámite? <AskAssistantLink question="¿Qué trámites puedo hacer con Compass?">Pídeselo a Compass</AskAssistantLink>.</p>
+          {inReview.length > 0 && <p className="requests-hint">Aquí solo das seguimiento. ¿Necesitas hacer otro trámite? <AskAssistantLink question="¿Qué trámites puedo hacer con Compass?">Pídeselo a Compass</AskAssistantLink>.</p>}
         </div>
       </div>
       {error && <p className="form-error" role="alert">No pudimos cargar tus solicitudes. Revisa tu conexión e inténtalo de nuevo.</p>}
