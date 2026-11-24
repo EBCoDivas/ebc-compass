@@ -17,7 +17,7 @@ export function isActionFollowUp(text: string) {
 }
 
 export function isStudentFollowUp(text: string) {
-  return isActionFollowUp(text) || /^(?:y |and )?(?:la fecha(?: limite)?|los requisitos|que me falta|cuanto cuesta|cual es el importe|what is the deadline|how much|what am i missing)$/.test(normalize(text))
+  return isActionFollowUp(text) || /^(?:y |and )?(?:la fecha(?: limite)?|los requisitos|que me falta|que opciones (?:tengo|hay)|cuales son (?:mis|las) opciones|cuanto cuesta|cual es el importe|what is the deadline|how much|what am i missing|what options (?:do i have|are there))$/.test(normalize(text))
 }
 
 export function asksToPrepare(text: string, kind: BannerActionKind) {

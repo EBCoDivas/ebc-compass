@@ -51,7 +51,10 @@ export function buildStudentTools(mcp: StudentMcp, actions: Pick<StudentActions,
     turn: ToolTurn; question: string; previousQuestion?: string; language: Language; intent: Intent; focus?: string;
     relevantIds: string[]; provider?: LlmProvider; signal?: AbortSignal; plannerTimeoutMs?: number; now: Date
   }): Promise<ToolResults | undefined> => {
-    const direct = studentTopic(input.question)
+    // «Quiero solicitar una beca» de una alumna de 1.er semestre también abre el trámite de la beca de primer ingreso.
+    const asksForScholarship = input.turn.student.semester === 1 && /\b(beca|becas|scholarship)\b/.test(normalize(input.question))
+      && /\b(solicit\w*|postul\w*|aplic\w*|pedir|tramit\w*|apply)\b/.test(normalize(input.question))
+    const direct = studentTopic(input.question) ?? (asksForScholarship ? 'request-scholarship' as const : undefined)
     const topic = direct ?? (isStudentFollowUp(input.question) && input.previousQuestion ? studentTopic(input.previousQuestion) : undefined)
     if (!topic && ['greeting', 'help', 'profile-help'].includes(input.intent)) return
     const kind = topic === 'request-scholarship' || topic === 'pay-enrollment' ? topic : undefined
@@ -222,10 +225,19 @@ export function buildStudentTools(mcp: StudentMcp, actions: Pick<StudentActions,
           const today = planningDate(input.now)
           const choices = options.filter(item => item.schedule && /servicio social/.test(normalize(item.title)) && (!item.deadline || item.deadline >= today))
             .sort((a, b) => morningFirst(a) - morningFirst(b)).slice(0, 3)
+          // Sin opciones con horario en su catálogo (por ejemplo Derecho en Toluca), se explican los requisitos de la liberación.
+          const release = options.find(item => /liberacion de servicio social/.test(normalize(item.title)))
+          const noChoices = choices.length === 0
           const summary = es ? `A tu ritmo actual llegarías a **${projection.projectedHours} horas**${projection.shortfallHours ? ` y te faltarían **${projection.shortfallHours}** para la fecha de titulación` : ' y cubrirías el requisito'}.`
             : `At your current pace you would reach **${projection.projectedHours} hours**${projection.shortfallHours ? ` and be **${projection.shortfallHours} hours short** by graduation` : ' and meet the requirement'}.`
           const hint = working ? (es ? 'Como trabajas por las tardes, revisa primero el horario de la mañana. Si puedes ajustar tu jornada, también tienes opciones por la tarde.' : 'Since you work in the afternoons, check the morning schedule first. Afternoon options are available if you can adjust your work hours.') : ''
-          return reply([summary, hint, choices.map(item => `- **${item.title}** · ${item.schedule!.days.join(', ')} · ${item.schedule!.start}–${item.schedule!.end}`).join('\n'), es ? 'Revisa con Servicios Escolares cuántas horas semanales te reconoce cada opción.' : 'Check with Student Services how many weekly hours each option counts toward the requirement.'].filter(Boolean).join('\n\n'), [appSources, bannerSource, ...choices.map(source)])
+          return reply([summary, hint, noChoices
+            ? (release?.requirements?.length
+              ? (es ? 'No hay opciones de servicio social con horario vigentes en tu catálogo. Para tu liberación necesitas:\n' : 'There are no current service options with a schedule in your catalog. To complete the requirement you need:\n') + release.requirements.map(item => '- ' + item).join('\n')
+              : (es ? 'No hay opciones de servicio social con horario vigentes en tu catálogo.' : 'There are no current service options with a schedule in your catalog.'))
+            : choices.map(item => `- **${item.title}** · ${item.schedule!.days.join(', ')} · ${item.schedule!.start}–${item.schedule!.end}`).join('\n'),
+            es ? (noChoices ? 'Confirma con Servicios Escolares cómo registrar tus horas restantes.' : 'Revisa con Servicios Escolares cuántas horas semanales te reconoce cada opción.') : (noChoices ? 'Confirm with Student Services how to register your remaining hours.' : 'Check with Student Services how many weekly hours each option counts toward the requirement.')].filter(Boolean).join('\n\n'),
+            [appSources, bannerSource, ...(noChoices && release ? [source(release)] : choices.map(source))])
         }
         const route = context.route.slice(0, 3).flatMap(step => {
           const item = options.find(option => option.id === step.opportunityId)

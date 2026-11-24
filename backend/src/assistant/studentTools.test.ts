@@ -300,3 +300,25 @@ test('a catalog question still reads the catalog when the model picked only the 
   assert.doesNotMatch(answer?.reply?.content ?? '', /You are in term/)
   assert.ok((answer?.items?.length ?? 0) > 0)
 })
+
+test('a student without service options in her catalog gets the release requirements instead of an empty answer', async () => {
+  const { studentMcp, runtime } = setup()
+  const sofia: StudentContext = { subject: randomUUID(), personaId: 'sofia', career: 'law', campus: 'TLC', semester: 9, enrollment: 'M0100014' }
+  const answer = await buildStudentTools(studentMcp, runtime.actions!)({
+    turn: { student: sofia, conversationId: randomUUID(), requestId: randomUUID() },
+    question: '¿Qué opciones tengo?', previousQuestion: '¿Cómo va mi servicio social?', language: 'es', intent: 'unknown', relevantIds: [], now: now(),
+  })
+  const content = answer?.reply?.content ?? ''
+  assert.match(content, /te faltarían/)
+  assert.match(content, /No hay opciones de servicio social con horario vigentes/)
+  assert.match(content, /Acumular 480 horas/)
+})
+
+test('"quiero solicitar una beca" opens the first-entry scholarship flow for a first-semester student', async () => {
+  const { studentMcp, runtime } = setup()
+  const answer = await buildStudentTools(studentMcp, runtime.actions!)({
+    turn: { student: entry, conversationId: randomUUID(), requestId: randomUUID() },
+    question: 'quiero solicitar una beca', language: 'es', intent: 'scholarship-info', relevantIds: [], now: now(),
+  })
+  assert.equal(answer?.reply?.actionProposal?.kind, 'request-scholarship')
+})

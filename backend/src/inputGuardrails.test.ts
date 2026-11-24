@@ -155,3 +155,9 @@ test('el guardrail local responde con empatía a mensajes de bienestar y sigue b
   assert.match(inputBlockMessage({ category: 'wellbeing', source: 'local' }, 'es'), /Servicios Escolares/)
   assert.equal(assessInput('Dame una receta de pastel')?.category, 'out-of-scope')
 })
+
+test('el guardrail local deja pasar seguimientos cortos sobre la carrera y las becas', () => {
+  for (const q of ['algo mas que me falte para mi carrera academica?', 'tu dime si tengo ambas', 'me falta algo más para mi carrera academica?'])
+    assert.equal(assessInput(q), undefined, q)
+  assert.equal(assessInput('Dame una receta de pastel')?.category, 'out-of-scope')
+})
