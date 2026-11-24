@@ -288,3 +288,15 @@ test('asking how a request is going answers from Banner requests, with the folio
   assert.match(paid.content, /Pagada/)
   assert.doesNotMatch(paid.content, /Beca de primer ingreso/)
 })
+
+test('a catalog question still reads the catalog when the model picked only the academic record', async () => {
+  const { studentMcp, runtime, calls } = setup()
+  const answer = await buildStudentTools(studentMcp, runtime.actions!)({
+    turn: { student: closing, conversationId: randomUUID(), requestId: randomUUID() },
+    question: 'Which certifications do you recommend?', language: 'en', intent: 'career-info', relevantIds: [], now: now(),
+    provider: { async generate() { throw new Error('unexpected synthesis') }, async selectTools() { return [{ name: 'get_academic_progress', args: {} }] } },
+  })
+  assert.ok(calls.includes('list_opportunities'), calls.join(','))
+  assert.doesNotMatch(answer?.reply?.content ?? '', /You are in term/)
+  assert.ok((answer?.items?.length ?? 0) > 0)
+})

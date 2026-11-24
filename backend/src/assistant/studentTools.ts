@@ -98,6 +98,13 @@ export function buildStudentTools(mcp: StudentMcp, actions: Pick<StudentActions,
           if (args.type === undefined || opportunityTypes.some(type => type === args.type)) add(choice.name, args.type ? { type: args.type } : {})
         } else if ((choice.name === 'get_student_context' || choice.name === 'get_academic_progress') && !Object.keys(args).length) add(choice.name)
       }
+      // Una pregunta sobre oportunidades siempre lee el catálogo, aunque el modelo haya elegido solo otra herramienta
+      // (por ejemplo, el expediente o la búsqueda de guías): sin catálogo, la respuesta diría que no hay opciones.
+      const catalogIntents: Intent[] = ['scholarship-info', 'course-info', 'event-info', 'career-info', 'recommendation-request', 'deadline-query']
+      if (!kind && !topic && catalogIntents.includes(input.intent) && !reads.some(read => read.name === 'list_opportunities' || read.name === 'get_requirements')) {
+        const type = typeByIntent[input.intent]
+        reads.unshift({ name: 'list_opportunities', args: type ? { type } : undefined })
+      }
       if (!reads.length) {
         if (input.focus === 'requirements' && input.relevantIds[0]) add('get_requirements', { opportunityId: input.relevantIds[0] })
         else if (input.intent === 'unknown' || input.intent === 'procedure-info') add('search_knowledge', { query: input.question.slice(0, 300), language: input.language })
@@ -198,7 +205,8 @@ export function buildStudentTools(mcp: StudentMcp, actions: Pick<StudentActions,
       }
 
       const progress = data('get_academic_progress')?.progress as AcademicProgress | null | undefined
-      if (topic === 'progress' || progress) {
+      // El resumen del expediente solo responde cuando el alumno preguntó por su avance; si el modelo lo consultó de más, se ignora.
+      if (topic === 'progress') {
         if (!progress) return reply(contact(input.language))
         const pieces = [es ? `Vas en el periodo **${progress.currentPeriod.number}** de **${progress.program.name}**.` : `You are in term **${progress.currentPeriod.number}** of **${progress.program.name}**.`]
         if (progress.credits) pieces.push(es ? `Tienes **${progress.credits.earned} de ${progress.credits.total} créditos**.` : `You have **${progress.credits.earned} of ${progress.credits.total} credits**.`)
