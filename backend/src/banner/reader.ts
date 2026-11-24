@@ -1,6 +1,8 @@
 import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda'
 import type { BannerActionState } from '../../../shared/contracts/studentActions.js'
 import { MemoryDocumentStore } from '../assistant/conversations/store.js'
+import type { CatalogEntry } from './catalog/seed.js'
+import { createCatalogStore } from './catalog/store.js'
 import { createBannerActionHandler, type BannerActionRequest, type BannerConfirmation, type BannerConfirmationResult, type BannerIdentity } from './actions.js'
 import { demoAcademicSnapshots, type BannerRecord } from './fixtures.js'
 
@@ -10,6 +12,8 @@ export interface BannerReader {
   readActions?(student: AcademicStudent): Promise<BannerActionState>
 }
 export interface BannerClient extends BannerReader {
+  /** El catálogo de oportunidades: Banner lo guarda en su propia tabla de DynamoDB. */
+  readCatalog(): Promise<CatalogEntry[]>
   readActions(student: AcademicStudent): Promise<BannerActionState>
   confirmAction(student: AcademicStudent, confirmation: BannerConfirmation): Promise<BannerConfirmationResult>
 }
@@ -32,9 +36,14 @@ function actionIdentity(student: AcademicStudent): BannerIdentity | undefined {
   if (enrollment && personaId && campus && career && semester === 1) return { subject: id, enrollment, personaId, campus, career, semester }
 }
 
-function withActions(reader: BannerReader, execute: (request: BannerActionRequest) => Promise<unknown>): BannerClient {
+function withActions(reader: BannerReader, execute: (request: BannerActionRequest | { version: 1; operation: 'listOpportunities' }) => Promise<unknown>): BannerClient {
   return {
     ...reader,
+    async readCatalog() {
+      const reply = await execute({ version: 1, operation: 'listOpportunities' }) as { opportunities?: CatalogEntry[] }
+      if (!Array.isArray(reply.opportunities)) throw new Error('BANNER_UNAVAILABLE')
+      return reply.opportunities
+    },
     async readActions(student) {
       const identity = actionIdentity(student)
       if (!identity) return {}
@@ -53,8 +62,10 @@ function withActions(reader: BannerReader, execute: (request: BannerActionReques
   }
 }
 
-export function createFixedBannerClient(store = new MemoryDocumentStore(), now?: () => Date): BannerClient {
-  return withActions(fixedBanner, createBannerActionHandler(store, now))
+export function createFixedBannerClient(store = new MemoryDocumentStore(), now?: () => Date,
+  catalog = createCatalogStore(new MemoryDocumentStore())): BannerClient {
+  const actions = createBannerActionHandler(store, now, catalog)
+  return withActions(fixedBanner, async request => request.operation === 'listOpportunities' ? { opportunities: await catalog.list() } : actions(request))
 }
 
 export function createBannerReader(env = process.env, client?: Pick<LambdaClient, 'send'>): BannerClient {
@@ -64,7 +75,7 @@ export function createBannerReader(env = process.env, client?: Pick<LambdaClient
     return createFixedBannerClient()
   }
   const lambda = client ?? new LambdaClient({ maxAttempts: 1, requestHandler: { requestTimeout: 4000, throwOnRequestTimeout: true } })
-  const invoke = async (request: BannerActionRequest | { version: 1; operation: 'getStudentRecord'; enrollment: string }) => {
+  const invoke = async (request: BannerActionRequest | { version: 1; operation: 'getStudentRecord'; enrollment: string } | { version: 1; operation: 'listOpportunities' }) => {
     try {
       const result = await lambda.send(new InvokeCommand({ FunctionName: functionName, InvocationType: 'RequestResponse',
         Payload: Buffer.from(JSON.stringify(request)) }))

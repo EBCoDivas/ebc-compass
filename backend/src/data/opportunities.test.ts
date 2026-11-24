@@ -1,6 +1,10 @@
+import '../testing/seedCatalog.js'
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { legacyOpportunities, opportunities } from './opportunities.js'
+import { catalogSeed } from '../banner/catalog/seed.js'
+
+const opportunities = catalogSeed
+const legacyOpportunities = catalogSeed.filter(item => item.collection === 'general')
 
 test('catalog contains the six documented opportunity types', () => {
   const types = new Set(opportunities.map((item) => item.type))

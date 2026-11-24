@@ -16,6 +16,7 @@ import { join } from 'node:path'
 import { provisionAuth } from './provision-auth.js'
 import { provisionStudentMcp } from '../../backend/src/mcp/provisionLocal.js'
 import { LOCAL_BANNER_ACTIONS_TABLE } from '../../backend/src/banner/actions.js'
+import { LOCAL_BANNER_CATALOG_TABLE } from '../../backend/src/banner/catalog/store.js'
 import { CreateBucketCommand, HeadBucketCommand, S3Client } from '@aws-sdk/client-s3'
 import { S3VectorsClient } from '@aws-sdk/client-s3vectors'
 import { ensureVectorIndex, VECTOR_BUCKET, VECTOR_INDEX } from '../kb/vectors.js'
@@ -148,6 +149,7 @@ try {
   await ensureProfilesTable()
   await ensurePersistentTable(process.env.CONVERSATION_HISTORY_TABLE ?? loadEnvFile(join(root, 'backend', '.env')).CONVERSATION_HISTORY_TABLE ?? 'Conversations')
   await ensurePersistentTable(LOCAL_BANNER_ACTIONS_TABLE)
+  await ensurePersistentTable(LOCAL_BANNER_CATALOG_TABLE)
   await ensureBucket()
   await ensureVectors()
   await provisionAuth(check)

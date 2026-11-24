@@ -2,7 +2,8 @@ import { matchesAcademicScope, levelForCareer } from '../../data/academic.js'
 // Adaptadores provisionales sobre los datos que existen hoy en el backend (backend/src/data/opportunities.ts).
 // Si el catálogo cambia (más tipos, códigos, prerrequisitos), solo hay que ajustar este archivo.
 
-import { opportunities as rawOpportunities } from '../../data/opportunities.js'
+import type { Opportunity } from '../../data/opportunities.js'
+import { currentCatalog } from '../../catalog/catalog.js'
 import { matchesOpportunityStage } from '../../data/opportunityScope.js'
 import { recommend } from '../../data/recommendations.js'
 import type {
@@ -16,7 +17,7 @@ import type {
 } from '../types.js'
 import { daysBetween } from '../domain/text.js'
 
-type RawOpportunity = (typeof rawOpportunities)[number]
+type RawOpportunity = Opportunity
 
 /** "course-fin-301" -> "FIN-301". Los ids sin esa forma no tienen código. */
 function codeFromId(id: string): string | undefined {
@@ -43,10 +44,16 @@ function toAssistant(raw: RawOpportunity): AssistantOpportunity {
 }
 
 export class InMemoryCatalog implements CatalogReader {
-  private readonly items: AssistantOpportunity[]
+  /** El catálogo se lee de Banner; se convierte cada vez que cambia la copia cargada. */
+  private cache?: { source: readonly Opportunity[]; items: AssistantOpportunity[] }
 
-  constructor(items: AssistantOpportunity[] = rawOpportunities.map(toAssistant)) {
-    this.items = items
+  constructor(private readonly provided?: AssistantOpportunity[]) {}
+
+  private get items(): AssistantOpportunity[] {
+    if (this.provided) return this.provided
+    const source = currentCatalog().all
+    if (this.cache?.source !== source) this.cache = { source, items: source.map(toAssistant) }
+    return this.cache.items
   }
 
   async list(filter: { type?: OpportunityType; career?: string; semester?: number; campus?: string; level?: string } = {}): Promise<AssistantOpportunity[]> {

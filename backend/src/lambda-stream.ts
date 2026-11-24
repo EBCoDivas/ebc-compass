@@ -3,6 +3,7 @@ import type { Writable } from 'node:stream'
 import type { Request } from 'express'
 import { createAssistant, ensureConversation, maintainConversation, runTurnStreaming } from './assistant/index.js'
 import { createBannerReader } from './banner/reader.js'
+import { ensureCatalog } from './catalog/catalog.js'
 import { parseStudentTurn, writeSse } from './routes/assistantRoutes.js'
 type GatewayEvent = {
   httpMethod?: string; path?: string; rawPath?: string; body?: string; isBase64Encoded?: boolean;
@@ -12,7 +13,8 @@ declare const awslambda: {
   streamifyResponse: (handler: (event: GatewayEvent, stream: Writable) => Promise<void>) => unknown
   HttpResponseStream: { from: (stream: Writable, metadata: { statusCode: number; headers: Record<string, string> }) => Writable }
 }
-const assistant = createAssistant({ banner: createBannerReader() })
+const banner = createBannerReader()
+const assistant = createAssistant({ banner })
 const headers = { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'Access-Control-Allow-Origin': '*' }
 export const handler = awslambda.streamifyResponse(async (event, raw) => {
   let output = raw
@@ -30,6 +32,7 @@ export const handler = awslambda.streamifyResponse(async (event, raw) => {
       output = awslambda.HttpResponseStream.from(raw, { statusCode: 404, headers })
       output.end(); return
     }
+    await ensureCatalog(banner)
     const body = JSON.parse(event.isBase64Encoded ? Buffer.from(event.body ?? '', 'base64').toString('utf8') : event.body ?? '{}')
     const { input, studentId, conversationId } = await parseStudentTurn({ body, apiGateway: { event } } as unknown as Request, assistant)
     await ensureConversation(assistant.graph, studentId, conversationId, !input.requireExisting)

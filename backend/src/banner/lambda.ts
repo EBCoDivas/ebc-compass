@@ -30,12 +30,13 @@ function actionRequest(request: Record<string, unknown>): BannerActionRequest | 
 
 type ActionHandler = ReturnType<typeof createBannerActionHandler>
 
-export function createBannerHandler(performAction: ActionHandler) {
+export function createBannerHandler(performAction: ActionHandler, listCatalog: () => Promise<unknown[]>) {
   return async (event: unknown) => {
     const request = object(event)
     if (request?.version === 1) {
       if (request.operation === 'getStudentRecord' && typeof request.enrollment === 'string' &&
           enrollment.test(request.enrollment) && Object.keys(request).length === 3) return { record: fixtureByEnrollment(request.enrollment) }
+      if (request.operation === 'listOpportunities' && Object.keys(request).length === 2) return { opportunities: await listCatalog() }
       const action = actionRequest(request)
       if (action) return performAction(action)
     }
@@ -43,8 +44,9 @@ export function createBannerHandler(performAction: ActionHandler) {
   }
 }
 
-let runtime: Promise<ActionHandler> | undefined
-export const handler = createBannerHandler(async action => {
-  const run = await (runtime ??= import('./dynamo.js').then(({ createBannerRuntime }) => createBannerRuntime()))
-  return run(action)
-})
+let runtime: Promise<ReturnType<typeof import('./dynamo.js').createBannerRuntime>> | undefined
+const bannerRuntime = () => runtime ??= import('./dynamo.js').then(({ createBannerRuntime }) => createBannerRuntime())
+export const handler = createBannerHandler(
+  async action => (await bannerRuntime()).actions(action),
+  async () => (await bannerRuntime()).catalog.list(),
+)

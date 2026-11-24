@@ -1,9 +1,10 @@
+import '../testing/seedCatalog.js'
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { normalize } from '../assistant/domain/text.js'
 import { programs } from './academic.js'
-import { opportunities } from './opportunities.js'
+import { catalogSeed as opportunities } from '../banner/catalog/seed.js'
 
 const interests = JSON.parse(readFileSync(new URL('../../../shared/interests.json', import.meta.url), 'utf8')) as {
   general: string[]; careers: Record<string, string[]>

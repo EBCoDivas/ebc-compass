@@ -7,12 +7,20 @@ export function createStudentMcp(input: {
     fields: { PK: "string", SK: "string" },
     primaryIndex: { hashKey: "PK", rangeKey: "SK" },
   });
+  // El catálogo de oportunidades (fechas, tarifas y requisitos) vive en la tabla propia de Banner.
+  const bannerCatalog = new sst.aws.Dynamo("BannerCatalog", {
+    fields: { PK: "string", SK: "string" },
+    primaryIndex: { hashKey: "PK", rangeKey: "SK" },
+  });
   const banner = new sst.aws.Function("BannerMock", {
     handler: "../backend/src/banner/lambda.handler",
     runtime: "nodejs22.x",
     timeout: "5 seconds",
-    environment: { APP_STAGE: input.stage, BANNER_ACTIONS_TABLE: bannerActions.name },
-    permissions: [{ actions: ["dynamodb:GetItem", "dynamodb:PutItem"], resources: [bannerActions.arn] }],
+    environment: { APP_STAGE: input.stage, BANNER_ACTIONS_TABLE: bannerActions.name, BANNER_CATALOG_TABLE: bannerCatalog.name },
+    permissions: [
+      { actions: ["dynamodb:GetItem", "dynamodb:PutItem"], resources: [bannerActions.arn] },
+      { actions: ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:Query"], resources: [bannerCatalog.arn] },
+    ],
     nodejs: { banner: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);" },
     logging: { format: "json", retention: "1 week" },
   });

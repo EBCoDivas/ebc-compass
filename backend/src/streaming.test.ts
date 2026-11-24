@@ -1,3 +1,4 @@
+import './testing/seedCatalog.js'
 import { once } from 'node:events'
 import test from 'node:test'
 import assert from 'node:assert/strict'

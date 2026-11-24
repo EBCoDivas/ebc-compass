@@ -9,6 +9,7 @@ import { STUDENT_CONTEXT_HEADER, TARGET_NAME, toolList } from './contract.js'
 import { loadEnvFile } from '../../../scripts/lib/emulator-env.mjs'
 import { signedRequest } from './signedRequest.js'
 import { LOCAL_BANNER_ACTIONS_TABLE } from '../banner/actions.js'
+import { LOCAL_BANNER_CATALOG_TABLE } from '../banner/catalog/store.js'
 
 const root = fileURLToPath(new URL('../../../', import.meta.url))
 const bannerName = 'ebc-compass-banner-mock'
@@ -159,7 +160,7 @@ export async function provisionStudentMcp(check: boolean) {
     ...(process.env.NODE_EXTRA_CA_CERTS ? { NODE_EXTRA_CA_CERTS: process.env.NODE_EXTRA_CA_CERTS } : {}),
     AWS_DISABLE_HOST_PREFIX_INJECTION: 'true',
   }
-  await ensureLambda(lambda, bannerName, role, 'banner/lambda.ts', check, { ...emulatorVariables, BANNER_ACTIONS_TABLE: LOCAL_BANNER_ACTIONS_TABLE })
+  await ensureLambda(lambda, bannerName, role, 'banner/lambda.ts', check, { ...emulatorVariables, BANNER_ACTIONS_TABLE: LOCAL_BANNER_ACTIONS_TABLE, BANNER_CATALOG_TABLE: LOCAL_BANNER_CATALOG_TABLE })
   if (transport === 'local') {
     if (!check) saveState('local')
     console.log('✔ Banner Lambda y MCP local sin Gateway')

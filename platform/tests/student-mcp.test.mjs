@@ -26,6 +26,10 @@ test("Banner alone has read and write access to its actions table", () => {
   context.exports.createStudentMcp({ stage: "test", historyTable: { name: "history", arn: "history-arn" }, knowledgeBaseId: "kb", knowledgeBaseArn: "kb-arn" });
   const banner = functions.get("BannerMock");
   assert.equal(banner.environment.BANNER_ACTIONS_TABLE, "BannerActions");
-  assert.deepEqual(JSON.parse(JSON.stringify(banner.permissions)), [{ actions: ["dynamodb:GetItem", "dynamodb:PutItem"], resources: ["BannerActions-arn"] }]);
-  assert.ok(functions.get("CompassMcpTools").permissions.every(permission => !permission.resources.includes("BannerActions-arn")));
+  assert.equal(banner.environment.BANNER_CATALOG_TABLE, "BannerCatalog");
+  assert.deepEqual(JSON.parse(JSON.stringify(banner.permissions)), [
+    { actions: ["dynamodb:GetItem", "dynamodb:PutItem"], resources: ["BannerActions-arn"] },
+    { actions: ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:Query"], resources: ["BannerCatalog-arn"] },
+  ]);
+  assert.ok(functions.get("CompassMcpTools").permissions.every(permission => !permission.resources.includes("BannerActions-arn") && !permission.resources.includes("BannerCatalog-arn")));
 });

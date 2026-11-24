@@ -6,6 +6,7 @@ import { DynamoDocumentStore } from '../assistant/conversations/store.js'
 import { BedrockKnowledgeBaseRetriever, FallbackRetriever, KeywordRetriever } from '../assistant/adapters/retrievers.js'
 import { createBannerReader } from '../banner/reader.js'
 import { loadAssistantConfig } from '../config/env.js'
+import { ensureCatalog } from '../catalog/catalog.js'
 import { makeToolHandler } from './tools.js'
 
 export function createToolRuntime() {
@@ -18,5 +19,11 @@ export function createToolRuntime() {
     ? fallback : new FallbackRetriever(new BedrockKnowledgeBaseRetriever({
       region: config.region, knowledgeBaseId: config.knowledgeBaseId,
     }), fallback)
-  return makeToolHandler({ banner: createBannerReader(), store, memories: new ConversationRepository(store), knowledge })
+  const banner = createBannerReader()
+  const handle = makeToolHandler({ banner, store, memories: new ConversationRepository(store), knowledge })
+  // Las herramientas leen el catálogo de Banner: se carga (y se renueva cada minuto) antes de cada llamada.
+  return (async (...args: Parameters<typeof handle>) => {
+    try { await ensureCatalog(banner) } catch { return { ok: false, code: 'UNAVAILABLE' } as const }
+    return handle(...args)
+  }) as typeof handle
 }

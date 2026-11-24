@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto'
 import type { ActionReceipt, BannerActionProposal, BannerActionState, MotivationLetterUpload } from '../../../shared/contracts/studentActions.js'
 import type { DocumentStore, Value } from '../assistant/conversations/store.js'
-import { Conflict } from '../assistant/conversations/store.js'
-import { stageCatalog } from '../data/planningCatalog.js'
+import { Conflict, MemoryDocumentStore } from '../assistant/conversations/store.js'
+import { createCatalogStore, type CatalogStore } from './catalog/store.js'
 import { evaluateScholarship, planningDate, quoteEnrollmentPayment } from '../planning/rules.js'
 import { fixtureByEnrollment } from './fixtures.js'
 
@@ -39,7 +39,8 @@ function canonicalRecord(identity: BannerIdentity) {
     && record.career === identity.career && record.currentPeriod.number === identity.semester && identity.semester === 1 ? record : undefined
 }
 
-export function createBannerActionHandler(store: Pick<DocumentStore, 'get' | 'write'>, now = () => new Date()) {
+export function createBannerActionHandler(store: Pick<DocumentStore, 'get' | 'write'>, now = () => new Date(),
+  catalog: Pick<CatalogStore, 'list'> = createCatalogStore(new MemoryDocumentStore())) {
   return async (request: BannerActionRequest): Promise<{ actions: BannerActionState } | BannerConfirmationResult> => {
     const { identity } = request
     const record = canonicalRecord(identity)
@@ -55,7 +56,8 @@ export function createBannerActionHandler(store: Pick<DocumentStore, 'get' | 'wr
     const { proposal } = request
     const scholarship = proposal.kind === 'request-scholarship'
     const slot = scholarship ? 'scholarship' : 'payment'
-    const opportunity = stageCatalog.find(item => item.id === enrollmentActionIds[slot])
+    // Las fechas, tarifas y requisitos salen del catálogo que Banner guarda en DynamoDB.
+    const opportunity = (await catalog.list()).find(item => item.id === enrollmentActionIds[slot])
     for (let attempt = 0; attempt < 4; attempt++) {
       const current = await read()
       const existing = current?.[slot]

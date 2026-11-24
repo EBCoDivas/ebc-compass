@@ -12,7 +12,7 @@ AgentCore Gateway publica cinco herramientas de lectura de Compass. El Gateway i
 
 El cliente de servidor parte de la sesión Cognito verificada y firma con SigV4 para invocar el Gateway; el destino se llama `compass`. Los argumentos del MCP no admiten IDs de alumno. IAM limita quién puede invocar el Gateway y cada Lambda. La cabecera de contexto se genera internamente para cada sesión: no se copian cabeceras del navegador, tokens ni datos de cuenta a la consulta vectorial. La memoria se lee sin escribir y respeta el olvido.
 
-Las guías de orientación se publican en S3 y se recuperan mediante la base de conocimiento existente. El corpus no guarda expedientes, memoria, montos de pago ni fechas límite operativas. El catálogo de Compass aporta las fechas y tarifas; Banner aporta los datos del expediente para los cálculos.
+Las guías de orientación se publican en S3 y se recuperan mediante la base de conocimiento existente. El corpus no guarda expedientes, memoria, montos de pago ni fechas límite operativas. El catálogo de oportunidades (fechas, tarifas y requisitos) vive en Banner, en su propia tabla de DynamoDB (`BannerCatalog`, un elemento por oportunidad). Banner lo carga con los datos iniciales (`backend/src/banner/catalog/`) solo si la tabla está vacía y lo sirve con la operación `listOpportunities`. Compass lo lee de Banner, lo conserva un minuto en memoria y lo renueva; si Banner falla y ya hay una copia, sigue con ella. Para cambiar una fecha o una tarifa basta editar el elemento en la tabla: Compass lo muestra en menos de un minuto, sin redesplegar. El pago de la inscripción usa esa misma tarifa. Banner aporta además los datos del expediente para los cálculos.
 
 ## Ensayo local
 

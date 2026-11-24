@@ -1,3 +1,4 @@
+import '../testing/seedCatalog.js'
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { MemoryDocumentStore } from '../assistant/conversations/store.js'

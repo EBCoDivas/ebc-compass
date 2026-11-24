@@ -8,6 +8,8 @@ import serverless from 'serverless-http'
 import { createAssistant, runTurnStreaming } from './index.js'
 import { createBannerReader } from '../banner/reader.js'
 import { createBannerHandler } from '../banner/lambda.js'
+import { createCatalogStore } from '../banner/catalog/store.js'
+import '../testing/seedCatalog.js'
 import { createBannerActionHandler, type BannerActionRequest } from '../banner/actions.js'
 import { LambdaClient, type InvokeCommandInput } from '@aws-sdk/client-lambda'
 import { loadAssistantConfig } from '../config/env.js'
@@ -33,7 +35,7 @@ function setup() {
   const bannerStore = new MemoryDocumentStore()
   const repo = new ConversationRepository(store)
   const lambda = new LambdaClient({})
-  const privateApi = createBannerHandler(createBannerActionHandler(bannerStore, now))
+  const privateApi = createBannerHandler(createBannerActionHandler(bannerStore, now), () => createCatalogStore(new MemoryDocumentStore()).list())
   let lostPaymentResponse = false
   lambda.middlewareStack.add(() => async args => {
     const input = args.input as InvokeCommandInput
@@ -199,7 +201,7 @@ test('streaming produces the same proposal contract and keeps blocked input away
 
 test('Banner rejects a changed amount or scope and old slip proposals cannot authorize payment', async () => {
   const bannerStore = new MemoryDocumentStore()
-  const run = createBannerHandler(createBannerActionHandler(bannerStore, now))
+  const run = createBannerHandler(createBannerActionHandler(bannerStore, now), () => createCatalogStore(new MemoryDocumentStore()).list())
   const identity = { subject: entry.subject, enrollment: entry.enrollment!, personaId: entry.personaId!, career: entry.career!, campus: entry.campus!, semester: entry.semester! }
   const id = randomUUID()
   const conversationId = randomUUID()

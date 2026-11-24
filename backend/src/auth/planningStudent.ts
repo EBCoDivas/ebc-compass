@@ -2,7 +2,7 @@ import type { Request } from 'express'
 import { DynamoProfileRepository } from '../profiles/repository.js'
 import type { PlanningStudent } from '../data/studentPlanning.js'
 import { planningOpportunities } from '../data/studentPlanning.js'
-import { opportunities } from '../data/opportunities.js'
+import { currentCatalog } from '../catalog/catalog.js'
 import { matchesOpportunityScope } from '../data/opportunityScope.js'
 import { verifiedAcademicProfile } from './academicProfile.js'
 import { identityClaims, identitySubject } from './identity.js'
@@ -31,5 +31,5 @@ export async function resolveOpportunityCatalog(request: Request) {
   if (student) return { scope: student, catalog: planningOpportunities(student) }
   const text = (key: string) => typeof request.query[key] === 'string' ? request.query[key] as string : undefined
   const scope = { career: text('career'), campus: text('campus'), level: text('level'), semester: Number(text('semester')) }
-  return { scope, catalog: opportunities.filter(item => matchesOpportunityScope(item, scope)) }
+  return { scope, catalog: currentCatalog().all.filter(item => matchesOpportunityScope(item, scope)) }
 }

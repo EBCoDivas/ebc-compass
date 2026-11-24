@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import test from 'node:test'
 import { createBannerHandler, handler as bannerLambda } from '../banner/lambda.js'
+import { createCatalogStore } from '../banner/catalog/store.js'
+import '../testing/seedCatalog.js'
 import { createBannerActionHandler } from '../banner/actions.js'
 import { createBannerReader } from '../banner/reader.js'
 import { ConversationRepository } from '../assistant/conversations/repository.js'
@@ -29,7 +31,7 @@ function setup(fail = false) {
   const store = new MemoryDocumentStore()
   const repo = new ConversationRepository(store)
   const lambda = new LambdaClient({})
-  const privateApi = createBannerHandler(createBannerActionHandler(new MemoryDocumentStore()))
+  const privateApi = createBannerHandler(createBannerActionHandler(new MemoryDocumentStore()), () => createCatalogStore(new MemoryDocumentStore()).list())
   const requests: unknown[] = []
   lambda.middlewareStack.add(() => async args => {
     const input = args.input as { Payload: Uint8Array }

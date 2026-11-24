@@ -1,5 +1,5 @@
-import type { Opportunity } from '../../../shared/contracts/studentPlanning.js'
-import { allCampuses, allCareers, allLevels } from './academic.js'
+import type { Opportunity } from '../../../../shared/contracts/studentPlanning.js'
+import { allCampuses, allCareers, allLevels } from '../../data/academic.js'
 
 type DatedOpportunity = Opportunity & { deadline: string }
 type Entry = Omit<DatedOpportunity, 'career' | 'campus' | 'level' | 'simulated'>

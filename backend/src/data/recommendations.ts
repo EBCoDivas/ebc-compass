@@ -1,5 +1,6 @@
 import { daysBetween, normalize } from '../assistant/domain/text.js'
-import { opportunities, type Opportunity } from './opportunities.js'
+import { currentCatalog } from '../catalog/catalog.js'
+import type { Opportunity } from './opportunities.js'
 import { matchesOpportunityScope } from './opportunityScope.js'
 
 export interface Recommendation {
@@ -9,7 +10,7 @@ export interface Recommendation {
 }
 
 /** Regla de recomendación por carrera, semestre e intereses. La usan la ruta /api/recommendations y el asistente. */
-export function recommend(options: { career?: string; semester?: number; interests?: string[]; campus?: string; level?: string; today?: Date }, catalog: readonly Opportunity[] = opportunities): Recommendation[] {
+export function recommend(options: { career?: string; semester?: number; interests?: string[]; campus?: string; level?: string; today?: Date }, catalog: readonly Opportunity[] = currentCatalog().all): Recommendation[] {
   const { career, semester } = options
   const interests = options.interests ?? []
   const today = options.today ?? new Date()

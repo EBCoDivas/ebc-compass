@@ -10,6 +10,7 @@ import { alertRoutes } from './routes/alertRoutes.js'
 import { createStudentPlanningRoutes } from './routes/studentPlanningRoutes.js'
 import { assistantRoutes } from './routes/assistantRoutes.js'
 import { createAssistant } from './assistant/index.js'
+import { ensureCatalog } from './catalog/catalog.js'
 import { adminRoutes } from './routes/adminRoutes.js'
 
 export const app = express()
@@ -20,6 +21,12 @@ app.use(cors())
 // La confirmación de la beca incluye la carta de motivos en base64 (hasta 1.5 MB).
 app.use('/api/assistant/conversations/:id/actions', express.json({ limit: '3mb' }))
 app.use(express.json())
+
+// El catálogo vive en Banner: se carga (y se renueva cada minuto) antes de atender cualquier ruta de la API.
+app.use('/api', async (_request, response, next) => {
+  try { await ensureCatalog(banner); next() }
+  catch { response.status(503).json({ code: 'CATALOG_UNAVAILABLE', message: 'No pudimos cargar el catálogo. Intenta de nuevo.' }) }
+})
 
 app.get('/api/health', (_request, response) => {
   response.json({ status: 'ok', service: 'ebc-compass-backend' })
