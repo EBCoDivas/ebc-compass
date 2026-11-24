@@ -252,3 +252,19 @@ llamadas al modelo. Ver [contrato y validación local](assistant-conversations.m
 - **S3 Vectors:** el nombre del bucket debe ir en minúsculas (3–63) y la Knowledge Base recibe solo `indexArn`.
 - **Smoke:** `npm run lab:smoke -- --confirm`.
 - **Cuentas del jurado:** `JURY_DEMO_ENABLED=true` y `JURY_DEMO_PASSWORD` en `scripts/lab/.env` (no versionado) habilitan el panel de cuentas en `/acceso`.
+
+## Cambiar los modelos del chat (Lunna y Terra)
+
+Por omisión `lab:deploy` elige un solo modelo (Nova Lite/Micro, Claude Haiku/Sonnet, Nova Pro; el primero que responda) y se lo da a Lunna y a Terra. El selector del chat y la traza de admin muestran el nombre del modelo configurado; si ambos son iguales, se muestra uno solo y sin selector.
+
+Si un lab nuevo abre más modelos:
+
+1. `npm run lab:models` prueba qué modelos responden en la cuenta (solo lectura). `-- openai` filtra por texto y `-- --all` muestra los bloqueados con el motivo.
+2. Pega en `scripts/lab/.env` los ids que quieras:
+   ```
+   BEDROCK_LUNNA_MODEL_ID=<id rápido>
+   BEDROCK_TERRA_MODEL_ID=<id con más detalle>
+   ```
+3. Redespliega con `npm run lab:deploy -- --confirm --skip-knowledge --skip-smoke`.
+
+Los modelos de OpenAI propietarios (gpt-5.x, gpt-6.x) requieren una suscripción de AWS Marketplace: si el lab niega `aws-marketplace:Subscribe`, `lab:models` los marca como bloqueados (algunos responden una vez y luego se bloquean; la prueba lo confirma con una segunda llamada). Los modelos abiertos (`openai.gpt-oss-*`, Qwen, Mistral…) no lo necesitan.

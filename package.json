@@ -54,6 +54,7 @@
     "sst:deploy": "node scripts/sst-guard.mjs deploy",
     "sst:remove": "node scripts/sst-guard.mjs remove",
     "lab:check": "npm --prefix scripts/lab run -s check --",
+    "lab:models": "npm --prefix scripts/lab run -s models --",
     "lab:deploy": "npm --prefix scripts/lab run -s deploy --",
     "lab:knowledge": "npm --prefix scripts/lab run -s knowledge --",
     "lab:smoke": "npm --prefix scripts/lab run -s smoke --",

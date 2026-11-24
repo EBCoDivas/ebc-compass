@@ -6,6 +6,7 @@
   "description": "Despliegue automatizado de EBC Compass al lab de AWS (SST + conocimiento + pruebas de humo). Ver docs/deploy-lab.md.",
   "scripts": {
     "check": "tsx --env-file-if-exists=.env cli.ts check",
+    "models": "tsx --env-file-if-exists=.env cli.ts models",
     "deploy": "tsx --env-file-if-exists=.env cli.ts deploy",
     "knowledge": "tsx --env-file-if-exists=.env cli.ts knowledge",
     "smoke": "tsx --env-file-if-exists=.env cli.ts smoke",

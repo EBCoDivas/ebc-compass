@@ -1,6 +1,7 @@
 // Despliegue de EBC Compass al lab de AWS con el mínimo de pasos manuales. Guía: docs/deploy-lab.md
 //
 //   npm run lab:check                   revisa credenciales, modelo de Bedrock y herramientas (solo lectura)
+//   npm run lab:models [-- --all]       prueba qué modelos de Bedrock responden en la cuenta y sugiere Lunna/Terra (solo lectura)
 //   npm run lab:deploy -- --confirm     TODO en un comando: modelo → SST deploy → conocimiento → prueba de humo
 //   npm run lab:knowledge -- --confirm  sube documentos, sincroniza la Knowledge Base y comprueba la recuperación
 //   npm run lab:smoke -- --confirm      prueba de humo contra el sitio y el API desplegados
@@ -218,6 +219,63 @@ async function embeddingsWork(): Promise<boolean> {
 }
 
 // ---------- Comandos ----------
+
+/** Modelos de texto que Bedrock lista en la cuenta (perfiles de inferencia de la región y modelos base). */
+async function listTextModels(): Promise<string[]> {
+  const ids = new Set<string>()
+  try {
+    const profiles = await bedrock.send(new ListInferenceProfilesCommand({ typeEquals: 'SYSTEM_DEFINED', maxResults: 1000 }))
+    for (const profile of profiles.inferenceProfileSummaries ?? []) if (profile.inferenceProfileId?.startsWith(GEO + '.')) ids.add(profile.inferenceProfileId)
+  } catch { /* sin permiso para listar perfiles */ }
+  try {
+    const models = await bedrock.send(new ListFoundationModelsCommand({ byOutputModality: 'TEXT', byInferenceType: 'ON_DEMAND' }))
+    for (const model of models.modelSummaries ?? []) if (model.modelId) ids.add(model.modelId)
+  } catch { /* idem */ }
+  return [...ids].filter((id) => !/embed|image|rerank|canvas|reel|sonic|speech|safeguard/i.test(id)).sort()
+}
+
+async function probeModel(modelId: string): Promise<{ id: string; ok: boolean; ms: number; reason?: string }> {
+  const started = Date.now()
+  try {
+    await runtime.send(new ConverseCommand({ modelId, messages: [{ role: 'user', content: [{ text: 'Responde solo: ok' }] }], inferenceConfig: { maxTokens: 200 } }))
+    return { id: modelId, ok: true, ms: Date.now() - started }
+  } catch (error) {
+    const message = (error as Error).message ?? ''
+    const reason = /marketplace/i.test(message) ? 'bloqueado por AWS Marketplace' : /AccessDenied/i.test(message) ? 'sin permiso' : (error as Error).name || 'error'
+    return { id: modelId, ok: false, ms: Date.now() - started, reason }
+  }
+}
+
+/** Solo lectura: qué modelos responden en esta cuenta y qué ids fijar para Lunna y Terra. */
+async function models(): Promise<void> {
+  step('Modelos de Bedrock en esta cuenta (solo lectura)')
+  const who = await identity()
+  ok(`Cuenta ${who.account} · región ${REGION}`)
+  const all = await listTextModels()
+  const filter = args.find((arg) => !arg.startsWith('--'))
+  const candidates = filter ? all.filter((id) => id.toLowerCase().includes(filter.toLowerCase())) : all
+  console.log(`  Probando ${candidates.length} modelos (Converse)…`)
+  const results: Awaited<ReturnType<typeof probeModel>>[] = []
+  for (let index = 0; index < candidates.length; index += 6) results.push(...(await Promise.all(candidates.slice(index, index + 6).map(probeModel))))
+  // Algunos modelos (los de Marketplace) responden la primera vez y luego se bloquean: se confirma con una segunda llamada.
+  for (const item of results.filter((entry) => entry.ok)) {
+    const again = await probeModel(item.id)
+    if (!again.ok) Object.assign(item, { ok: false, reason: 'respondió una vez y luego se bloqueó (' + again.reason + ')' })
+  }
+  const usable = results.filter((item) => item.ok).sort((a, b) => a.ms - b.ms)
+  for (const item of usable) ok(`${item.id}  (${item.ms} ms)`)
+  const blocked = results.filter((item) => !item.ok)
+  if (args.includes('--all')) for (const item of blocked) warn(`${item.id}: ${item.reason}`)
+  else if (blocked.length) console.log(`  · ${blocked.length} modelos sin acceso (usa --all para verlos con el motivo)`)
+  if (usable.length === 0) fail('Ningún modelo respondió en esta cuenta.')
+  const preferred = MODEL_PREFERENCE.flatMap((pattern) => usable.filter((item) => pattern.test(item.id))).map((item) => item.id)
+  const lunna = process.env.BEDROCK_LUNNA_MODEL_ID?.trim() || preferred[0] || usable[0].id
+  const terra = process.env.BEDROCK_TERRA_MODEL_ID?.trim() || lunna
+  console.log('\nPara fijar los modelos del chat, agrega a scripts/lab/.env y vuelve a desplegar:')
+  console.log(`  BEDROCK_LUNNA_MODEL_ID=${lunna}`)
+  console.log(`  BEDROCK_TERRA_MODEL_ID=${terra}`)
+  console.log('Si omites estas variables, el despliegue elige solo uno (el primero que responda) para ambos.')
+}
 
 async function check(): Promise<void> {
   step('Revisión previa (solo lectura)')
@@ -583,7 +641,7 @@ async function destroy(): Promise<void> {
   ok('Despliegue eliminado')
 }
 
-const commands: Record<string, () => Promise<void> | void> = { check, deploy, knowledge, smoke, user, personas, mcp, status, destroy }
+const commands: Record<string, () => Promise<void> | void> = { check, models, deploy, knowledge, smoke, user, personas, mcp, status, destroy }
 const command = commands[process.argv[2] ?? '']
 if (!command) {
   console.error(`Uso: lab <${Object.keys(commands).join('|')}>`)
