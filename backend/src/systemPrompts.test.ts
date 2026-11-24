@@ -12,7 +12,7 @@ import { InMemoryCatalog, CatalogDates, ProfileRecommendations } from './assista
 
 test('the shared Spanish Markdown prompt is available and missing assets fail at initialization', () => {
   const prompt = loadSystemPrompt()
-  assert.match(prompt, /Responde en inglés/)
+  assert.match(prompt, /Idioma de la respuesta: inglés/)
   assert.doesNotMatch(prompt, /\bdemo\b|datos simulados|\bMVP\b/i)
   assert.throws(() => loadSystemPrompt('/missing-assistant-prompts'))
 })
