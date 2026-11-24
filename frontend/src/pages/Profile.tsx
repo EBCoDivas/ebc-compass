@@ -1,7 +1,8 @@
-import { academicDataFromClaims } from '../services/personaService'
+import { academicDataFromClaims, periodLabel } from '../services/personaService'
+import { fetchAcademicProgress, type AcademicProgress } from '../services/academicProgressService'
 import { interestOptionsFor, interestSuggestions } from '../utils/interests'
 import { authConfigured, getToken, signOut } from '../services/authService'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { loadProfile, needsProfileSetup, profileCompleteness, saveProfileRemote } from '../services/profileService'
@@ -12,7 +13,24 @@ import type { StudentProfile } from '../types/profile'
 
 export function Profile() {
   const navigate = useNavigate()
-  const academic = academicDataFromClaims(getToken())
+  const claimsData = academicDataFromClaims(getToken())
+  // Los datos académicos y las materias completadas vienen del expediente en Banner; el token solo respalda si Banner no responde.
+  const [record, setRecord] = useState<AcademicProgress | null | undefined>(undefined)
+  useEffect(() => {
+    let active = true
+    fetchAcademicProgress().then(value => { if (active) setRecord(value) }).catch(() => { if (active) setRecord(null) })
+    return () => { active = false }
+  }, [])
+  useEffect(() => {
+    const codes = record?.completedCourses?.map(course => course.code)
+    if (codes) setProfile(current => ({ ...current, completedCourses: codes }))
+  }, [record])
+  const academic = record
+    ? { enrollment: record.student?.enrollment ?? claimsData?.enrollment ?? '', fullName: record.student?.fullName ?? claimsData?.fullName ?? '',
+        campus: record.campus.name, career: record.program.name, semester: periodLabel(record.currentPeriod.number, record.currentPeriod.type) }
+    : claimsData
+  const coursesByPeriod = [...new Map((record?.completedCourses ?? []).map(course => [course.period, [] as NonNullable<AcademicProgress['completedCourses']>])).entries()]
+  for (const course of record?.completedCourses ?? []) coursesByPeriod.find(([period]) => period === course.period)?.[1].push(course)
   const [profile, setProfile] = useState<StudentProfile>(() => {
     const stored = loadProfile()
     return { ...emptyProfile, ...stored, campus: stored?.campus || '', career: stored?.career || '', currentSemester: stored?.currentSemester || '' }
@@ -93,6 +111,7 @@ export function Profile() {
             <div><span>Carrera</span><strong>{academic?.career || profile?.career || 'Sin carrera'}</strong></div>
             <div><span>Periodo actual</span><strong>{academic?.semester || profile?.currentSemester}</strong></div>
           </div> : <div className="form-grid"><label>Campus<select required value={profile.campus} onChange={e => update('campus', e.target.value as StudentProfile['campus'])}><option value="">Selecciona campus</option>{campusOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><label>Carrera<select required value={profile.career} onChange={e => update('career', e.target.value as StudentProfile['career'])}><option value="">Selecciona carrera</option>{careerOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label><label>Periodo<input type="number" min="1" max="20" required value={profile.currentSemester === 'na' ? '' : profile.currentSemester} onChange={e => update('currentSemester', e.target.value ? Number(e.target.value) : '')} /></label></div>}
+          {record && <p className="field-help">Estos datos vienen de tu expediente en Banner.</p>}
           {academic && <p className="field-help">¿Algo no coincide? <AskAssistantLink question="¿Cómo solicito la corrección de un dato académico incorrecto?">Pregunta a Compass cómo corregirlo</AskAssistantLink>.</p>}
         </section>
         <section className="form-card">
@@ -113,7 +132,22 @@ export function Profile() {
         </section>
         <section className="form-card">
           <h2>Información para recomendaciones</h2>
-          <label>Materias completadas <input value={profile.completedCourses.join(', ')} onChange={(e) => update('completedCourses', e.target.value.split(',').map((item) => item.trim()).filter(Boolean))} placeholder="Ej. Contabilidad, Matemáticas" /><span className="field-help">Sepáralas con comas.</span></label>
+          {record === undefined ? null : record
+            ? <div className="course-history">
+                <h3>Materias completadas</h3>
+                {record.completedCourses?.length
+                  ? <>
+                      <p className="field-help">{record.courses ? `${record.completedCourses.length} de ${record.courses.total} materias. ` : ''}Vienen de tu expediente en Banner y Compass las usa para tus recomendaciones.</p>
+                      <details><summary>Ver mis materias</summary>
+                        {coursesByPeriod.map(([period, courses]) => <div key={period} className="course-period">
+                          <strong>{periodLabel(period, record.currentPeriod.type)}</strong>
+                          <ul>{courses.map(course => <li key={course.code}><code>{course.code}</code> {course.name}</li>)}</ul>
+                        </div>)}
+                      </details>
+                    </>
+                  : <p className="field-help">Todavía no tienes materias completadas en tu expediente.</p>}
+              </div>
+            : <label>Materias completadas <input value={profile.completedCourses.join(', ')} onChange={(e) => update('completedCourses', e.target.value.split(',').map((item) => item.trim()).filter(Boolean))} placeholder="Ej. Contabilidad, Matemáticas" /><span className="field-help">Sepáralas con comas.</span></label>}
           <label>Metas profesionales <textarea rows={3} value={profile.goals} onChange={(e) => update('goals', e.target.value)} placeholder="Ej. Trabajar en banca digital" /></label>
         </section>
         {error && <p className="form-error" role="alert">{error}</p>}

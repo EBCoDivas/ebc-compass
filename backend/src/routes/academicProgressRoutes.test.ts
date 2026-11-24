@@ -25,12 +25,19 @@ test('academic progress requires verified identity and returns only the matching
   const response = await fetch(url)
   assert.equal(response.status, 200)
   assert.equal(response.headers.get('cache-control'), 'no-store')
-  assert.deepEqual(await response.json(), { progress: {
-    studentId: 'diego-sub', source: 'demo', asOf: '2026-11-16',
+  const { progress } = await response.json() as { progress: { completedCourses?: { code: string; name: string; period: number }[] } & Record<string, unknown> }
+  const { completedCourses, ...rest } = progress
+  assert.deepEqual(rest, {
+    studentId: 'diego-sub', source: 'demo', asOf: '2026-11-16', student: { enrollment: 'M0100011', fullName: 'Diego Ramírez' },
     program: { id: 'marketing', name: 'Mercadotecnia' }, campus: { id: 'GDL', name: 'Guadalajara' },
     currentPeriod: { number: 5, type: 'semestre' }, courses: { completed: 24, total: 54 }, credits: { earned: 144, total: 324 },
     gpa: { value: 8.7, scale: 10 },
-  } })
+  })
+  // Las materias completadas vienen de Banner y coinciden con el conteo del expediente.
+  assert.equal(completedCourses?.length, 24)
+  assert.deepEqual(completedCourses?.[0], { code: 'MER-101', name: 'Fundamentos de mercadotecnia', period: 1 })
+  assert.equal(new Set(completedCourses?.map(course => course.code)).size, 24)
+  assert.equal(Math.max(...(completedCourses ?? []).map(course => course.period)), 4)
 
   claims = { sub: 'diego-sub', 'custom:personaId': 'diego', 'custom:career': 'law', 'custom:campusCode': 'TLC' }
   assert.deepEqual(await (await fetch(url)).json(), { progress: null })

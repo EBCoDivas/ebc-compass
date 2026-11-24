@@ -179,6 +179,13 @@ select { appearance: none; background-color: #fff; background-image: url("data:i
 .academic-summary { display: grid; gap: .75rem; grid-template-columns: repeat(2, 1fr); }
 .academic-summary div { background: var(--mist); border: 1px solid var(--line); border-radius: 10px; display: grid; gap: .25rem; padding: .85rem 1rem; }
 .academic-summary span { color: var(--ink-soft); font-size: .85rem; }
+.course-history h3 { color: var(--navy); font-size: 1rem; margin: 0 0 .25rem; }
+.course-history summary { color: var(--blue); cursor: pointer; font-weight: 700; margin: .5rem 0; }
+.course-period { margin: .75rem 0; }
+.course-period strong { color: var(--navy); font-size: .85rem; }
+.course-period ul { display: grid; gap: .25rem .75rem; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); list-style: none; margin: .35rem 0 0; padding: 0; }
+.course-period li { font-size: .88rem; }
+.course-period code { background: var(--mist); border-radius: 5px; color: var(--ink-soft); font-size: .75rem; padding: .05rem .35rem; }
 
 /* Fechas */
 .home-dates { margin-top: 1.25rem; }

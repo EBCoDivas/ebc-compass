@@ -26,6 +26,8 @@ export { ensureConversation, maintainConversation } from './conversations/lifecy
 
 export interface AssistantRuntime {
   actions?: StudentActions
+  /** Banner: de ahí salen los datos del expediente, como las materias completadas. */
+  banner?: BannerClient
   memoryLlm?: LlmProvider
   inputGuardrail?: InputGuardrail
   config: AssistantConfig
@@ -93,5 +95,5 @@ export function createAssistant(options: { config?: AssistantConfig; checkpointe
           ttlSeconds: config.conversationTtlSeconds,
         }))
 
-  return { actions, memoryLlm: deps.llm, inputGuardrail: deps.inputGuardrail, config, checkpointer, conversations, profileReader, graph: buildAssistantGraph(deps, checkpointer) }
+  return { actions, banner: options.banner, memoryLlm: deps.llm, inputGuardrail: deps.inputGuardrail, config, checkpointer, conversations, profileReader, graph: buildAssistantGraph(deps, checkpointer) }
 }

@@ -73,6 +73,8 @@
 .admin-source.opportunity .admin-source-kind { background: var(--gold-soft); border-color: transparent; color: var(--gold-ink); }
 .admin-source-title { font-size: .9rem; }
 .admin-source.document .admin-source-title { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .82rem; }
+.admin-source-id { background: var(--mist); border-radius: 5px; color: var(--ink-soft); font-size: .75rem; padding: .05rem .4rem; }
+.admin-source.record .admin-source-kind { background: var(--cyan-soft); border-color: transparent; color: var(--cyan-ink); }
 .admin-source-origin { border-radius: 999px; font-size: .72rem; font-weight: 700; padding: .1rem .55rem; }
 .admin-source-origin.vector { background: var(--cyan-soft); color: var(--cyan-ink); }
 .admin-source-origin.keyword { background: var(--gold-soft); color: var(--gold-ink); }

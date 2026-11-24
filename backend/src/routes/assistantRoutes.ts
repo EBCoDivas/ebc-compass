@@ -83,7 +83,14 @@ export function parseTurn(request: Request) {
 export async function parseStudentTurn(request: Request, assistant: AssistantRuntime) {
   const turn = parseTurn(request)
   const student = assistant.actions ? await resolvePlanningStudent(request).catch(() => undefined) : undefined
-  return { ...turn, input: { ...turn.input, ...(student ? { toolTurn: { student, conversationId: turn.conversationId, requestId: turn.input.requestId, tools: [] as string[] } } : {}) } }
+  // Las materias completadas son del expediente en Banner: mandan sobre lo que el navegador declare.
+  const record = student && assistant.banner
+    ? await assistant.banner.readRecord({ id: student.subject, personaId: student.personaId, enrollment: student.enrollment, career: student.career,
+        campus: student.campus, semester: student.semester }).catch(() => null)
+    : null
+  const completed = record?.completedCourses?.map(course => course.code).slice(0, 50)
+  const profile = completed ? { ...turn.input.profile, completedCourses: completed } : turn.input.profile
+  return { ...turn, input: { ...turn.input, profile, ...(student ? { toolTurn: { student, conversationId: turn.conversationId, requestId: turn.input.requestId, tools: [] as string[] } } : {}) } }
 }
 
 export async function writeSse(response: Writable, event: string, data: unknown) {

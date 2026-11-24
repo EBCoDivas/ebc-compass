@@ -29,7 +29,12 @@ const clock = new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-dig
 
 /** El chat responde en Markdown; en la traza se lee como texto plano. */
 const plain = (text?: string) => (text ?? '').replace(/\*\*(.+?)\*\*/g, '$1')
-const sourceKinds = { document: 'Guía', opportunity: 'Catálogo', record: 'Expediente' } as const
+/** La etiqueta nombra el sistema de donde sale el dato; la herramienta MCP por la que pasó se ve aparte, en «Herramientas». */
+function sourceLabel(source: AuditSource): string {
+  if (source.kind === 'document') return 'Guía'
+  if (source.kind === 'opportunity') return 'Banner · Catálogo'
+  return source.id === 'student-route' ? 'Compass · Ruta' : 'Banner · Expediente'
+}
 const origins = { vector: 'Vector store', keyword: 'Respaldo por palabras' } as const
 
 /** Las ejecuciones guardadas antes de registrar el tipo solo tienen títulos: se muestran como fuentes sin clasificar. */
@@ -39,8 +44,9 @@ function SourceChip({ source }: { source: AuditSource }) {
   const legacy = source.id === source.title && source.kind === 'record'
   return (
     <li className={`admin-source ${legacy ? 'legacy' : source.kind}`}>
-      {!legacy && <span className="admin-source-kind">{sourceKinds[source.kind]}</span>}
+      {!legacy && <span className="admin-source-kind">{sourceLabel(source)}</span>}
       <span className="admin-source-title">{source.kind === 'document' ? source.id : source.title}</span>
+      {source.kind === 'opportunity' && <code className="admin-source-id" title="Elemento de la tabla BannerCatalog">{source.id}</code>}
       {source.kind === 'document' && source.origin && <span className={`admin-source-origin ${source.origin}`}>{origins[source.origin]}</span>}
       {typeof source.score === 'number' && <span className="admin-source-score" title="Similitud con la pregunta">{Math.round(source.score * 100)} %</span>}
     </li>

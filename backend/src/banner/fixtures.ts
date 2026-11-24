@@ -1,9 +1,14 @@
 import type { AcademicProgress } from '../../../shared/contracts/academicProgress.js'
 import type { PaymentMethod } from '../../../shared/contracts/studentActions.js'
+import { completedCourses, type CompletedCourse } from './curriculum.js'
 import type { StudentPlanning } from '../../../shared/contracts/studentPlanning.js'
 
 export interface BannerRecord {
   enrollment: string
+  /** Nombre completo tal como está en el expediente. */
+  fullName: string
+  /** Materias aprobadas, con su clave. Coinciden con `courses.completed`. */
+  completedCourses?: CompletedCourse[]
   personaId: string
   career: string
   campus: string
@@ -19,20 +24,22 @@ export interface BannerRecord {
 }
 
 const asOf = '2026-11-16'
-const records: BannerRecord[] = [
-  { enrollment: 'M0100011', personaId: 'diego', career: 'marketing', campus: 'GDL', asOf,
+const baseRecords: Omit<BannerRecord, 'completedCourses'>[] = [
+  { enrollment: 'M0100011', fullName: 'Diego Ramírez', personaId: 'diego', career: 'marketing', campus: 'GDL', asOf,
     currentPeriod: { number: 5, type: 'semestre' }, courses: { completed: 24, total: 54 }, credits: { earned: 144, total: 324 }, gpa: { value: 8.7, scale: 10 } },
-  { enrollment: 'M0100012', personaId: 'ana', career: 'accounting', campus: 'QRO', asOf,
+  { enrollment: 'M0100012', fullName: 'Ana Lucía Torres', personaId: 'ana', career: 'accounting', campus: 'QRO', asOf,
     currentPeriod: { number: 7, type: 'semestre' }, courses: { completed: 36, total: 54 }, credits: { earned: 216, total: 324 }, gpa: { value: 9.4, scale: 10 },
     serviceHours: { completedHours: 260, weeklyHours: 6, asOf: '2026-11-22' } },
-  { enrollment: 'M0100018', personaId: 'ana-ingreso', career: 'accounting', campus: 'QRO', asOf,
+  { enrollment: 'M0100018', fullName: 'Ana Lucía Torres', personaId: 'ana-ingreso', career: 'accounting', campus: 'QRO', asOf,
     currentPeriod: { number: 1, type: 'semestre' }, courses: { completed: 0, total: 54 }, credits: { earned: 0, total: 324 },
     firstEntry: { highSchoolGpa: 9.2, admissionLetter: true, motivationLetter: false },
     paymentMethod: { brand: 'Visa', last4: '4242', holder: 'ANA LUCÍA TORRES', expires: '08/29' } },
-  { enrollment: 'M0100014', personaId: 'sofia', career: 'law', campus: 'TLC', asOf,
+  { enrollment: 'M0100014', fullName: 'Sofía Herrera', personaId: 'sofia', career: 'law', campus: 'TLC', asOf,
     currentPeriod: { number: 9, type: 'semestre' }, courses: { completed: 48, total: 54 }, credits: { earned: 288, total: 324 }, gpa: { value: 9.2, scale: 10 },
     serviceHours: { completedHours: 468, weeklyHours: 12, asOf: '2026-11-22' } },
 ]
+// Seis materias por semestre cursado: la lista siempre coincide con el conteo de `courses.completed`.
+const records: BannerRecord[] = baseRecords.map(record => ({ ...record, completedCourses: completedCourses(record.career, (record.courses?.completed ?? 0) / 6) }))
 
 export const demoAcademicSnapshots = Object.fromEntries([...records.map(record => [record.personaId, record] as const), ['sin-perfil', null]]) as Record<string, BannerRecord | null>
 
